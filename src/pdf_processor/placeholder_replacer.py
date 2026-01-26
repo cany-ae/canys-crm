@@ -152,9 +152,10 @@ class PlaceholderReplacer:
         if beitrag_replacements and len(doc) > 0:
             print(f"[DEBUG] Suche Beträge auf allen {len(doc)} Seiten...")
 
-            # Farben für Beitrags-Ersetzung (dunkles Türkis auf hellem Hintergrund)
-            beitrag_bg_color = (0.855, 0.937, 0.980)  # Hellblau #DAEFFA
-            beitrag_text_color = (0.0, 0.325, 0.6)  # Dunkelblau #005399
+            # Farben für Beitrags-Ersetzung
+            # Hintergrund: #ddeb3a (221, 235, 58) -> RGB(0.867, 0.922, 0.227)
+            beitrag_bg_color = (0.867, 0.922, 0.227)  # Gelb #ddeb3a
+            beitrag_text_color = (0.0, 0.0, 0.0)  # Schwarz
 
             found_any = False
 
