@@ -213,24 +213,38 @@ class PDFExtractor:
         """
         Extrahiere Beitrag (10% Selbstbeteiligung) aus AMIS-PDF
 
-        Sucht nach Mustern wie:
-        - "Beitrag: XXX,XX €"
-        - "Beitrag XXX,XX €"
-        - "XXX,XX €" nach "Beitrag"
+        Sucht nach dem Bereich "Beitrag" und extrahiert den ersten Betrag darunter.
+        Format im AMIS-PDF:
+        - "Beitrag" als Überschrift
+        - "240,20 EUR" als Betrag darunter
         """
-        # AMIS-spezifische Muster für Beitrag
-        patterns = [
-            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",  # "Beitrag: 295,81 €" oder "Beitrag 295,81 €"
-            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})",  # "Beitrag: 295,81" ohne €
-            r"Jahresbeitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",  # "Jahresbeitrag: 295,81 €"
-            r"Gesamtbeitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",  # "Gesamtbeitrag: 295,81 €"
+        # Zuerst: Suche nach "Beitrag" gefolgt von Betrag mit EUR (AMIS-Format)
+        # Das Format ist: "Beitrag\n240,20 EUR" oder "Beitrag\n240,20 EUR\nmonatlich"
+        amis_patterns = [
+            # "Beitrag" gefolgt von Zeilenumbruch und Betrag mit EUR
+            r"Beitrag\s*\n\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*EUR",
+            # "Beitrag" mit optionalem Doppelpunkt und Betrag mit EUR auf gleicher/nächster Zeile
+            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*EUR",
         ]
 
-        for pattern in patterns:
+        for pattern in amis_patterns:
             match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
             if match:
                 beitrag = match.group(1).strip()
-                # Füge € hinzu falls nicht vorhanden
+                return f"{beitrag} €"
+
+        # Fallback: Alte Patterns mit € Symbol
+        fallback_patterns = [
+            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",
+            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})",
+            r"Jahresbeitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",
+            r"Gesamtbeitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",
+        ]
+
+        for pattern in fallback_patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                beitrag = match.group(1).strip()
                 return f"{beitrag} €"
 
         return ""
