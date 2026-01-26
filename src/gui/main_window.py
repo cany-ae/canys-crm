@@ -513,18 +513,10 @@ class MainWindow(QMainWindow):
         # Anzeige-Label mit € Suffix (wie die anderen Felder)
         sb10_input_layout = QHBoxLayout()
         sb10_input_layout.setSpacing(8)
-        self.beitrag_10_label = QLabel("—")
-        self.beitrag_10_label.setFixedHeight(50)
-        self.beitrag_10_label.setStyleSheet(f"""
-            padding: 0px 18px;
-            border: 3px solid {COLORS['light_blue']};
-            border-radius: 10px;
-            background-color: {COLORS['white']};
-            font-size: 16px;
-            font-weight: 500;
-            color: {COLORS['text_gray']};
-            min-width: 120px;
-        """)
+        self.beitrag_10_label = QLineEdit()
+        self.beitrag_10_label.setReadOnly(True)
+        self.beitrag_10_label.setPlaceholderText("—")
+        self.beitrag_10_label.setMinimumHeight(50)
         sb10_input_layout.addWidget(self.beitrag_10_label)
         euro10 = QLabel("€")
         euro10.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {COLORS['primary_blue']};")
@@ -689,25 +681,13 @@ class MainWindow(QMainWindow):
                     beitrag_clean = beitrag.replace('€', '').replace(' ', '').strip()
                     self.beitrag_10_label.setText(beitrag_clean)
                     self.beitrag_10_label.setStyleSheet(f"""
-                        padding: 0px 18px;
                         border: 3px solid {COLORS['success_green']};
-                        border-radius: 10px;
-                        background-color: {COLORS['white']};
-                        font-size: 16px;
-                        font-weight: bold;
-                        color: {COLORS['text_dark']};
-                        min-width: 120px;
                     """)
                 else:
-                    self.beitrag_10_label.setText("—")
+                    self.beitrag_10_label.setText("")
                     self.beitrag_10_label.setStyleSheet(f"""
-                        padding: 0px 18px;
                         border: 3px solid {COLORS['error_red']};
-                        border-radius: 10px;
                         background-color: #fff0f0;
-                        font-size: 16px;
-                        color: {COLORS['error_red']};
-                        min-width: 120px;
                     """)
             except Exception as e:
                 print(f"Warnung: Datenextraktion fehlgeschlagen: {e}")
