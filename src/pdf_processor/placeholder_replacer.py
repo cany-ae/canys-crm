@@ -192,11 +192,11 @@ class PlaceholderReplacer:
 
                     for inst in text_instances:
                         # Berechne Schriftgröße
-                        base_font_size = inst.height * 0.7
+                        base_font_size = inst.height * 0.65
                         old_rect_width = inst.x1 - inst.x0
 
-                        # Fira Go unterstützt Euro-Zeichen (Unicode)
-                        fontname = "figo"
+                        # Helvetica unterstützt Euro-Zeichen korrekt
+                        fontname = "helv"
                         font_size = base_font_size
 
                         # Optimale Schriftgröße finden
@@ -220,8 +220,8 @@ class PlaceholderReplacer:
                         # Überschreibe mit Hintergrundfarbe
                         page.draw_rect(cover_rect, color=beitrag_bg_color, fill=beitrag_bg_color)
 
-                        # Text höher positionieren (weiter oben im Feld)
-                        y_offset = -4
+                        # Text weiter nach oben positionieren
+                        y_offset = -6
 
                         page.insert_text(
                             (inst.x0 + 2, inst.y1 + y_offset),
