@@ -514,18 +514,17 @@ class MainWindow(QMainWindow):
         self.beitrag_10_label = QLabel("— (wird aus AMIS gelesen)")
         self.beitrag_10_label.setStyleSheet(f"""
             padding: 10px 18px;
-            border: 3px solid #ddeb3a;
+            border: 3px solid {COLORS['border_gray']};
             border-radius: 10px;
-            background-color: #ddeb3a;
-            font-size: 16px;
-            font-weight: bold;
-            color: #000000;
+            background-color: {COLORS['white']};
+            font-size: 14px;
+            color: {COLORS['text_gray']};
             min-width: 150px;
         """)
         sb10_layout.addWidget(self.beitrag_10_label)
 
         hint10 = QLabel("🔄 Automatisch aus AMIS")
-        hint10.setStyleSheet(f"color: {COLORS['success_green']}; font-size: 12px; font-style: italic;")
+        hint10.setStyleSheet(f"color: {COLORS['text_gray']}; font-size: 12px; font-style: italic;")
         sb10_layout.addWidget(hint10)
         beitraege_layout.addLayout(sb10_layout)
 
