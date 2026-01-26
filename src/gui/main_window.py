@@ -510,26 +510,19 @@ class MainWindow(QMainWindow):
         sb10_label.setObjectName("inputLabel")
         sb10_layout.addWidget(sb10_label)
 
-        # Anzeige-Label mit € Suffix
-        sb10_input_layout = QHBoxLayout()
-        sb10_input_layout.setSpacing(8)
+        # Anzeige-Label (€ wird direkt im Text angezeigt)
         self.beitrag_10_label = QLabel("— (wird aus AMIS gelesen)")
         self.beitrag_10_label.setStyleSheet(f"""
-            padding: 14px 18px;
-            border: 3px solid {COLORS['success_green']};
+            padding: 10px 18px;
+            border: 3px solid #ddeb3a;
             border-radius: 10px;
-            background-color: #e8fff0;
+            background-color: #ddeb3a;
             font-size: 16px;
             font-weight: bold;
-            color: {COLORS['text_dark']};
+            color: #000000;
             min-width: 150px;
-            min-height: 22px;
         """)
-        sb10_input_layout.addWidget(self.beitrag_10_label)
-        euro10 = QLabel("€")
-        euro10.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {COLORS['success_green']};")
-        sb10_input_layout.addWidget(euro10)
-        sb10_layout.addLayout(sb10_input_layout)
+        sb10_layout.addWidget(self.beitrag_10_label)
 
         hint10 = QLabel("🔄 Automatisch aus AMIS")
         hint10.setStyleSheet(f"color: {COLORS['success_green']}; font-size: 12px; font-style: italic;")
@@ -685,31 +678,29 @@ class MainWindow(QMainWindow):
                 # Zeige extrahierten Beitrag (10% Selbstbeteiligung)
                 beitrag = self.extracted_data.get('beitrag', '')
                 if beitrag and self.beitrag_10_label:
-                    # Entferne € falls vorhanden für saubere Anzeige
+                    # Entferne € falls vorhanden, dann mit € am Ende anzeigen
                     beitrag_clean = beitrag.replace('€', '').replace(' ', '').strip()
-                    self.beitrag_10_label.setText(beitrag_clean)
-                    self.beitrag_10_label.setStyleSheet(f"""
-                        padding: 14px 18px;
-                        border: 3px solid {COLORS['success_green']};
+                    self.beitrag_10_label.setText(f"{beitrag_clean}€")
+                    self.beitrag_10_label.setStyleSheet("""
+                        padding: 10px 18px;
+                        border: 3px solid #ddeb3a;
                         border-radius: 10px;
-                        background-color: #e8fff0;
-                        font-size: 18px;
+                        background-color: #ddeb3a;
+                        font-size: 16px;
                         font-weight: bold;
-                        color: {COLORS['success_green']};
+                        color: #000000;
                         min-width: 150px;
-                        min-height: 22px;
                     """)
                 else:
                     self.beitrag_10_label.setText("— (nicht gefunden)")
                     self.beitrag_10_label.setStyleSheet(f"""
-                        padding: 14px 18px;
+                        padding: 10px 18px;
                         border: 3px solid {COLORS['error_red']};
                         border-radius: 10px;
                         background-color: #fff0f0;
                         font-size: 14px;
                         color: {COLORS['error_red']};
                         min-width: 150px;
-                        min-height: 22px;
                     """)
             except Exception as e:
                 print(f"Warnung: Datenextraktion fehlgeschlagen: {e}")
