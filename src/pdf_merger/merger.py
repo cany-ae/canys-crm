@@ -28,7 +28,7 @@ class PDFMerger:
         if not self.template_path.exists():
             raise FileNotFoundError(f"Vorlage nicht gefunden: {template_path}")
 
-    def merge(self, amis_pdf_path: str, output_path: str, replace_placeholders: bool = True, pferdename: str = None) -> str:
+    def merge(self, amis_pdf_path: str, output_path: str, replace_placeholders: bool = True, pferdename: str = None, beitraege: dict = None) -> str:
         """
         Füge PDFs zusammen: Vorlage + AMIS
         Optional: Ersetze Platzhalter in Vorlage mit Daten aus AMIS-PDF
@@ -38,6 +38,7 @@ class PDFMerger:
             output_path: Ausgabepfad für fertiges PDF
             replace_placeholders: Ob Platzhalter ersetzt werden sollen (Standard: True)
             pferdename: Optional: Pferdename für Platzhalter
+            beitraege: Optional: Dict mit beitrag_20, beitrag_10, beitrag_0
 
         Returns:
             Pfad zur erstellten PDF-Datei
@@ -62,6 +63,12 @@ class PDFMerger:
                 # Füge Pferdename hinzu falls vorhanden
                 if pferdename:
                     placeholder_data['pferdename'] = pferdename
+
+                # Füge Beiträge hinzu falls vorhanden
+                if beitraege:
+                    placeholder_data['beitrag_20'] = beitraege.get('beitrag_20', '')
+                    placeholder_data['beitrag_10'] = beitraege.get('beitrag_10', '')
+                    placeholder_data['beitrag_0'] = beitraege.get('beitrag_0', '')
 
                 # Erstelle temporäre Kopie von Vorlage mit ersetzten Platzhaltern
                 temp_dir = tempfile.mkdtemp()

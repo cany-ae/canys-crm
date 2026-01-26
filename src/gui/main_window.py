@@ -201,24 +201,25 @@ class MergeThread(QThread):
     finished = pyqtSignal(bool, str)
     progress = pyqtSignal(int, str)
 
-    def __init__(self, template_path, amis_pdf_path, output_path, pferdename=None):
+    def __init__(self, template_path, amis_pdf_path, output_path, pferdename=None, beitraege=None):
         super().__init__()
         self.template_path = template_path
         self.amis_pdf_path = amis_pdf_path
         self.output_path = output_path
         self.pferdename = pferdename
+        self.beitraege = beitraege or {}  # Dict mit beitrag_20, beitrag_10, beitrag_0
 
     def run(self):
         try:
             self.progress.emit(30, "Lade Vorlage...")
-            # Merger wird später angepasst für neues Format
             merger = PDFMerger(template_path=self.template_path)
 
             self.progress.emit(60, "Füge PDFs zusammen...")
             output_path = merger.merge(
                 self.amis_pdf_path,
                 self.output_path,
-                pferdename=self.pferdename
+                pferdename=self.pferdename,
+                beitraege=self.beitraege
             )
 
             self.progress.emit(100, "Fertig!")
@@ -242,6 +243,9 @@ class MainWindow(QMainWindow):
         self.merge_thread = None
         self.extracted_data = None  # Extrahierte Daten aus AMIS-PDF
         self.pferdename_input = None  # Eingabefeld für Pferdename
+        self.beitrag_20_input = None  # 20% Selbstbeteiligung (manuell)
+        self.beitrag_10_label = None  # 10% Selbstbeteiligung (aus AMIS)
+        self.beitrag_0_input = None   # Keine Selbstbeteiligung (manuell)
         self.init_ui()
 
     def init_ui(self):
@@ -278,6 +282,10 @@ class MainWindow(QMainWindow):
         # Pferdename Eingabe
         pferdename_group = self._create_pferdename_group()
         layout.addWidget(pferdename_group)
+
+        # Beiträge (Selbstbeteiligung)
+        beitraege_group = self._create_beitraege_group()
+        layout.addWidget(beitraege_group)
 
         # Vorschau
         preview_group = self._create_preview_group()
@@ -414,9 +422,82 @@ class MainWindow(QMainWindow):
         group.setLayout(layout)
         return group
 
+    def _create_beitraege_group(self):
+        """Erstelle Beiträge-Eingabe (Selbstbeteiligung)"""
+        group = QGroupBox("Schritt 3: Beiträge (Selbstbeteiligung)")
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+
+        description = QLabel("Geben Sie die Beiträge für die verschiedenen Selbstbeteiligungen ein:")
+        description.setStyleSheet(f"color: {COLORS['text_gray']}; font-weight: normal;")
+        layout.addWidget(description)
+
+        # Grid für die 3 Beiträge
+        beitraege_layout = QHBoxLayout()
+        beitraege_layout.setSpacing(20)
+
+        # 20% Selbstbeteiligung (manuell)
+        sb20_layout = QVBoxLayout()
+        sb20_label = QLabel("20% Selbstbeteiligung:")
+        sb20_label.setStyleSheet(f"font-weight: bold; color: {COLORS['primary_blue']};")
+        sb20_layout.addWidget(sb20_label)
+        self.beitrag_20_input = QLineEdit()
+        self.beitrag_20_input.setPlaceholderText("z.B. 243,81")
+        self.beitrag_20_input.textChanged.connect(self._update_preview)
+        sb20_layout.addWidget(self.beitrag_20_input)
+        hint20 = QLabel("(manuell eingeben)")
+        hint20.setStyleSheet(f"color: {COLORS['text_gray']}; font-size: 10px;")
+        sb20_layout.addWidget(hint20)
+        beitraege_layout.addLayout(sb20_layout)
+
+        # 10% Selbstbeteiligung (aus AMIS)
+        sb10_layout = QVBoxLayout()
+        sb10_label = QLabel("10% Selbstbeteiligung:")
+        sb10_label.setStyleSheet(f"font-weight: bold; color: {COLORS['primary_blue']};")
+        sb10_layout.addWidget(sb10_label)
+        self.beitrag_10_label = QLabel("— (wird aus AMIS gelesen)")
+        self.beitrag_10_label.setStyleSheet(f"""
+            padding: 10px 15px;
+            border: 2px solid {COLORS['success_green']};
+            border-radius: 8px;
+            background-color: #f0fff4;
+            font-size: 13px;
+            color: {COLORS['text_dark']};
+            min-width: 200px;
+        """)
+        sb10_layout.addWidget(self.beitrag_10_label)
+        hint10 = QLabel("(automatisch aus AMIS)")
+        hint10.setStyleSheet(f"color: {COLORS['success_green']}; font-size: 10px;")
+        sb10_layout.addWidget(hint10)
+        beitraege_layout.addLayout(sb10_layout)
+
+        # Keine Selbstbeteiligung (manuell)
+        sb0_layout = QVBoxLayout()
+        sb0_label = QLabel("Keine Selbstbeteiligung:")
+        sb0_label.setStyleSheet(f"font-weight: bold; color: {COLORS['primary_blue']};")
+        sb0_layout.addWidget(sb0_label)
+        self.beitrag_0_input = QLineEdit()
+        self.beitrag_0_input.setPlaceholderText("z.B. 385,62")
+        self.beitrag_0_input.textChanged.connect(self._update_preview)
+        sb0_layout.addWidget(self.beitrag_0_input)
+        hint0 = QLabel("(manuell eingeben)")
+        hint0.setStyleSheet(f"color: {COLORS['text_gray']}; font-size: 10px;")
+        sb0_layout.addWidget(hint0)
+        beitraege_layout.addLayout(sb0_layout)
+
+        layout.addLayout(beitraege_layout)
+
+        # Hinweis
+        hint = QLabel("💡 Diese Beträge werden in der Vorlage (Seite 1) eingetragen")
+        hint.setStyleSheet(f"color: {COLORS['text_gray']}; font-size: 11px;")
+        layout.addWidget(hint)
+
+        group.setLayout(layout)
+        return group
+
     def _create_preview_group(self):
         """Erstelle Vorschau"""
-        group = QGroupBox("Schritt 3: Vorschau")
+        group = QGroupBox("Schritt 4: Vorschau")
         layout = QVBoxLayout()
         layout.setSpacing(10)
 
@@ -459,16 +540,25 @@ class MainWindow(QMainWindow):
                 if self.extracted_data:
                     placeholder_data = PlaceholderReplacer.prepare_data_from_extraction(self.extracted_data)
                     pferdename = self.pferdename_input.text() if self.pferdename_input else ""
+                    beitrag_20 = self.beitrag_20_input.text() if self.beitrag_20_input else ""
+                    beitrag_10 = self.extracted_data.get('beitrag', '')
+                    beitrag_0 = self.beitrag_0_input.text() if self.beitrag_0_input else ""
+
                     preview += f"""
 
   ─────────────────────────────
   Extrahierte Daten:
 
   • Name:        {placeholder_data.get('vorname', 'N/A')} {placeholder_data.get('nachname', 'N/A')}
-
   • Datum:       {placeholder_data.get('datum', 'N/A')}
+  • Pferdename:  {pferdename if pferdename else '(noch nicht eingegeben)'}
 
-  • Pferdename:  {pferdename if pferdename else '(noch nicht eingegeben)'}"""
+  ─────────────────────────────
+  Beiträge (Selbstbeteiligung):
+
+  • 20%:         {beitrag_20 if beitrag_20 else '(noch nicht eingegeben)'} €
+  • 10%:         {beitrag_10 if beitrag_10 else '(nicht gefunden)'}
+  • Keine:       {beitrag_0 if beitrag_0 else '(noch nicht eingegeben)'} €"""
 
                 return preview
 
@@ -514,6 +604,23 @@ class MainWindow(QMainWindow):
             try:
                 extractor = PDFExtractor(file_path)
                 self.extracted_data = extractor.extract()
+
+                # Zeige extrahierten Beitrag (10% Selbstbeteiligung)
+                beitrag = self.extracted_data.get('beitrag', '')
+                if beitrag and self.beitrag_10_label:
+                    self.beitrag_10_label.setText(beitrag)
+                    self.beitrag_10_label.setStyleSheet(f"""
+                        padding: 10px 15px;
+                        border: 2px solid {COLORS['success_green']};
+                        border-radius: 8px;
+                        background-color: #f0fff4;
+                        font-size: 14px;
+                        font-weight: bold;
+                        color: {COLORS['success_green']};
+                        min-width: 200px;
+                    """)
+                else:
+                    self.beitrag_10_label.setText("— (nicht gefunden)")
             except Exception as e:
                 print(f"Warnung: Datenextraktion fehlgeschlagen: {e}")
                 self.extracted_data = None
@@ -524,9 +631,16 @@ class MainWindow(QMainWindow):
     def _check_ready(self):
         """Prüfe ob bereit"""
         pferdename = self.pferdename_input.text().strip() if self.pferdename_input else ""
+        beitrag_20 = self.beitrag_20_input.text().strip() if self.beitrag_20_input else ""
+        beitrag_0 = self.beitrag_0_input.text().strip() if self.beitrag_0_input else ""
+        beitrag_10 = self.extracted_data.get('beitrag', '') if self.extracted_data else ""
+
         ready = (
             self.amis_pdf_path is not None and
-            len(pferdename) > 0
+            len(pferdename) > 0 and
+            len(beitrag_20) > 0 and
+            len(beitrag_0) > 0 and
+            len(beitrag_10) > 0
         )
         self.generate_btn.setEnabled(ready)
 
@@ -559,11 +673,19 @@ class MainWindow(QMainWindow):
 
         pferdename = self.pferdename_input.text().strip() if self.pferdename_input else None
 
+        # Sammle Beiträge
+        beitraege = {
+            'beitrag_20': self.beitrag_20_input.text().strip() if self.beitrag_20_input else "",
+            'beitrag_10': self.extracted_data.get('beitrag', '') if self.extracted_data else "",
+            'beitrag_0': self.beitrag_0_input.text().strip() if self.beitrag_0_input else ""
+        }
+
         self.merge_thread = MergeThread(
             str(template_path),
             self.amis_pdf_path,
             str(output_path),
-            pferdename=pferdename
+            pferdename=pferdename,
+            beitraege=beitraege
         )
         self.merge_thread.progress.connect(self._update_progress)
         self.merge_thread.finished.connect(self._merge_finished)

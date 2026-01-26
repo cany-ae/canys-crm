@@ -41,7 +41,8 @@ class PDFExtractor:
             data = {
                 "horse_name": self._extract_horse_name(full_text),
                 "customer_name": self._extract_customer_name(full_text),
-                "created_date": self._extract_date(full_text)
+                "created_date": self._extract_date(full_text),
+                "beitrag": self._extract_beitrag(full_text)  # 10% Selbstbeteiligung aus AMIS
             }
 
             return data
@@ -207,6 +208,32 @@ class PDFExtractor:
 
         # Fallback: Heutiges Datum
         return datetime.now().strftime("%d.%m.%Y")
+
+    def _extract_beitrag(self, text: str) -> str:
+        """
+        Extrahiere Beitrag (10% Selbstbeteiligung) aus AMIS-PDF
+
+        Sucht nach Mustern wie:
+        - "Beitrag: XXX,XX €"
+        - "Beitrag XXX,XX €"
+        - "XXX,XX €" nach "Beitrag"
+        """
+        # AMIS-spezifische Muster für Beitrag
+        patterns = [
+            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",  # "Beitrag: 295,81 €" oder "Beitrag 295,81 €"
+            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})",  # "Beitrag: 295,81" ohne €
+            r"Jahresbeitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",  # "Jahresbeitrag: 295,81 €"
+            r"Gesamtbeitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",  # "Gesamtbeitrag: 295,81 €"
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                beitrag = match.group(1).strip()
+                # Füge € hinzu falls nicht vorhanden
+                return f"{beitrag} €"
+
+        return ""
 
     def _validate_date(self, date_str: str) -> bool:
         """

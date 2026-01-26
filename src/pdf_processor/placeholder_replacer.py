@@ -54,6 +54,31 @@ class PlaceholderReplacer:
             "tt.mm.jjjj": data.get("datum", "").strip(),  # Datum
         }
 
+        # Euro-Beträge für Selbstbeteiligung (auf Seite 1)
+        # Formatiere Beträge: Entferne € falls vorhanden, füge es dann hinzu
+        def format_beitrag(value):
+            if not value:
+                return ""
+            # Entferne € und Leerzeichen
+            clean = value.replace("€", "").replace(" ", "").strip()
+            return f"{clean}€"  # Format: "243,81€" (ohne Leerzeichen vor €)
+
+        beitrag_20 = data.get("beitrag_20", "")
+        beitrag_10 = data.get("beitrag_10", "")
+        beitrag_0 = data.get("beitrag_0", "")
+
+        # Beitrags-Ersetzungen (Original -> Neu)
+        beitrag_replacements = {}
+        if beitrag_20:
+            beitrag_replacements["243,81€"] = format_beitrag(beitrag_20)
+            beitrag_replacements["243,81 €"] = format_beitrag(beitrag_20)
+        if beitrag_10:
+            beitrag_replacements["295,81 €"] = format_beitrag(beitrag_10)
+            beitrag_replacements["295,81€"] = format_beitrag(beitrag_10)
+        if beitrag_0:
+            beitrag_replacements["385,62 €"] = format_beitrag(beitrag_0)
+            beitrag_replacements["385,62€"] = format_beitrag(beitrag_0)
+
         # Farben für Platzhalter-Ersetzung
         # Hintergrund: #DAEFFA (218, 239, 250) -> RGB(0.855, 0.937, 0.980)
         background_color = (0.855, 0.937, 0.980)
@@ -107,6 +132,54 @@ class PlaceholderReplacer:
                         fontname=fontname,
                         fontsize=font_size,
                         color=text_color
+                    )
+
+        # Ersetze Euro-Beträge (Selbstbeteiligung) auf Seite 1
+        if beitrag_replacements and len(doc) > 0:
+            page = doc[0]  # Nur auf Seite 1
+
+            # Farben für Beitrags-Ersetzung (dunkles Türkis auf hellem Hintergrund)
+            beitrag_bg_color = (0.855, 0.937, 0.980)  # Hellblau #DAEFFA
+            beitrag_text_color = (0.0, 0.325, 0.6)  # Dunkelblau #005399
+
+            for old_beitrag, new_beitrag in beitrag_replacements.items():
+                if not new_beitrag:
+                    continue
+
+                # Suche nach altem Betrag
+                text_instances = page.search_for(old_beitrag)
+
+                for inst in text_instances:
+                    # Überschreibe mit Hintergrundfarbe
+                    page.draw_rect(inst, color=beitrag_bg_color, fill=beitrag_bg_color)
+
+                    # Berechne Schriftgröße
+                    base_font_size = inst.height * 0.75
+                    rect_width = inst.x1 - inst.x0
+
+                    fontname = "helv"
+                    font_size = base_font_size
+
+                    # Optimale Schriftgröße finden
+                    while font_size > 10:
+                        text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
+                        if text_width <= rect_width * 0.95:
+                            break
+                        font_size -= 0.5
+
+                    font_size = max(font_size, 10)
+
+                    # Zentriere Text vertikal und horizontal
+                    text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
+                    x_offset = (rect_width - text_width) / 2
+                    y_offset = -2
+
+                    page.insert_text(
+                        (inst.x0 + x_offset, inst.y1 + y_offset),
+                        new_beitrag,
+                        fontname=fontname,
+                        fontsize=font_size,
+                        color=beitrag_text_color
                     )
 
         # Speichere neue PDF
