@@ -172,28 +172,37 @@ class PlaceholderReplacer:
                         found_any = True
 
                     for inst in text_instances:
-                        # Überschreibe mit Hintergrundfarbe
-                        page.draw_rect(inst, color=beitrag_bg_color, fill=beitrag_bg_color)
-
-                        # Berechne Schriftgröße
+                        # Berechne Schriftgröße zuerst
                         base_font_size = inst.height * 0.75
-                        rect_width = inst.x1 - inst.x0
+                        old_rect_width = inst.x1 - inst.x0
 
                         fontname = "helv"
                         font_size = base_font_size
 
-                        # Optimale Schriftgröße finden
+                        # Optimale Schriftgröße finden (basierend auf alter Breite)
                         while font_size > 10:
                             text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
-                            if text_width <= rect_width * 0.95:
+                            if text_width <= old_rect_width * 0.95:
                                 break
                             font_size -= 0.5
 
                         font_size = max(font_size, 10)
 
-                        # Zentriere Text vertikal und horizontal
+                        # Berechne finale Textbreite
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
-                        x_offset = (rect_width - text_width) / 2
+
+                        # Rechteck-Breite: Maximum aus alter Breite und neuer Textbreite + Padding
+                        padding = 4
+                        final_width = max(old_rect_width, text_width + padding * 2)
+
+                        # Erstelle angepasstes Rechteck (deckt alten UND neuen Text ab)
+                        cover_rect = fitz.Rect(inst.x0 - 1, inst.y0 - 1, inst.x0 + final_width + 1, inst.y1 + 1)
+
+                        # Überschreibe mit Hintergrundfarbe
+                        page.draw_rect(cover_rect, color=beitrag_bg_color, fill=beitrag_bg_color)
+
+                        # Zentriere Text im neuen Rechteck
+                        x_offset = (final_width - text_width) / 2
                         y_offset = -2
 
                         page.insert_text(
