@@ -27,5 +27,8 @@ mypy==1.8.0
 # Utilities
 pillow==10.2.0
 
+# AI/ML
+groq==0.4.1
+
 # Sample Data Generation (for testing)
 reportlab==4.0.9

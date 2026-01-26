@@ -672,7 +672,7 @@ class MainWindow(QMainWindow):
             # Extrahiere Daten aus PDF
             try:
                 extractor = PDFExtractor(file_path)
-                self.extracted_data = extractor.extract()
+                self.extracted_data = extractor.extract(fetch_breed_info=True)
 
                 # Zeige extrahierten Beitrag (10% Selbstbeteiligung)
                 beitrag = self.extracted_data.get('beitrag', '')
@@ -741,11 +741,12 @@ class MainWindow(QMainWindow):
 
         pferdename = self.pferdename_input.text().strip() if self.pferdename_input else None
 
-        # Sammle Beiträge
+        # Sammle Beiträge und KI-Rasseinfo
         beitraege = {
             'beitrag_20': self.beitrag_20_input.text().strip() if self.beitrag_20_input else "",
             'beitrag_10': self.extracted_data.get('beitrag', '') if self.extracted_data else "",
-            'beitrag_0': self.beitrag_0_input.text().strip() if self.beitrag_0_input else ""
+            'beitrag_0': self.beitrag_0_input.text().strip() if self.beitrag_0_input else "",
+            'breed_info': self.extracted_data.get('breed_info', '') if self.extracted_data else ""
         }
 
         self.merge_thread = MergeThread(

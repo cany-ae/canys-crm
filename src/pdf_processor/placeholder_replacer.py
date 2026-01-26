@@ -1,6 +1,7 @@
 """
 PDF-Platzhalter-Ersetzung
 Ersetzt Platzhalter in der Vorlage-PDF mit echten Daten
+Kombinierte Version: Beiträge + KI-Rasseinfo
 """
 
 import fitz  # PyMuPDF
@@ -29,7 +30,8 @@ class PlaceholderReplacer:
         Args:
             output_path: Pfad für die Ausgabe-PDF
             data: Dictionary mit Daten zum Ersetzen
-                  Erwartet: vorname, nachname, pferdename, datum
+                  Erwartet: vorname, nachname, pferdename, datum, breed_info (optional),
+                           beitrag_20, beitrag_10, beitrag_0 (optional)
 
         Returns:
             Pfad zur erstellten PDF-Datei
@@ -52,9 +54,10 @@ class PlaceholderReplacer:
             "Vorname, Nachname": full_name,  # Kombinierter Platzhalter für Namen
             "Pferdename": data.get("pferdename", "").strip(),  # Manuell eingegeben in GUI
             "tt.mm.jjjj": data.get("datum", "").strip(),  # Datum
+            "{{RASSEINFO}}": data.get("breed_info", "").strip(),  # KI-generierte Rasseinfo
         }
 
-        # Euro-Beträge für Selbstbeteiligung (auf Seite 1)
+        # Euro-Beträge für Selbstbeteiligung
         # Formatiere Beträge: Entferne € falls vorhanden, füge es dann hinzu
         def format_beitrag(value):
             if not value:
@@ -99,12 +102,28 @@ class PlaceholderReplacer:
         text_color = (0.0, 0.325, 0.6)
 
         # Ersetze auf allen Seiten
-        for page in doc:
+        breed_info_inserted = False
+        for page_num, page in enumerate(doc):
             for placeholder, value in replacements.items():
                 # Suche nach Platzhalter
                 text_instances = page.search_for(placeholder)
 
                 for inst in text_instances:
+                    # Spezielle Behandlung für mehrzeiligen Rasseinfo-Text
+                    if placeholder == "{{RASSEINFO}}" and value:
+                        # Mehrzeiligen Text einfügen
+                        self._insert_multiline_text(
+                            page, inst, value,
+                            fontname="helv",
+                            font_size=11,
+                            line_height=1.4,
+                            text_color=(0.2, 0.2, 0.2),  # Dunkelgrau für bessere Lesbarkeit
+                            background_color=None  # Kein Hintergrund für Fließtext
+                        )
+                        breed_info_inserted = True
+                        continue
+
+                    # Standard Platzhalter-Ersetzung für kurze Texte
                     # Überschreibe mit hellblauem Rechteck (#DAEFFA)
                     page.draw_rect(inst, color=background_color, fill=background_color)
 
@@ -168,7 +187,7 @@ class PlaceholderReplacer:
                     # Suche nach altem Betrag
                     text_instances = page.search_for(old_beitrag)
                     if text_instances:
-                        print(f"[DEBUG] ✅ Seite {page_idx + 1}: '{old_beitrag}' gefunden: {len(text_instances)} Treffer")
+                        print(f"[DEBUG] Seite {page_idx + 1}: '{old_beitrag}' gefunden: {len(text_instances)} Treffer")
                         found_any = True
 
                     for inst in text_instances:
@@ -215,7 +234,108 @@ class PlaceholderReplacer:
 
             # Debug: Wenn nichts gefunden wurde
             if not found_any:
-                print(f"[DEBUG] ❌ Keine Beträge gefunden auf allen Seiten!")
+                print(f"[DEBUG] Keine Beträge gefunden auf allen Seiten!")
+
+        # Falls kein Platzhalter gefunden wurde, aber breed_info vorhanden ist,
+        # füge Text als horizontales Banner ein (Premium Side Banner Design)
+        breed_info_text = data.get("breed_info", "").strip()
+        if not breed_info_inserted and breed_info_text and len(doc) >= 1:
+            page = doc[0]  # Seite 1 (0-indexed)
+            page_height = page.rect.height
+            page_width = page.rect.width
+
+            # MODERNES BANNER-DESIGN: links unten, rund, dynamisch, ohne XP-Kasten
+
+            # DIMENSIONEN (nur linke Seite)
+            banner_width = min(330, page_width * 0.42)
+            banner_padding_h = 18
+            banner_padding_v = 16
+            margin_left = 20  # Weiter links positioniert
+            margin_bottom = 55
+
+            # LOOK
+            corner_radius = 14
+            shadow_offset = 6  # etwas mehr Abstand wirkt natürlicher
+
+            # FARBEN
+            banner_bg_color = (0.855, 0.937, 0.980)  # #DAEFFA
+            title_color = (0.0, 0.325, 0.6)  # #005399 (wie Platzhalter)
+            banner_text_color = (0.0, 0.325, 0.6)  # #005399 (wie Platzhalter)
+
+            # TYPO
+            title_font = "helv"
+            title_size = 8                # 7 ist zu klein/technisch
+            text_font = "helv"
+            text_size = 10                # wirkt wertiger
+            line_height_px = text_size * 1.45
+
+            # Position links unten (y wird NACH Höhe berechnet)
+            x_start = margin_left
+
+            # Wrap Text (OHNE hard lines[:3] – sonst nie dynamisch)
+            max_text_width = banner_width - (2 * banner_padding_h)
+            lines = self._wrap_text(breed_info_text, text_font, text_size, max_text_width)
+
+            # Optional: begrenze nur, damit das Motiv nicht komplett verdeckt wird
+            max_lines = 7
+            if len(lines) > max_lines:
+                lines = lines[:max_lines]
+                # Ellipsis auf letzte Zeile
+                if len(lines[-1]) > 3:
+                    lines[-1] = lines[-1].rstrip(".") + " ..."
+
+            # Dynamische Höhe berechnen
+            title_block_h = title_size + 12
+            text_block_h = len(lines) * line_height_px
+            banner_height = banner_padding_v + title_block_h + text_block_h + banner_padding_v
+
+            y_start = page_height - banner_height - margin_bottom
+
+            banner_rect = fitz.Rect(x_start, y_start, x_start + banner_width, y_start + banner_height)
+
+            # Schatten: nur wenn Opacity unterstützt wird – sonst weglassen (kein XP-Style!)
+            shadow_rect = fitz.Rect(
+                banner_rect.x0 + shadow_offset,
+                banner_rect.y0 + shadow_offset,
+                banner_rect.x1 + shadow_offset,
+                banner_rect.y1 + shadow_offset
+            )
+
+            shadow_drawn = False
+            try:
+                self._draw_rounded_rect(page, shadow_rect, corner_radius, fill=(0, 0, 0), fill_opacity=0.12)
+                shadow_drawn = True
+            except (TypeError, AttributeError):
+                shadow_drawn = False  # kein Fallback mit grauem Block, sonst wieder XP
+
+            # Card (runde Ecken!)
+            try:
+                self._draw_rounded_rect(page, banner_rect, corner_radius, fill=banner_bg_color)
+            except AttributeError:
+                # Fallback: Rechteck ohne runde Ecken
+                page.draw_rect(banner_rect, color=banner_bg_color, fill=banner_bg_color)
+
+            # Optional: subtiler Highlight-Layer oben (macht's „modern")
+            hl_rect = fitz.Rect(banner_rect.x0 + 12, banner_rect.y0 + 10, banner_rect.x1 - 12, banner_rect.y0 + 34)
+            try:
+                page.draw_rect(hl_rect, fill=(1, 1, 1), color=(1, 1, 1), fill_opacity=0.18, stroke_opacity=0)
+            except TypeError:
+                pass
+
+            # Titel: "Über [Pferdename]"
+            pferdename = data.get("pferdename", "")
+            title_text = f"Über {pferdename}" if pferdename else "Rasseportrait"
+            title_x = banner_rect.x0 + banner_padding_h
+            title_y = banner_rect.y0 + banner_padding_v + title_size
+            page.insert_text((title_x, title_y), title_text, fontname=title_font, fontsize=title_size, color=title_color)
+
+            # Text
+            y_pos = title_y + 14
+            for line in lines:
+                if y_pos > banner_rect.y1 - banner_padding_v:
+                    break
+                page.insert_text((title_x, y_pos), line, fontname=text_font, fontsize=text_size, color=banner_text_color)
+                y_pos += line_height_px
 
         # Speichere neue PDF
         output_path = Path(output_path)
@@ -224,6 +344,105 @@ class PlaceholderReplacer:
         doc.close()
 
         return str(output_path)
+
+    def _insert_multiline_text(self, page, rect, text, fontname="helv", font_size=11,
+                               line_height=1.4, text_color=(0, 0, 0), background_color=None):
+        """
+        Füge mehrzeiligen Text in ein Rechteck ein (bei Platzhalter)
+
+        Args:
+            page: PDF-Seite
+            rect: Rechteck (fitz.Rect) des Platzhalters
+            text: Einzufügender Text
+            fontname: Schriftart
+            font_size: Schriftgröße
+            line_height: Zeilenhöhe (Multiplikator)
+            text_color: RGB Tuple (0-1 Bereich)
+            background_color: RGB Tuple oder None
+        """
+        if background_color:
+            page.draw_rect(rect, color=background_color, fill=background_color)
+
+        # Berechne maximale Breite
+        max_width = rect.x1 - rect.x0 - 10  # 5pt Rand links+rechts
+
+        # Text in Zeilen aufbrechen (word wrap)
+        lines = self._wrap_text(text, fontname, font_size, max_width)
+
+        # Füge Zeilen ein
+        y_position = rect.y0 + font_size
+        for line in lines:
+            if y_position > rect.y1:  # Nicht über Rechteck-Grenze hinaus
+                break
+
+            page.insert_text(
+                (rect.x0 + 5, y_position),
+                line,
+                fontname=fontname,
+                fontsize=font_size,
+                color=text_color
+            )
+            y_position += font_size * line_height
+
+    def _wrap_text(self, text, fontname, font_size, max_width):
+        """
+        Breche Text in Zeilen um (word wrap)
+
+        Args:
+            text: Text zum Umbrechen
+            fontname: Schriftart
+            font_size: Schriftgröße
+            max_width: Maximale Breite in Punkten
+
+        Returns:
+            Liste von Textzeilen
+        """
+        words = text.split()
+        lines = []
+        current_line = []
+
+        for word in words:
+            # Teste ob Wort in aktuelle Zeile passt
+            test_line = ' '.join(current_line + [word])
+            text_width = fitz.get_text_length(test_line, fontname=fontname, fontsize=font_size)
+
+            if text_width <= max_width:
+                current_line.append(word)
+            else:
+                # Zeile ist voll, starte neue Zeile
+                if current_line:
+                    lines.append(' '.join(current_line))
+                current_line = [word]
+
+        # Letzte Zeile hinzufügen
+        if current_line:
+            lines.append(' '.join(current_line))
+
+        return lines
+
+    def _draw_rounded_rect(self, page, rect, r, fill, fill_opacity=None):
+        """
+        Rounded rect simulation for PyMuPDF: 2 rects + 4 circles.
+        Supports opacity if available in the local PyMuPDF build.
+        """
+        r = min(r, rect.width / 2, rect.height / 2)
+
+        kwargs = {}
+        if fill_opacity is not None:
+            kwargs["fill_opacity"] = fill_opacity
+            kwargs["stroke_opacity"] = 0
+
+        x0, y0, x1, y1 = rect.x0, rect.y0, rect.x1, rect.y1
+
+        # Core rectangles
+        page.draw_rect(fitz.Rect(x0 + r, y0, x1 - r, y1), fill=fill, color=fill, **kwargs)
+        page.draw_rect(fitz.Rect(x0, y0 + r, x1, y1 - r), fill=fill, color=fill, **kwargs)
+
+        # Corner circles
+        page.draw_circle((x0 + r, y0 + r), r, fill=fill, color=fill, **kwargs)
+        page.draw_circle((x1 - r, y0 + r), r, fill=fill, color=fill, **kwargs)
+        page.draw_circle((x0 + r, y1 - r), r, fill=fill, color=fill, **kwargs)
+        page.draw_circle((x1 - r, y1 - r), r, fill=fill, color=fill, **kwargs)
 
     def replace_in_place(self, data: Dict[str, str]) -> str:
         """

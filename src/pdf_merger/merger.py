@@ -64,11 +64,12 @@ class PDFMerger:
                 if pferdename:
                     placeholder_data['pferdename'] = pferdename
 
-                # Füge Beiträge hinzu falls vorhanden
+                # Füge Beiträge und KI-Rasseinfo hinzu falls vorhanden
                 if beitraege:
                     placeholder_data['beitrag_20'] = beitraege.get('beitrag_20', '')
                     placeholder_data['beitrag_10'] = beitraege.get('beitrag_10', '')
                     placeholder_data['beitrag_0'] = beitraege.get('beitrag_0', '')
+                    placeholder_data['breed_info'] = beitraege.get('breed_info', '')
 
                 # Erstelle temporäre Kopie von Vorlage mit ersetzten Platzhaltern
                 temp_dir = tempfile.mkdtemp()

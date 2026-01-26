@@ -1,6 +1,8 @@
 """
 PDF-Datenextraktion für AMIS Pferde-Angebote
-Extrahiert: Pferdename, Kundenname, Erstelldatum
+Extrahiert: Pferdename, Kundenname, Erstelldatum, Pferderasse, Beitrag
+Integriert KI-gestützte Rasseninformationen via Groq API
+Kombinierte Version: Beitrag + KI-Rasseinfo
 """
 
 import re
@@ -8,6 +10,17 @@ from datetime import datetime
 from pathlib import Path
 import pdfplumber
 from typing import Dict, Optional
+import sys
+import os
+
+# Import AI Module für Rassenabfrage
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+try:
+    from ai import query_horse_breed
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
+    print("⚠️ Groq AI nicht verfügbar - installiere 'groq' package")
 
 
 class PDFExtractor:
@@ -24,12 +37,15 @@ class PDFExtractor:
         if not self.pdf_path.exists():
             raise FileNotFoundError(f"PDF nicht gefunden: {pdf_path}")
 
-    def extract(self) -> Dict[str, str]:
+    def extract(self, fetch_breed_info: bool = True) -> Dict[str, str]:
         """
         Extrahiere alle relevanten Daten aus PDF
 
+        Args:
+            fetch_breed_info: Wenn True, werden automatisch KI-Infos zur Rasse abgerufen
+
         Returns:
-            Dictionary mit: horse_name, customer_name, created_date
+            Dictionary mit: horse_name, customer_name, created_date, horse_breed, breed_info, beitrag
         """
         with pdfplumber.open(self.pdf_path) as pdf:
             # Gesamten Text aus allen Seiten extrahieren
@@ -38,12 +54,27 @@ class PDFExtractor:
                 full_text += page.extract_text() + "\n"
 
             # Daten extrahieren
+            horse_name = self._extract_horse_name(full_text)
+            horse_breed = self._extract_horse_breed(full_text)
+
             data = {
-                "horse_name": self._extract_horse_name(full_text),
+                "horse_name": horse_name,
                 "customer_name": self._extract_customer_name(full_text),
                 "created_date": self._extract_date(full_text),
+                "horse_breed": horse_breed,
+                "breed_info": None,
                 "beitrag": self._extract_beitrag(full_text)  # 10% Selbstbeteiligung aus AMIS
             }
+
+            # KI-gestützte Rasseninformationen abrufen
+            if fetch_breed_info and AI_AVAILABLE and horse_breed != "Nicht gefunden":
+                try:
+                    print(f"🤖 Frage KI nach Infos zu Rasse: {horse_breed}")
+                    breed_data = query_horse_breed(horse_breed, horse_name)
+                    data["breed_info"] = breed_data.get("info", "Keine Infos verfügbar")
+                except Exception as e:
+                    print(f"⚠️ KI-Abfrage fehlgeschlagen: {str(e)}")
+                    data["breed_info"] = "Fehler bei Rasseninformationen"
 
             return data
 
@@ -54,26 +85,12 @@ class PDFExtractor:
         Sucht nach Mustern wie:
         - "Pferdename: XXX"
         - "Name des Pferdes: XXX"
-        - "Pferd, Rasse: XXX" (AMIS-spezifisch)
         """
-        # AMIS-spezifisches Muster: "Pferd, Rasse: Name"
-        amis_pattern = r"Pferd[,\s]*Rasse:\s*([^,\n]+)"
-        match = re.search(amis_pattern, text, re.IGNORECASE | re.MULTILINE)
-        if match:
-            name = match.group(1).strip()
-            # Bereinige Name
-            name = re.sub(r'[,;:.]$', '', name).strip()
-            # Entferne "Geburtsdatum:" falls vorhanden
-            name = re.split(r',\s*Geburtsdatum', name)[0].strip()
-            if name:
-                return name
-
-        # Standard-Patterns
         patterns = [
             r"Pferdename:\s*(.+?)(?:\n|$)",
             r"Name des Pferdes:\s*(.+?)(?:\n|$)",
-            r"Pferd:\s*(.+?)(?:\n|$)",
-            r"Tier:\s*(.+?)(?:\n|$)",
+            r"Pferd:\s*(.+?)(?:,|Rasse|\n|$)",  # Stoppt vor Komma oder "Rasse"
+            r"Tier:\s*([^,\n]+?)(?:,|Rasse|\n|$)",  # Stoppt vor Komma oder "Rasse"
             r"Versichertes Pferd:\s*(.+?)(?:\n|$)"
         ]
 
@@ -83,8 +100,41 @@ class PDFExtractor:
                 name = match.group(1).strip()
                 # Bereinige Name (entferne Sonderzeichen am Ende)
                 name = re.sub(r'[,;:.]$', '', name).strip()
-                if name:
+                # Entferne "Geburtsdatum:" falls vorhanden
+                name = re.split(r',?\s*Geburtsdatum', name)[0].strip()
+                # Verhindere dass Rasse extrahiert wird
+                if name and len(name) > 1 and not name.lower().startswith('rasse'):
                     return name
+
+        return "Nicht gefunden"
+
+    def _extract_horse_breed(self, text: str) -> str:
+        """
+        Extrahiere Pferderasse
+
+        Sucht nach Mustern wie:
+        - "Rasse: XXX"
+        - "Pferd, Rasse: XXX" (AMIS-spezifisch)
+        - "Tier: Pferd, Rasse: XXX, Geburtsdatum"
+        """
+        # AMIS-spezifisches Muster: "Rasse: Achal Tekkiner"
+        # Extrahiert Text zwischen "Rasse:" und dem nächsten Komma/Zeilenumbruch
+        patterns = [
+            r"Rasse:\s*([^,\n]+?)(?:,|\n|Geburtsdatum)",  # Stoppt vor Komma oder "Geburtsdatum"
+            r"Rasse:\s*([^,\n]+)",  # Fallback: Bis Komma oder Zeilenumbruch
+            r"Pferderasse:\s*([^,\n]+)",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                breed = match.group(1).strip()
+                # Bereinige Rasse (entferne trailing Sonderzeichen)
+                breed = re.sub(r'[,;:.]$', '', breed).strip()
+                # Entferne eventuelle Zusatzinfos in Klammern
+                breed = re.split(r'\s*\(', breed)[0].strip()
+                if breed and len(breed) > 2:
+                    return breed
 
         return "Nicht gefunden"
 
