@@ -516,7 +516,6 @@ class MainWindow(QMainWindow):
         self.beitrag_10_label = QLineEdit()
         self.beitrag_10_label.setReadOnly(True)
         self.beitrag_10_label.setPlaceholderText("—")
-        self.beitrag_10_label.setMinimumHeight(50)
         sb10_input_layout.addWidget(self.beitrag_10_label)
         euro10 = QLabel("€")
         euro10.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {COLORS['primary_blue']};")
