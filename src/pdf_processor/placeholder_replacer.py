@@ -68,16 +68,29 @@ class PlaceholderReplacer:
         beitrag_0 = data.get("beitrag_0", "")
 
         # Beitrags-Ersetzungen (Original -> Neu)
+        # Verschiedene Formate für Euro-Beträge (mit/ohne Leerzeichen, Non-Breaking Space)
         beitrag_replacements = {}
         if beitrag_20:
-            beitrag_replacements["243,81€"] = format_beitrag(beitrag_20)
-            beitrag_replacements["243,81 €"] = format_beitrag(beitrag_20)
+            new_val = format_beitrag(beitrag_20)
+            # Alle möglichen Formate für 243,81
+            beitrag_replacements["243,81€"] = new_val
+            beitrag_replacements["243,81 €"] = new_val
+            beitrag_replacements["243,81\xa0€"] = new_val  # Non-breaking space
+            beitrag_replacements["243,81"] = new_val  # Ohne €
         if beitrag_10:
-            beitrag_replacements["295,81 €"] = format_beitrag(beitrag_10)
-            beitrag_replacements["295,81€"] = format_beitrag(beitrag_10)
+            new_val = format_beitrag(beitrag_10)
+            # Alle möglichen Formate für 295,81
+            beitrag_replacements["295,81€"] = new_val
+            beitrag_replacements["295,81 €"] = new_val
+            beitrag_replacements["295,81\xa0€"] = new_val  # Non-breaking space
+            beitrag_replacements["295,81"] = new_val  # Ohne €
         if beitrag_0:
-            beitrag_replacements["385,62 €"] = format_beitrag(beitrag_0)
-            beitrag_replacements["385,62€"] = format_beitrag(beitrag_0)
+            new_val = format_beitrag(beitrag_0)
+            # Alle möglichen Formate für 385,62
+            beitrag_replacements["385,62€"] = new_val
+            beitrag_replacements["385,62 €"] = new_val
+            beitrag_replacements["385,62\xa0€"] = new_val  # Non-breaking space
+            beitrag_replacements["385,62"] = new_val  # Ohne €
 
         # Farben für Platzhalter-Ersetzung
         # Hintergrund: #DAEFFA (218, 239, 250) -> RGB(0.855, 0.937, 0.980)
@@ -138,16 +151,24 @@ class PlaceholderReplacer:
         if beitrag_replacements and len(doc) > 0:
             page = doc[0]  # Nur auf Seite 1
 
+            # Debug: Zeige Text auf Seite 1
+            page_text = page.get_text()
+            print(f"[DEBUG] Suche Beträge auf Seite 1...")
+
             # Farben für Beitrags-Ersetzung (dunkles Türkis auf hellem Hintergrund)
             beitrag_bg_color = (0.855, 0.937, 0.980)  # Hellblau #DAEFFA
             beitrag_text_color = (0.0, 0.325, 0.6)  # Dunkelblau #005399
 
+            found_any = False
             for old_beitrag, new_beitrag in beitrag_replacements.items():
                 if not new_beitrag:
                     continue
 
                 # Suche nach altem Betrag
                 text_instances = page.search_for(old_beitrag)
+                if text_instances:
+                    print(f"[DEBUG] ✅ '{old_beitrag}' gefunden: {len(text_instances)} Treffer")
+                    found_any = True
 
                 for inst in text_instances:
                     # Überschreibe mit Hintergrundfarbe
@@ -181,6 +202,14 @@ class PlaceholderReplacer:
                         fontsize=font_size,
                         color=beitrag_text_color
                     )
+
+            # Debug: Wenn nichts gefunden wurde, zeige relevante Zeilen
+            if not found_any:
+                print(f"[DEBUG] ❌ Keine Beträge gefunden!")
+                print(f"[DEBUG] Relevante Zeilen auf Seite 1:")
+                for line in page_text.split('\n'):
+                    if '€' in line or '243' in line or '295' in line or '385' in line:
+                        print(f"[DEBUG]   {repr(line)}")
 
         # Speichere neue PDF
         output_path = Path(output_path)
