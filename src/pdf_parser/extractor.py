@@ -213,32 +213,41 @@ class PDFExtractor:
         """
         Extrahiere Beitrag (10% Selbstbeteiligung) aus AMIS-PDF
 
-        Sucht nach dem Bereich "Beitrag" und extrahiert den ersten Betrag darunter.
-        Format im AMIS-PDF:
-        - "Beitrag" als Überschrift
-        - "240,20 EUR" als Betrag darunter
+        Das AMIS-PDF hat eine Tabelle mit:
+        - Spalte "Beitrag" als Überschrift
+        - Wert wie "240,20 EUR" in der Zeile darunter
+
+        Die Textextraktion kann unterschiedlich sein, daher mehrere Patterns.
         """
-        # Zuerst: Suche nach "Beitrag" gefolgt von Betrag mit EUR (AMIS-Format)
-        # Das Format ist: "Beitrag\n240,20 EUR" oder "Beitrag\n240,20 EUR\nmonatlich"
+        # Pattern 1: Suche nach "XXX,XX EUR" direkt nach "Beitrag" (mit beliebigem Text dazwischen)
+        # Das erfasst Tabellen-Layouts wo Beitrag als Header steht
         amis_patterns = [
-            # "Beitrag" gefolgt von Zeilenumbruch und Betrag mit EUR
-            r"Beitrag\s*\n\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*EUR",
-            # "Beitrag" mit optionalem Doppelpunkt und Betrag mit EUR auf gleicher/nächster Zeile
-            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*EUR",
+            # "Beitrag" gefolgt von Betrag mit EUR (mit beliebigem Text dazwischen, aber nicht zu viel)
+            r"Beitrag\s*\n?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*EUR",
+            # Tabellen-Format: Nach "Beitrag" kommt irgendwann "XXX,XX EUR"
+            r"Beitrag.*?(\d{1,3}(?:\.\d{3})*,\d{2})\s*EUR",
+            # Gesamtbeitrag Format
+            r"Gesamtbeitrag.*?(\d{1,3}(?:\.\d{3})*,\d{2})\s*EUR",
         ]
 
         for pattern in amis_patterns:
-            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
             if match:
                 beitrag = match.group(1).strip()
                 return f"{beitrag} €"
 
-        # Fallback: Alte Patterns mit € Symbol
+        # Pattern 2: Suche einfach nach dem ersten "XXX,XX EUR" im Dokument
+        # (AMIS PDFs haben typischerweise den Beitrag als ersten EUR-Betrag)
+        eur_pattern = r"(\d{1,3}(?:\.\d{3})*,\d{2})\s*EUR"
+        match = re.search(eur_pattern, text, re.IGNORECASE)
+        if match:
+            beitrag = match.group(1).strip()
+            return f"{beitrag} €"
+
+        # Fallback: Patterns mit € Symbol
         fallback_patterns = [
             r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",
-            r"Beitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})",
-            r"Jahresbeitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",
-            r"Gesamtbeitrag[:\s]*(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",
+            r"(\d{1,3}(?:\.\d{3})*,\d{2})\s*€",
         ]
 
         for pattern in fallback_patterns:
