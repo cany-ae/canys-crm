@@ -147,69 +147,65 @@ class PlaceholderReplacer:
                         color=text_color
                     )
 
-        # Ersetze Euro-Beträge (Selbstbeteiligung) auf Seite 1
+        # Ersetze Euro-Beträge (Selbstbeteiligung) auf allen Seiten
+        # (Die Beträge können auf verschiedenen Seiten sein, z.B. Seite 3 bei Samet)
         if beitrag_replacements and len(doc) > 0:
-            page = doc[0]  # Nur auf Seite 1
-
-            # Debug: Zeige Text auf Seite 1
-            page_text = page.get_text()
-            print(f"[DEBUG] Suche Beträge auf Seite 1...")
+            print(f"[DEBUG] Suche Beträge auf allen {len(doc)} Seiten...")
 
             # Farben für Beitrags-Ersetzung (dunkles Türkis auf hellem Hintergrund)
             beitrag_bg_color = (0.855, 0.937, 0.980)  # Hellblau #DAEFFA
             beitrag_text_color = (0.0, 0.325, 0.6)  # Dunkelblau #005399
 
             found_any = False
-            for old_beitrag, new_beitrag in beitrag_replacements.items():
-                if not new_beitrag:
-                    continue
 
-                # Suche nach altem Betrag
-                text_instances = page.search_for(old_beitrag)
-                if text_instances:
-                    print(f"[DEBUG] ✅ '{old_beitrag}' gefunden: {len(text_instances)} Treffer")
-                    found_any = True
+            # Durchsuche ALLE Seiten nach Beträgen
+            for page_idx, page in enumerate(doc):
+                for old_beitrag, new_beitrag in beitrag_replacements.items():
+                    if not new_beitrag:
+                        continue
 
-                for inst in text_instances:
-                    # Überschreibe mit Hintergrundfarbe
-                    page.draw_rect(inst, color=beitrag_bg_color, fill=beitrag_bg_color)
+                    # Suche nach altem Betrag
+                    text_instances = page.search_for(old_beitrag)
+                    if text_instances:
+                        print(f"[DEBUG] ✅ Seite {page_idx + 1}: '{old_beitrag}' gefunden: {len(text_instances)} Treffer")
+                        found_any = True
 
-                    # Berechne Schriftgröße
-                    base_font_size = inst.height * 0.75
-                    rect_width = inst.x1 - inst.x0
+                    for inst in text_instances:
+                        # Überschreibe mit Hintergrundfarbe
+                        page.draw_rect(inst, color=beitrag_bg_color, fill=beitrag_bg_color)
 
-                    fontname = "helv"
-                    font_size = base_font_size
+                        # Berechne Schriftgröße
+                        base_font_size = inst.height * 0.75
+                        rect_width = inst.x1 - inst.x0
 
-                    # Optimale Schriftgröße finden
-                    while font_size > 10:
+                        fontname = "helv"
+                        font_size = base_font_size
+
+                        # Optimale Schriftgröße finden
+                        while font_size > 10:
+                            text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
+                            if text_width <= rect_width * 0.95:
+                                break
+                            font_size -= 0.5
+
+                        font_size = max(font_size, 10)
+
+                        # Zentriere Text vertikal und horizontal
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
-                        if text_width <= rect_width * 0.95:
-                            break
-                        font_size -= 0.5
+                        x_offset = (rect_width - text_width) / 2
+                        y_offset = -2
 
-                    font_size = max(font_size, 10)
+                        page.insert_text(
+                            (inst.x0 + x_offset, inst.y1 + y_offset),
+                            new_beitrag,
+                            fontname=fontname,
+                            fontsize=font_size,
+                            color=beitrag_text_color
+                        )
 
-                    # Zentriere Text vertikal und horizontal
-                    text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
-                    x_offset = (rect_width - text_width) / 2
-                    y_offset = -2
-
-                    page.insert_text(
-                        (inst.x0 + x_offset, inst.y1 + y_offset),
-                        new_beitrag,
-                        fontname=fontname,
-                        fontsize=font_size,
-                        color=beitrag_text_color
-                    )
-
-            # Debug: Wenn nichts gefunden wurde, zeige relevante Zeilen
+            # Debug: Wenn nichts gefunden wurde
             if not found_any:
-                print(f"[DEBUG] ❌ Keine Beträge gefunden!")
-                print(f"[DEBUG] Relevante Zeilen auf Seite 1:")
-                for line in page_text.split('\n'):
-                    if '€' in line or '243' in line or '295' in line or '385' in line:
-                        print(f"[DEBUG]   {repr(line)}")
+                print(f"[DEBUG] ❌ Keine Beträge gefunden auf allen Seiten!")
 
         # Speichere neue PDF
         output_path = Path(output_path)
