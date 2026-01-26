@@ -191,22 +191,22 @@ class PlaceholderReplacer:
                         # Berechne finale Textbreite
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
 
-                        # Rechteck-Breite: Maximum aus alter Breite und neuer Textbreite + Padding
-                        padding = 4
-                        final_width = max(old_rect_width, text_width + padding * 2)
+                        # Rechteck: Decke alten Text KOMPLETT ab + Platz für neuen Text
+                        padding = 6
+                        # Rechte Kante: Maximum aus Original-Ende und neuer Textbreite
+                        right_edge = max(inst.x1, inst.x0 + text_width + padding)
 
                         # Erstelle angepasstes Rechteck (deckt alten UND neuen Text ab)
-                        cover_rect = fitz.Rect(inst.x0 - 1, inst.y0 - 1, inst.x0 + final_width + 1, inst.y1 + 1)
+                        cover_rect = fitz.Rect(inst.x0 - 2, inst.y0 - 2, right_edge + 4, inst.y1 + 2)
 
                         # Überschreibe mit Hintergrundfarbe
                         page.draw_rect(cover_rect, color=beitrag_bg_color, fill=beitrag_bg_color)
 
-                        # Zentriere Text im neuen Rechteck
-                        x_offset = (final_width - text_width) / 2
+                        # Text linksbündig mit kleinem Padding
                         y_offset = -2
 
                         page.insert_text(
-                            (inst.x0 + x_offset, inst.y1 + y_offset),
+                            (inst.x0 + 2, inst.y1 + y_offset),
                             new_beitrag,
                             fontname=fontname,
                             fontsize=font_size,
