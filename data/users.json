@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "vorname": "Samet",
+      "nachname": "Uz",
+      "login": "Sametuz",
+      "template": "templates/sametuz/vorlage.pdf",
+      "active": true,
+      "last_login": "2026-01-26T21:01:30.996272"
+    },
+    {
+      "id": 2,
+      "vorname": "Mia",
+      "nachname": "Horvat",
+      "login": "MiaHorvat",
+      "template": "templates\\miahorvat\\vorlage.pdf",
+      "active": true,
+      "last_login": null
+    }
+  ]
+}

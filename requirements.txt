@@ -5,6 +5,7 @@ PyQt6-Qt6==6.6.1
 # PDF Processing
 PyPDF2==3.0.1
 pdfplumber==0.11.0
+PyMuPDF==1.23.8
 
 # PowerPoint Processing
 python-pptx==0.6.23

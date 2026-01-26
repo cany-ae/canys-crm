@@ -7,7 +7,7 @@ Farben: Blau-Weiß Theme (Allianz Corporate Design)
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QComboBox, QFileDialog,
-    QGroupBox, QMessageBox, QProgressBar, QFrame
+    QGroupBox, QMessageBox, QProgressBar, QFrame, QLineEdit
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from pathlib import Path
@@ -16,6 +16,9 @@ import subprocess
 import sys
 
 from pdf_merger.merger import PDFMerger
+from pdf_parser.extractor import PDFExtractor
+from pdf_processor.placeholder_replacer import PlaceholderReplacer
+from auth.user_manager import UserManager
 
 
 # Allianz Blau-Weiß Farbschema
@@ -87,6 +90,25 @@ STYLESHEET = f"""
         border-right: 5px solid transparent;
         border-top: 8px solid {COLORS['primary_blue']};
         margin-right: 10px;
+    }}
+
+    QLineEdit {{
+        padding: 10px 15px;
+        border: 2px solid {COLORS['border_gray']};
+        border-radius: 8px;
+        background-color: {COLORS['white']};
+        font-size: 13px;
+        color: {COLORS['text_dark']};
+        min-width: 200px;
+    }}
+
+    QLineEdit:hover {{
+        border-color: {COLORS['light_blue']};
+    }}
+
+    QLineEdit:focus {{
+        border-color: {COLORS['primary_blue']};
+        border-width: 2px;
     }}
 
     QPushButton {{
@@ -166,8 +188,9 @@ STYLESHEET = f"""
         background-color: {COLORS['white']};
         border: 2px solid {COLORS['border_gray']};
         border-radius: 8px;
-        padding: 15px;
+        padding: 20px;
         font-size: 13px;
+        line-height: 1.8;
         font-family: 'Consolas', 'Courier New', monospace;
     }}
 """
@@ -178,19 +201,25 @@ class MergeThread(QThread):
     finished = pyqtSignal(bool, str)
     progress = pyqtSignal(int, str)
 
-    def __init__(self, vertriebler_name, amis_pdf_path, output_path):
+    def __init__(self, template_path, amis_pdf_path, output_path, pferdename=None):
         super().__init__()
-        self.vertriebler_name = vertriebler_name
+        self.template_path = template_path
         self.amis_pdf_path = amis_pdf_path
         self.output_path = output_path
+        self.pferdename = pferdename
 
     def run(self):
         try:
-            self.progress.emit(30, "Lade Templates...")
-            merger = PDFMerger(self.vertriebler_name)
+            self.progress.emit(30, "Lade Vorlage...")
+            # Merger wird später angepasst für neues Format
+            merger = PDFMerger(template_path=self.template_path)
 
             self.progress.emit(60, "Füge PDFs zusammen...")
-            output_path = merger.merge(self.amis_pdf_path, self.output_path)
+            output_path = merger.merge(
+                self.amis_pdf_path,
+                self.output_path,
+                pferdename=self.pferdename
+            )
 
             self.progress.emit(100, "Fertig!")
             self.finished.emit(True, output_path)
@@ -202,10 +231,17 @@ class MergeThread(QThread):
 class MainWindow(QMainWindow):
     """Hauptfenster - PDF Zusammenführung"""
 
-    def __init__(self):
+    # Signals
+    logout_requested = pyqtSignal()
+
+    def __init__(self, user: dict):
         super().__init__()
+        self.user = user  # Eingeloggter User
+        self.user_manager = UserManager()
         self.amis_pdf_path = None
         self.merge_thread = None
+        self.extracted_data = None  # Extrahierte Daten aus AMIS-PDF
+        self.pferdename_input = None  # Eingabefeld für Pferdename
         self.init_ui()
 
     def init_ui(self):
@@ -231,13 +267,17 @@ class MainWindow(QMainWindow):
         line.setStyleSheet(f"background-color: {COLORS['border_gray']}; max-height: 2px;")
         layout.addWidget(line)
 
-        # Vertriebler-Auswahl
-        vertriebler_group = self._create_vertriebler_group()
-        layout.addWidget(vertriebler_group)
+        # User-Info-Anzeige
+        user_info_group = self._create_user_info_group()
+        layout.addWidget(user_info_group)
 
         # AMIS PDF Upload
         pdf_group = self._create_pdf_group()
         layout.addWidget(pdf_group)
+
+        # Pferdename Eingabe
+        pferdename_group = self._create_pferdename_group()
+        layout.addWidget(pferdename_group)
 
         # Vorschau
         preview_group = self._create_preview_group()
@@ -256,6 +296,13 @@ class MainWindow(QMainWindow):
 
         # Aktionsbutton
         button_layout = QHBoxLayout()
+
+        # Abmelden-Button (links)
+        logout_btn = QPushButton("Abmelden")
+        logout_btn.setObjectName("secondaryBtn")
+        logout_btn.clicked.connect(self.logout)
+        button_layout.addWidget(logout_btn)
+
         button_layout.addStretch()
 
         self.generate_btn = QPushButton("PDF erstellen")
@@ -294,30 +341,34 @@ class MainWindow(QMainWindow):
 
         return header
 
-    def _create_vertriebler_group(self):
-        """Erstelle Vertriebler-Auswahl"""
-        group = QGroupBox("Schritt 1: Vertriebler auswählen")
-        layout = QVBoxLayout()
-        layout.setSpacing(10)
+    def _create_user_info_group(self):
+        """Erstelle User-Info-Anzeige"""
+        group = QGroupBox("Angemeldet als")
+        layout = QHBoxLayout()
+        layout.setSpacing(15)
 
-        description = QLabel("Wählen Sie den Vertriebler für die Vorlage:")
-        description.setStyleSheet(f"color: {COLORS['text_gray']}; font-weight: normal;")
-        layout.addWidget(description)
+        # User-Icon (Emoji)
+        icon_label = QLabel("👤")
+        icon_label.setStyleSheet("font-size: 32px;")
+        layout.addWidget(icon_label)
 
-        self.vertriebler_combo = QComboBox()
-        vertriebler_list = PDFMerger.get_available_vertriebler()
-        if not vertriebler_list:
-            vertriebler_list = ["Samet Uz"]
-        self.vertriebler_combo.addItems(vertriebler_list)
-        self.vertriebler_combo.currentTextChanged.connect(self._update_preview)
-        layout.addWidget(self.vertriebler_combo)
+        # User-Name
+        user_name = f"{self.user.get('vorname', '')} {self.user.get('nachname', '')}".strip()
+        if not user_name:
+            user_name = self.user.get('login', 'Unbekannt')
+
+        name_label = QLabel(user_name)
+        name_label.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLORS['primary_blue']};")
+        layout.addWidget(name_label)
+
+        layout.addStretch()
 
         group.setLayout(layout)
         return group
 
     def _create_pdf_group(self):
         """Erstelle AMIS PDF Upload"""
-        group = QGroupBox("Schritt 2: AMIS Angebot hochladen")
+        group = QGroupBox("Schritt 1: AMIS Angebot hochladen")
         layout = QHBoxLayout()
         layout.setSpacing(15)
 
@@ -341,6 +392,28 @@ class MainWindow(QMainWindow):
         group.setLayout(layout)
         return group
 
+    def _create_pferdename_group(self):
+        """Erstelle Pferdename-Eingabe"""
+        group = QGroupBox("Schritt 2: Pferdename eingeben")
+        layout = QVBoxLayout()
+        layout.setSpacing(10)
+
+        description = QLabel("Geben Sie den Pferdenamen für die Vorlage ein:")
+        description.setStyleSheet(f"color: {COLORS['text_gray']}; font-weight: normal;")
+        layout.addWidget(description)
+
+        self.pferdename_input = QLineEdit()
+        self.pferdename_input.setPlaceholderText("z.B. Black Beauty")
+        self.pferdename_input.textChanged.connect(self._update_preview)
+        layout.addWidget(self.pferdename_input)
+
+        hint = QLabel("💡 Dieser Name wird in der Vorlage eingefügt")
+        hint.setStyleSheet(f"color: {COLORS['text_gray']}; font-size: 11px;")
+        layout.addWidget(hint)
+
+        group.setLayout(layout)
+        return group
+
     def _create_preview_group(self):
         """Erstelle Vorschau"""
         group = QGroupBox("Schritt 3: Vorschau")
@@ -357,35 +430,64 @@ class MainWindow(QMainWindow):
 
     def _get_preview_text(self) -> str:
         """Erstelle Vorschau-Text"""
-        vertriebler = self.vertriebler_combo.currentText() if hasattr(self, 'vertriebler_combo') else "Samet Uz"
+        user_name = f"{self.user.get('vorname', '')} {self.user.get('nachname', '')}".strip()
 
         if self.amis_pdf_path:
             try:
-                merger = PDFMerger(vertriebler)
+                # Hole Template-Pfad aus User-Daten
+                template_path = self.user_manager.get_user_template_path(self.user['id'])
+
+                if not template_path:
+                    return "Fehler: Keine Vorlage für diesen Vertriebler gefunden."
+
+                # Hole Seiten-Info vom Merger
+                merger = PDFMerger(str(template_path))
                 info = merger.get_page_info(self.amis_pdf_path)
 
-                return f"""Zusammenführung:
+                preview = f"""Zusammenführung:
 
-  Teil 1 (Anfang):     {info['teil1_seiten']} Seiten
+  Vorlage Teil 1:      {info['vorlage_seiten_teil1']} Seiten (vor AMIS)
   AMIS Angebot:        {info['amis_seiten']} Seiten
-  Teil 2 (Ende):       {info['teil2_seiten']} Seiten
+  Vorlage Teil 2:      {info['vorlage_seiten_teil2']} Seiten (nach AMIS)
   ─────────────────────────────
   GESAMT:              {info['gesamt_seiten']} Seiten
 
-  Vertriebler: {vertriebler}
+  Vertriebler: {user_name}
   AMIS-Datei:  {Path(self.amis_pdf_path).name}"""
+
+                # Füge extrahierte Daten hinzu
+                if self.extracted_data:
+                    placeholder_data = PlaceholderReplacer.prepare_data_from_extraction(self.extracted_data)
+                    pferdename = self.pferdename_input.text() if self.pferdename_input else ""
+                    preview += f"""
+
+  ─────────────────────────────
+  Extrahierte Daten:
+
+  • Name:        {placeholder_data.get('vorname', 'N/A')} {placeholder_data.get('nachname', 'N/A')}
+
+  • Datum:       {placeholder_data.get('datum', 'N/A')}
+
+  • Pferdename:  {pferdename if pferdename else '(noch nicht eingegeben)'}"""
+
+                return preview
 
             except Exception as e:
                 return f"Fehler: {str(e)}"
         else:
             return """So funktioniert es:
 
-  1. Wählen Sie Ihren Vertriebler-Namen
-  2. Laden Sie das AMIS Angebot (PDF) hoch
+  1. Laden Sie das AMIS Angebot (PDF) hoch
+  2. Geben Sie den Pferdenamen ein
   3. Klicken Sie auf "PDF erstellen"
 
   Das fertige PDF wird auf Ihrem Desktop gespeichert:
-  Desktop/Angebote/Angebot_[Dateiname].pdf"""
+  Desktop/Angebote/Angebot_[Dateiname].pdf
+
+  Automatisch befüllt werden:
+  • Name des Kunden (Vor- und Nachname)
+  • Datum des Angebots
+  • Pferdename"""
 
     def _update_preview(self):
         """Aktualisiere Vorschau"""
@@ -393,7 +495,7 @@ class MainWindow(QMainWindow):
         self._check_ready()
 
     def select_pdf(self):
-        """AMIS PDF auswählen"""
+        """AMIS PDF auswählen und Daten extrahieren"""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "AMIS Angebot auswählen",
@@ -407,24 +509,47 @@ class MainWindow(QMainWindow):
             self.pdf_label.setStyleSheet(
                 f"color: {COLORS['success_green']}; font-weight: bold; font-style: normal;"
             )
+
+            # Extrahiere Daten aus PDF
+            try:
+                extractor = PDFExtractor(file_path)
+                self.extracted_data = extractor.extract()
+            except Exception as e:
+                print(f"Warnung: Datenextraktion fehlgeschlagen: {e}")
+                self.extracted_data = None
+
             self._update_preview()
             self._check_ready()
 
     def _check_ready(self):
         """Prüfe ob bereit"""
+        pferdename = self.pferdename_input.text().strip() if self.pferdename_input else ""
         ready = (
             self.amis_pdf_path is not None and
-            self.vertriebler_combo.currentText() != ""
+            len(pferdename) > 0
         )
         self.generate_btn.setEnabled(ready)
 
     def merge_pdfs(self):
         """Starte PDF-Zusammenführung"""
+        from datetime import datetime
+
+        # Hole Template-Pfad
+        template_path = self.user_manager.get_user_template_path(self.user['id'])
+        if not template_path:
+            QMessageBox.critical(
+                self,
+                "Fehler",
+                "Keine Vorlage für diesen Vertriebler gefunden."
+            )
+            return
+
         output_dir = Path.home() / "Desktop" / "Angebote"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         pdf_name = Path(self.amis_pdf_path).stem
-        output_path = output_dir / f"Angebot_{pdf_name}.pdf"
+        timestamp = datetime.now().strftime("%H-%M-%S")
+        output_path = output_dir / f"Angebot_{pdf_name}_{timestamp}.pdf"
 
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
@@ -432,10 +557,13 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Starte Zusammenführung...")
         self.generate_btn.setEnabled(False)
 
+        pferdename = self.pferdename_input.text().strip() if self.pferdename_input else None
+
         self.merge_thread = MergeThread(
-            self.vertriebler_combo.currentText(),
+            str(template_path),
             self.amis_pdf_path,
-            str(output_path)
+            str(output_path),
+            pferdename=pferdename
         )
         self.merge_thread.progress.connect(self._update_progress)
         self.merge_thread.finished.connect(self._merge_finished)
@@ -505,3 +633,17 @@ class MainWindow(QMainWindow):
                 "Hinweis",
                 f"Datei konnte nicht automatisch geöffnet werden.\n\nPfad: {file_path}"
             )
+
+    def logout(self):
+        """Abmelden und zurück zum Login"""
+        reply = QMessageBox.question(
+            self,
+            "Abmelden",
+            "Möchten Sie sich wirklich abmelden?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.logout_requested.emit()
+            self.close()

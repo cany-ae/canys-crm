@@ -53,8 +53,21 @@ class PDFExtractor:
         Sucht nach Mustern wie:
         - "Pferdename: XXX"
         - "Name des Pferdes: XXX"
-        - "Pferd: XXX"
+        - "Pferd, Rasse: XXX" (AMIS-spezifisch)
         """
+        # AMIS-spezifisches Muster: "Pferd, Rasse: Name"
+        amis_pattern = r"Pferd[,\s]*Rasse:\s*([^,\n]+)"
+        match = re.search(amis_pattern, text, re.IGNORECASE | re.MULTILINE)
+        if match:
+            name = match.group(1).strip()
+            # Bereinige Name
+            name = re.sub(r'[,;:.]$', '', name).strip()
+            # Entferne "Geburtsdatum:" falls vorhanden
+            name = re.split(r',\s*Geburtsdatum', name)[0].strip()
+            if name:
+                return name
+
+        # Standard-Patterns
         patterns = [
             r"Pferdename:\s*(.+?)(?:\n|$)",
             r"Name des Pferdes:\s*(.+?)(?:\n|$)",
@@ -81,8 +94,70 @@ class PDFExtractor:
         Sucht nach Mustern wie:
         - "Versicherungsnehmer: XXX"
         - "Kunde: XXX"
-        - "Antragsteller: XXX"
+        - "Für\nHerr\nName" (AMIS-spezifisch)
         """
+        # AMIS-spezifisches Muster: Zeile nach "Herr" oder "Frau"
+        # WICHTIG: Nur den ERSTEN Treffer nach "Für" verwenden (= Kunde)
+        # um Vertriebler/Vermittler zu ignorieren
+        lines = text.split('\n')
+
+        # Suche nach "Für" und dann nach erstem "Herr" oder "Frau"
+        found_fuer = False
+        for i, line in enumerate(lines):
+            # Markiere dass wir im Kundenbereich sind
+            if re.search(r'\bFür\b', line, re.IGNORECASE):
+                found_fuer = True
+                continue
+
+            # Nur nach "Für" suchen wir nach Herr/Frau
+            if found_fuer and re.search(r'\b(Herr|Frau)\b', line, re.IGNORECASE):
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+
+                    # Verbesserter Regex - GENAU 2 Wörter (Vorname + Nachname)
+                    # Erlaubt: Buchstaben, Umlaute, Bindestriche, Apostrophe
+                    # Verhindert dass "Samet Uz Im Bühl" vollständig gematcht wird
+                    name_match = re.match(
+                        r'^([A-ZÄÖÜ][a-zäöüß\-\']+)\s+([A-ZÄÖÜ][a-zäöüß\-\']+)(?:\s|$)',
+                        next_line
+                    )
+
+                    if name_match:
+                        # Kombiniere Vorname (Gruppe 1) + Nachname (Gruppe 2)
+                        vorname = name_match.group(1).strip()
+                        nachname = name_match.group(2).strip()
+                        name = f"{vorname} {nachname}"
+
+                        if name and len(name) > 2:
+                            return name
+
+                    # Fallback: Wenn der Regex nicht passt, versuche einfachere Extraktion
+                    # Nehme NUR die ersten 2 Wörter die mit Großbuchstaben beginnen
+                    # (= Vorname + Nachname, verhindert dass Adresse mitgenommen wird)
+                    words = next_line.split()
+                    name_words = []
+                    for word in words:
+                        # Stoppe bei Adresse (Zahlen, "Straße", etc.)
+                        if re.match(r'^\d', word) or word.lower() in ['straße', 'str.', 'platz', 'weg', 'im', 'am', 'an', 'der', 'die', 'das']:
+                            break
+                        # Sammle Wörter die mit Großbuchstaben beginnen
+                        if re.match(r'^[A-ZÄÖÜ]', word):
+                            name_words.append(word)
+                            # Maximal 2 Wörter (Vorname + Nachname)
+                            if len(name_words) >= 2:
+                                break
+
+                    if len(name_words) == 2:  # Genau 2 Wörter = Vorname + Nachname
+                        name = ' '.join(name_words)
+                        # Normalisiere Leerzeichen
+                        name = re.sub(r'\s+', ' ', name).strip()
+                        if len(name) > 2:
+                            return name
+
+                    # Stoppe nach erstem Herr/Frau Treffer (auch wenn kein Name gefunden)
+                    break
+
+        # Standard-Patterns
         patterns = [
             r"Versicherungsnehmer:\s*(.+?)(?:\n|$)",
             r"Kunde:\s*(.+?)(?:\n|$)",
@@ -97,6 +172,8 @@ class PDFExtractor:
                 name = match.group(1).strip()
                 # Bereinige Name
                 name = re.sub(r'[,;:.]$', '', name).strip()
+                # Normalisiere Leerzeichen
+                name = re.sub(r'\s+', ' ', name)
                 if name and len(name) > 2:  # Mindestens 3 Zeichen
                     return name
 
@@ -108,14 +185,15 @@ class PDFExtractor:
 
         Sucht nach Mustern wie:
         - "Datum: DD.MM.YYYY"
-        - "Erstellt am: DD.MM.YYYY"
+        - "vom DD.MM.YYYY"
         - DD.MM.YYYY Format
         """
         patterns = [
+            r"vom\s+(\d{1,2}\.\d{1,2}\.\d{4})",  # AMIS: "vom 25.01.2026"
+            r"Versicherungsvorschlag vom\s+(\d{1,2}\.\d{1,2}\.\d{4})",
             r"Datum:\s*(\d{1,2}\.\d{1,2}\.\d{4})",
             r"Erstellt am:\s*(\d{1,2}\.\d{1,2}\.\d{4})",
             r"Angebotsdatum:\s*(\d{1,2}\.\d{1,2}\.\d{4})",
-            r"vom\s+(\d{1,2}\.\d{1,2}\.\d{4})",
             r"(\d{1,2}\.\d{1,2}\.\d{4})"  # Fallback: Jedes Datum
         ]
 

@@ -1,92 +1,102 @@
 """
 PDF-Merger für Angebotserstellung
-Fügt PDFs zusammen: Teil1 (2 Seiten) + AMIS Angebot + Teil2 (4 Seiten)
+Fügt PDFs zusammen: Vorlage (2 Seiten) + AMIS Angebot + Endseiten (4 Seiten)
+Ersetzt Platzhalter in Vorlage mit Daten aus AMIS-PDF
 """
 
 from pathlib import Path
 from typing import Optional
 from PyPDF2 import PdfReader, PdfWriter
+import tempfile
+import shutil
+
+from pdf_parser.extractor import PDFExtractor
+from pdf_processor.placeholder_replacer import PlaceholderReplacer
 
 
 class PDFMerger:
     """Fügt Vertriebler-Template mit AMIS-Angebot zusammen"""
 
-    TEMPLATES_DIR = Path(__file__).parent.parent.parent / "templates"
-
-    # Verfügbare Vertriebler und ihre Template-Ordner
-    VERTRIEBLER = {
-        "Samet Uz": "samet_uz",
-        "Vertriebler 2": "vertriebler_2",
-        "Vertriebler 3": "vertriebler_3",
-        "Vertriebler 4": "vertriebler_4",
-        "Vertriebler 5": "vertriebler_5",
-        "Vertriebler 6": "vertriebler_6",
-        "Vertriebler 7": "vertriebler_7",
-    }
-
-    def __init__(self, vertriebler_name: str):
+    def __init__(self, template_path: str):
         """
         Initialisiere Merger
 
         Args:
-            vertriebler_name: Name des Vertrieblers
+            template_path: Pfad zur Vertriebler-Vorlage (PDF)
         """
-        self.vertriebler_name = vertriebler_name
-        self.template_folder = self._get_template_folder(vertriebler_name)
+        self.template_path = Path(template_path)
+        if not self.template_path.exists():
+            raise FileNotFoundError(f"Vorlage nicht gefunden: {template_path}")
 
-    def _get_template_folder(self, vertriebler_name: str) -> Path:
+    def merge(self, amis_pdf_path: str, output_path: str, replace_placeholders: bool = True, pferdename: str = None) -> str:
         """
-        Hole Template-Ordner für Vertriebler
-
-        Args:
-            vertriebler_name: Name des Vertrieblers
-
-        Returns:
-            Pfad zum Template-Ordner
-        """
-        folder_name = self.VERTRIEBLER.get(vertriebler_name, "samet_uz")
-        return self.TEMPLATES_DIR / folder_name
-
-    def merge(self, amis_pdf_path: str, output_path: str) -> str:
-        """
-        Füge PDFs zusammen: Teil1 + AMIS + Teil2
+        Füge PDFs zusammen: Vorlage + AMIS
+        Optional: Ersetze Platzhalter in Vorlage mit Daten aus AMIS-PDF
 
         Args:
             amis_pdf_path: Pfad zum AMIS-Angebot PDF
             output_path: Ausgabepfad für fertiges PDF
+            replace_placeholders: Ob Platzhalter ersetzt werden sollen (Standard: True)
+            pferdename: Optional: Pferdename für Platzhalter
 
         Returns:
             Pfad zur erstellten PDF-Datei
         """
-        # Template-Dateien
-        teil1_path = self.template_folder / "teil1.pdf"
-        teil2_path = self.template_folder / "teil2.pdf"
-
-        # Prüfe ob Templates existieren
-        if not teil1_path.exists():
-            raise FileNotFoundError(f"Template Teil 1 nicht gefunden: {teil1_path}")
-        if not teil2_path.exists():
-            raise FileNotFoundError(f"Template Teil 2 nicht gefunden: {teil2_path}")
+        # Prüfe ob AMIS PDF existiert
         if not Path(amis_pdf_path).exists():
             raise FileNotFoundError(f"AMIS PDF nicht gefunden: {amis_pdf_path}")
+
+        # Platzhalter ersetzen falls gewünscht
+        vorlage_to_use = self.template_path
+        temp_dir = None
+
+        if replace_placeholders:
+            try:
+                # Extrahiere Daten aus AMIS-PDF
+                extractor = PDFExtractor(amis_pdf_path)
+                extracted_data = extractor.extract()
+
+                # Bereite Daten für Platzhalter vor
+                placeholder_data = PlaceholderReplacer.prepare_data_from_extraction(extracted_data)
+
+                # Füge Pferdename hinzu falls vorhanden
+                if pferdename:
+                    placeholder_data['pferdename'] = pferdename
+
+                # Erstelle temporäre Kopie von Vorlage mit ersetzten Platzhaltern
+                temp_dir = tempfile.mkdtemp()
+                temp_vorlage = Path(temp_dir) / "vorlage_filled.pdf"
+
+                replacer = PlaceholderReplacer(str(self.template_path))
+                replacer.replace_placeholders(str(temp_vorlage), placeholder_data)
+
+                vorlage_to_use = temp_vorlage
+
+            except Exception as e:
+                # Falls Platzhalter-Ersetzung fehlschlägt, nutze Original
+                print(f"Warnung: Platzhalter-Ersetzung fehlgeschlagen: {e}")
+                vorlage_to_use = self.template_path
 
         # PDF Writer erstellen
         writer = PdfWriter()
 
-        # Teil 1 hinzufügen (erste 2 Seiten)
-        teil1_reader = PdfReader(str(teil1_path))
-        for page in teil1_reader.pages:
-            writer.add_page(page)
+        # Vorlage lesen
+        vorlage_reader = PdfReader(str(vorlage_to_use))
+        total_vorlage_pages = len(vorlage_reader.pages)
+
+        # Erste 2 Seiten der Vorlage hinzufügen
+        for i in range(min(2, total_vorlage_pages)):
+            writer.add_page(vorlage_reader.pages[i])
 
         # AMIS Angebot hinzufügen (alle Seiten)
         amis_reader = PdfReader(amis_pdf_path)
         for page in amis_reader.pages:
             writer.add_page(page)
 
-        # Teil 2 hinzufügen (letzte 4 Seiten)
-        teil2_reader = PdfReader(str(teil2_path))
-        for page in teil2_reader.pages:
-            writer.add_page(page)
+        # Restliche Seiten der Vorlage hinzufügen (ab Seite 3)
+        if total_vorlage_pages > 2:
+            for i in range(2, total_vorlage_pages):
+                writer.add_page(vorlage_reader.pages[i])
 
         # Output-Verzeichnis erstellen
         output_path = Path(output_path)
@@ -95,6 +105,13 @@ class PDFMerger:
         # PDF speichern
         with open(output_path, "wb") as output_file:
             writer.write(output_file)
+
+        # Temporäres Verzeichnis aufräumen
+        if temp_dir:
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception:
+                pass
 
         return str(output_path)
 
@@ -108,46 +125,27 @@ class PDFMerger:
         Returns:
             Dictionary mit Seiten-Infos
         """
-        teil1_path = self.template_folder / "teil1.pdf"
-        teil2_path = self.template_folder / "teil2.pdf"
-
         info = {
-            "teil1_seiten": 0,
+            "vorlage_seiten_teil1": 0,  # Erste 2 Seiten vor AMIS
             "amis_seiten": 0,
-            "teil2_seiten": 0,
+            "vorlage_seiten_teil2": 0,  # Restliche Seiten nach AMIS
             "gesamt_seiten": 0
         }
 
-        if teil1_path.exists():
-            info["teil1_seiten"] = len(PdfReader(str(teil1_path)).pages)
+        if self.template_path.exists():
+            total_vorlage_pages = len(PdfReader(str(self.template_path)).pages)
+            # Erste 2 Seiten
+            info["vorlage_seiten_teil1"] = min(2, total_vorlage_pages)
+            # Restliche Seiten (ab Seite 3)
+            info["vorlage_seiten_teil2"] = max(0, total_vorlage_pages - 2)
 
         if Path(amis_pdf_path).exists():
             info["amis_seiten"] = len(PdfReader(amis_pdf_path).pages)
 
-        if teil2_path.exists():
-            info["teil2_seiten"] = len(PdfReader(str(teil2_path)).pages)
-
         info["gesamt_seiten"] = (
-            info["teil1_seiten"] +
+            info["vorlage_seiten_teil1"] +
             info["amis_seiten"] +
-            info["teil2_seiten"]
+            info["vorlage_seiten_teil2"]
         )
 
         return info
-
-    @classmethod
-    def get_available_vertriebler(cls) -> list:
-        """
-        Hole Liste der verfügbaren Vertriebler (mit Templates)
-
-        Returns:
-            Liste der Vertriebler-Namen
-        """
-        available = []
-        for name, folder in cls.VERTRIEBLER.items():
-            template_path = cls.TEMPLATES_DIR / folder
-            teil1 = template_path / "teil1.pdf"
-            teil2 = template_path / "teil2.pdf"
-            if teil1.exists() and teil2.exists():
-                available.append(name)
-        return available if available else list(cls.VERTRIEBLER.keys())

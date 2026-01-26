@@ -5,10 +5,11 @@ Desktop-Anwendung für die automatische Erstellung von Versicherungsangeboten au
 ## ✨ Features
 
 - **PDF-Upload**: Import von AMIS Pferde-Angebots-PDFs
-- **Automatische Datenextraktion**: Pferdename, Kundenname, Erstelldatum
-- **Multi-Vertriebler-System**: 7 verschiedene PowerPoint-Templates
-- **PowerPoint-Integration**: Automatische Befüllung von Angebotsvorlagen
-- **Preisfelder-Platzhalter**: 3 gelb markierte Felder für manuelle Preiseingabe
+- **Automatische Datenextraktion**: Vorname, Nachname, Pferdename, Erstelldatum
+- **Platzhalter-Ersetzung**: Automatische Befüllung der Vorlage mit extrahierten Daten
+- **PDF-Zusammenführung**: Teil1 (Vorlage) + AMIS Angebot + Teil2 (Endseiten)
+- **Multi-Vertriebler-System**: 7 verschiedene Template-Ordner
+- **Echtzeit-Vorschau**: Zeigt extrahierte Daten und Seitenanzahl vor der Erstellung
 - **EXE-Datei**: Standalone-Anwendung ohne Python-Installation
 
 ## 🚀 Installation
@@ -61,12 +62,19 @@ python3 src/main.py
 ### Workflow
 
 1. **Vertriebler auswählen** - Wähle einen der 7 Vertriebler aus dem Dropdown
-2. **PDF hochladen** - Lade das AMIS Pferde-Angebots-PDF hoch
-3. **Daten prüfen** - Automatisch extrahierte Daten werden angezeigt
-4. **Angebot generieren** - PowerPoint wird erstellt mit:
-   - Automatisch eingefügten Daten (Pferdename, Kunde, Datum)
-   - 3 gelb markierten Preisfeldern zum manuellen Ausfüllen
-5. **Ergebnis** - Fertiges Angebot wird auf dem Desktop gespeichert
+2. **AMIS-PDF hochladen** - Lade das AMIS Pferde-Angebots-PDF hoch
+3. **Automatische Datenextraktion**:
+   - Vorname und Nachname werden aus dem Angebot extrahiert
+   - Pferdename wird identifiziert
+   - Erstelldatum wird ausgelesen
+4. **Vorschau prüfen** - Zeigt:
+   - Extrahierte Daten (Vorname, Nachname, Pferdename, Datum)
+   - Seitenanzahl der Zusammenführung
+5. **PDF erstellen** - Die Anwendung:
+   - Ersetzt Platzhalter in der Vorlage (Teil1.pdf)
+   - Fügt Teil1 + AMIS + Teil2 zusammen
+6. **Ergebnis** - Fertiges PDF wird auf dem Desktop gespeichert:
+   `Desktop/Angebote/Angebot_[Dateiname].pdf`
 
 ## 📁 Projektstruktur
 
@@ -80,15 +88,23 @@ canys-crm/
 │   ├── pdf_parser/
 │   │   ├── __init__.py
 │   │   └── extractor.py           # PDF-Datenextraktion
+│   ├── pdf_processor/
+│   │   ├── __init__.py
+│   │   └── placeholder_replacer.py # Platzhalter-Ersetzung
+│   ├── pdf_merger/
+│   │   ├── __init__.py
+│   │   └── merger.py              # PDF-Zusammenführung
 │   ├── pptx_manager/
 │   │   ├── __init__.py
-│   │   └── generator.py           # PowerPoint-Generator
+│   │   └── generator.py           # PowerPoint-Generator (optional)
 │   └── utils/
 │       ├── __init__.py
 │       └── template_creator.py    # Template-Ersteller
-├── templates/                      # PowerPoint-Templates (7 Stück)
-│   ├── template_vertriebler_1.pptx
-│   ├── template_vertriebler_2.pptx
+├── templates/                      # PDF-Templates (7 Vertriebler)
+│   ├── samet_uz/
+│   │   ├── teil1.pdf              # Vorlage mit Platzhaltern
+│   │   └── teil2.pdf              # Endseiten
+│   ├── vertriebler_2/
 │   └── ...
 ├── tests/                          # Tests
 ├── docs/                           # Dokumentation
@@ -103,8 +119,11 @@ canys-crm/
 ## 🔧 Technologie-Stack
 
 - **GUI**: PyQt6
-- **PDF-Verarbeitung**: pdfplumber, PyPDF2
-- **PowerPoint**: python-pptx
+- **PDF-Verarbeitung**:
+  - PyPDF2 (Zusammenführung)
+  - pdfplumber (Text-Extraktion)
+  - PyMuPDF (Platzhalter-Ersetzung)
+- **PowerPoint**: python-pptx (optional)
 - **Build**: PyInstaller
 - **Testing**: pytest
 
