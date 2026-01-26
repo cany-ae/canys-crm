@@ -58,13 +58,13 @@ class PlaceholderReplacer:
         }
 
         # Euro-Beträge für Selbstbeteiligung
-        # Formatiere Beträge: Entferne € falls vorhanden, füge es dann hinzu
+        # Formatiere Beträge: Entferne € falls vorhanden, füge EUR hinzu
         def format_beitrag(value):
             if not value:
                 return ""
-            # Entferne € und Leerzeichen
-            clean = value.replace("€", "").replace(" ", "").strip()
-            return f"{clean}€"  # Format: "243,81€" (ohne Leerzeichen vor €)
+            # Entferne € und EUR und Leerzeichen
+            clean = value.replace("€", "").replace("EUR", "").replace(" ", "").strip()
+            return f"{clean} EUR"  # Format: "243,81 EUR" (EUR statt € wegen Schriftart)
 
         beitrag_20 = data.get("beitrag_20", "")
         beitrag_10 = data.get("beitrag_10", "")
@@ -211,20 +211,27 @@ class PlaceholderReplacer:
                         # Berechne finale Textbreite
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
 
-                        # Rechteck: Schmal, nur alten Text abdecken
-                        right_edge = max(inst.x1, inst.x0 + text_width + 4)
+                        # Rechteck: Schmal und flach
+                        right_edge = max(inst.x1, inst.x0 + text_width + 6)
 
-                        # Schmales Rechteck (keine extra Höhe)
-                        cover_rect = fitz.Rect(inst.x0 - 1, inst.y0, right_edge + 2, inst.y1)
+                        # Kleineres Rechteck (weniger Höhe)
+                        rect_height = inst.height * 0.7  # 70% der Original-Höhe
+                        y_center = (inst.y0 + inst.y1) / 2
+                        cover_rect = fitz.Rect(
+                            inst.x0 - 1,
+                            y_center - rect_height / 2,
+                            right_edge + 2,
+                            y_center + rect_height / 2
+                        )
 
                         # Überschreibe mit Hintergrundfarbe
                         page.draw_rect(cover_rect, color=beitrag_bg_color, fill=beitrag_bg_color)
 
-                        # Text weiter nach oben positionieren
-                        y_offset = -6
+                        # Text zentriert im Rechteck
+                        text_y = y_center + font_size * 0.35
 
                         page.insert_text(
-                            (inst.x0 + 2, inst.y1 + y_offset),
+                            (inst.x0 + 2, text_y),
                             new_beitrag,
                             fontname=fontname,
                             fontsize=font_size,
