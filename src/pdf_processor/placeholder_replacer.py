@@ -191,38 +191,37 @@ class PlaceholderReplacer:
                         found_any = True
 
                     for inst in text_instances:
-                        # Berechne Schriftgröße zuerst
-                        base_font_size = inst.height * 0.75
+                        # Berechne Schriftgröße
+                        base_font_size = inst.height * 0.7
                         old_rect_width = inst.x1 - inst.x0
 
-                        fontname = "helv"
+                        # Fira Go unterstützt Euro-Zeichen (Unicode)
+                        fontname = "figo"
                         font_size = base_font_size
 
-                        # Optimale Schriftgröße finden (basierend auf alter Breite)
-                        while font_size > 10:
+                        # Optimale Schriftgröße finden
+                        while font_size > 9:
                             text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
-                            if text_width <= old_rect_width * 0.95:
+                            if text_width <= old_rect_width * 0.9:
                                 break
                             font_size -= 0.5
 
-                        font_size = max(font_size, 10)
+                        font_size = max(font_size, 9)
 
                         # Berechne finale Textbreite
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
 
-                        # Rechteck: Decke alten Text KOMPLETT ab + Platz für neuen Text
-                        padding = 6
-                        # Rechte Kante: Maximum aus Original-Ende und neuer Textbreite
-                        right_edge = max(inst.x1, inst.x0 + text_width + padding)
+                        # Rechteck: Schmal, nur alten Text abdecken
+                        right_edge = max(inst.x1, inst.x0 + text_width + 4)
 
-                        # Erstelle angepasstes Rechteck (deckt alten UND neuen Text ab)
-                        cover_rect = fitz.Rect(inst.x0 - 2, inst.y0 - 2, right_edge + 4, inst.y1 + 2)
+                        # Schmales Rechteck (keine extra Höhe)
+                        cover_rect = fitz.Rect(inst.x0 - 1, inst.y0, right_edge + 2, inst.y1)
 
                         # Überschreibe mit Hintergrundfarbe
                         page.draw_rect(cover_rect, color=beitrag_bg_color, fill=beitrag_bg_color)
 
-                        # Text linksbündig mit kleinem Padding
-                        y_offset = -2
+                        # Text höher positionieren (weiter oben im Feld)
+                        y_offset = -4
 
                         page.insert_text(
                             (inst.x0 + 2, inst.y1 + y_offset),
