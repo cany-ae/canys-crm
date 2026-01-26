@@ -515,7 +515,7 @@ class MainWindow(QMainWindow):
         sb10_input_layout.setSpacing(8)
         self.beitrag_10_label = QLabel("—")
         self.beitrag_10_label.setStyleSheet(f"""
-            padding: 14px 18px;
+            padding: 8px 18px;
             border: 3px solid {COLORS['light_blue']};
             border-radius: 10px;
             background-color: {COLORS['white']};
@@ -523,6 +523,7 @@ class MainWindow(QMainWindow):
             font-weight: 500;
             color: {COLORS['text_gray']};
             min-width: 120px;
+            max-height: 44px;
         """)
         sb10_input_layout.addWidget(self.beitrag_10_label)
         euro10 = QLabel("€")
@@ -688,7 +689,7 @@ class MainWindow(QMainWindow):
                     beitrag_clean = beitrag.replace('€', '').replace(' ', '').strip()
                     self.beitrag_10_label.setText(beitrag_clean)
                     self.beitrag_10_label.setStyleSheet(f"""
-                        padding: 14px 18px;
+                        padding: 8px 18px;
                         border: 3px solid {COLORS['success_green']};
                         border-radius: 10px;
                         background-color: {COLORS['white']};
@@ -696,17 +697,19 @@ class MainWindow(QMainWindow):
                         font-weight: bold;
                         color: {COLORS['text_dark']};
                         min-width: 120px;
+                        max-height: 44px;
                     """)
                 else:
                     self.beitrag_10_label.setText("—")
                     self.beitrag_10_label.setStyleSheet(f"""
-                        padding: 14px 18px;
+                        padding: 8px 18px;
                         border: 3px solid {COLORS['error_red']};
                         border-radius: 10px;
                         background-color: #fff0f0;
                         font-size: 16px;
                         color: {COLORS['error_red']};
                         min-width: 120px;
+                        max-height: 44px;
                     """)
             except Exception as e:
                 print(f"Warnung: Datenextraktion fehlgeschlagen: {e}")
