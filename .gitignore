@@ -46,6 +46,7 @@ Thumbs.db
 # Projekt-spezifisch
 templates/*.pptx.backup
 *.log
+config.json
 
 # Output
 Angebote/
