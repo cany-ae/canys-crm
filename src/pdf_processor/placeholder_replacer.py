@@ -212,7 +212,7 @@ class PlaceholderReplacer:
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
 
                         # Rechteck: Etwas breiter um alten Text zu überdecken
-                        right_edge = max(inst.x1 + 15, inst.x0 + text_width + 8)
+                        right_edge = max(inst.x1 + 10, inst.x0 + text_width + 6)
 
                         # Rechteck etwas höher um schwarze Striche zu überdecken
                         rect_height = inst.height * 0.9  # 90% der Original-Höhe
