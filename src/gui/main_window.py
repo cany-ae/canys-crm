@@ -47,24 +47,21 @@ STYLESHEET = f"""
     QGroupBox {{
         background-color: {COLORS['white']};
         border: 2px solid {COLORS['border_gray']};
-        border-radius: 10px;
-        margin-top: 25px;
+        border-radius: 8px;
+        margin-top: 15px;
         padding: 15px;
-        padding-top: 20px;
-        font-size: 14px;
-        font-weight: bold;
-        color: {COLORS['primary_blue']};
+        padding-top: 15px;
     }}
 
     QGroupBox::title {{
         subcontrol-origin: margin;
         subcontrol-position: top left;
-        padding: 10px 25px;
+        padding: 8px 15px;
         background-color: {COLORS['primary_blue']};
         color: {COLORS['white']};
-        border-radius: 6px;
+        border-radius: 5px;
         margin-left: 10px;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: bold;
     }}
 
@@ -98,47 +95,36 @@ STYLESHEET = f"""
     }}
 
     QLineEdit {{
-        padding: 14px 18px;
-        border: 3px solid {COLORS['light_blue']};
-        border-radius: 10px;
+        padding: 10px 12px;
+        border: 2px solid {COLORS['border_gray']};
+        border-radius: 6px;
         background-color: {COLORS['white']};
-        font-size: 16px;
-        font-weight: 500;
+        font-size: 14px;
         color: {COLORS['text_dark']};
-        min-width: 180px;
-        min-height: 45px;
     }}
 
     QLineEdit:hover {{
-        border-color: {COLORS['primary_blue']};
-        background-color: #f0f7ff;
+        border-color: {COLORS['light_blue']};
     }}
 
     QLineEdit:focus {{
         border-color: {COLORS['primary_blue']};
-        border-width: 3px;
-        background-color: #e8f4ff;
-    }}
-
-    QLineEdit::placeholder {{
-        color: {COLORS['text_gray']};
-        font-style: italic;
     }}
 
     QPushButton {{
-        padding: 14px 28px;
+        padding: 10px 20px;
         border: none;
-        border-radius: 10px;
-        font-size: 15px;
+        border-radius: 6px;
+        font-size: 14px;
         font-weight: bold;
     }}
 
     QPushButton#primaryBtn {{
         background-color: {COLORS['primary_blue']};
         color: {COLORS['white']};
-        min-width: 220px;
-        min-height: 55px;
-        font-size: 18px;
+        min-width: 180px;
+        min-height: 45px;
+        font-size: 16px;
     }}
 
     QPushButton#primaryBtn:hover {{
@@ -153,8 +139,8 @@ STYLESHEET = f"""
     QPushButton#secondaryBtn {{
         background-color: {COLORS['white']};
         color: {COLORS['primary_blue']};
-        border: 3px solid {COLORS['primary_blue']};
-        min-height: 45px;
+        border: 2px solid {COLORS['primary_blue']};
+        min-height: 40px;
     }}
 
     QPushButton#secondaryBtn:hover {{
@@ -177,50 +163,26 @@ STYLESHEET = f"""
 
     QLabel {{
         color: {COLORS['text_dark']};
-        font-size: 14px;
+        font-size: 13px;
     }}
 
     QLabel#titleLabel {{
-        font-size: 32px;
+        font-size: 26px;
         font-weight: bold;
         color: {COLORS['primary_blue']};
-        padding: 25px;
+        padding: 15px;
     }}
 
     QLabel#subtitleLabel {{
-        font-size: 16px;
+        font-size: 14px;
         color: {COLORS['text_gray']};
-        padding-bottom: 25px;
+        padding-bottom: 15px;
     }}
 
     QLabel#statusLabel {{
-        font-size: 15px;
+        font-size: 14px;
         color: {COLORS['light_blue']};
         font-weight: bold;
-    }}
-
-    QLabel#previewLabel {{
-        background-color: {COLORS['white']};
-        border: 3px solid {COLORS['border_gray']};
-        border-radius: 10px;
-        padding: 20px;
-        font-size: 14px;
-        line-height: 1.8;
-        font-family: 'Consolas', 'Courier New', monospace;
-    }}
-
-    QLabel#inputLabel {{
-        font-size: 15px;
-        font-weight: bold;
-        color: {COLORS['primary_blue']};
-        padding: 5px 0px;
-    }}
-
-    QLabel#hintLabel {{
-        font-size: 12px;
-        color: {COLORS['text_gray']};
-        font-style: italic;
-        padding: 3px 0px;
     }}
 """
 
@@ -280,15 +242,15 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         """Initialisiere die Benutzeroberfläche"""
         self.setWindowTitle("Allianz Angebotstool - AMIS Pferde-Versicherung")
-        self.setMinimumSize(1000, 850)
+        self.setMinimumSize(800, 700)
         self.setStyleSheet(STYLESHEET)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         layout = QVBoxLayout(central_widget)
-        layout.setContentsMargins(35, 30, 35, 30)
-        layout.setSpacing(15)
+        layout.setContentsMargins(25, 20, 25, 20)
+        layout.setSpacing(10)
 
         # Header
         header_widget = self._create_header()
@@ -378,12 +340,7 @@ class MainWindow(QMainWindow):
         """Erstelle User-Info-Anzeige"""
         group = QGroupBox("Angemeldet als")
         layout = QHBoxLayout()
-        layout.setSpacing(18)
-
-        # User-Icon (Emoji)
-        icon_label = QLabel("👤")
-        icon_label.setStyleSheet("font-size: 38px;")
-        layout.addWidget(icon_label)
+        layout.setSpacing(15)
 
         # User-Name
         user_name = f"{self.user.get('vorname', '')} {self.user.get('nachname', '')}".strip()
@@ -391,15 +348,10 @@ class MainWindow(QMainWindow):
             user_name = self.user.get('login', 'Unbekannt')
 
         name_label = QLabel(user_name)
-        name_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {COLORS['primary_blue']};")
+        name_label.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLORS['primary_blue']};")
         layout.addWidget(name_label)
 
         layout.addStretch()
-
-        # Hinweis zur aktuellen Vorlage
-        template_hint = QLabel("📋 Vorlage wird automatisch verwendet")
-        template_hint.setStyleSheet(f"color: {COLORS['text_gray']}; font-size: 13px; font-style: italic;")
-        layout.addWidget(template_hint)
 
         group.setLayout(layout)
         return group
@@ -407,34 +359,18 @@ class MainWindow(QMainWindow):
     def _create_pdf_group(self):
         """Erstelle AMIS PDF Upload"""
         group = QGroupBox("Schritt 1: AMIS Angebot hochladen")
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
         layout.setSpacing(15)
-
-        # Status-Zeile
-        status_layout = QHBoxLayout()
-        status_layout.setSpacing(12)
-
-        icon_label = QLabel("📄")
-        icon_label.setStyleSheet("font-size: 28px;")
-        status_layout.addWidget(icon_label)
 
         self.pdf_label = QLabel("Keine Datei ausgewählt")
         self.pdf_label.setStyleSheet(f"color: {COLORS['text_gray']}; font-style: italic; font-size: 14px;")
-        status_layout.addWidget(self.pdf_label)
-        status_layout.addStretch()
+        layout.addWidget(self.pdf_label, 1)
 
-        layout.addLayout(status_layout)
-
-        # Button mittig
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
-        upload_btn = QPushButton("📁 PDF auswählen")
+        upload_btn = QPushButton("PDF auswählen")
         upload_btn.setObjectName("secondaryBtn")
-        upload_btn.setMinimumWidth(200)
+        upload_btn.setMinimumWidth(150)
         upload_btn.clicked.connect(self.select_pdf)
-        btn_layout.addWidget(upload_btn)
-        btn_layout.addStretch()
-        layout.addLayout(btn_layout)
+        layout.addWidget(upload_btn)
 
         group.setLayout(layout)
         return group
@@ -443,36 +379,14 @@ class MainWindow(QMainWindow):
         """Erstelle Pferdename-Eingabe"""
         group = QGroupBox("Schritt 2: Pferdename eingeben")
         layout = QVBoxLayout()
-        layout.setSpacing(12)
+        layout.setSpacing(10)
 
-        # Eingabefeld zentriert
-        input_layout = QHBoxLayout()
-        input_layout.addStretch()
-
-        field_layout = QVBoxLayout()
-        field_layout.setSpacing(6)
-
-        label = QLabel("Pferdename:")
-        label.setObjectName("inputLabel")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        field_layout.addWidget(label)
-
+        # Eingabefeld
         self.pferdename_input = QLineEdit()
         self.pferdename_input.setPlaceholderText("z.B. Black Beauty")
-        self.pferdename_input.setMinimumWidth(350)
-        self.pferdename_input.setMinimumHeight(50)
-        self.pferdename_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.pferdename_input.setMinimumHeight(45)
         self.pferdename_input.textChanged.connect(self._update_preview)
-        field_layout.addWidget(self.pferdename_input)
-
-        hint = QLabel("💡 Dieser Name wird in der Vorlage eingefügt")
-        hint.setObjectName("hintLabel")
-        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        field_layout.addWidget(hint)
-
-        input_layout.addLayout(field_layout)
-        input_layout.addStretch()
-        layout.addLayout(input_layout)
+        layout.addWidget(self.pferdename_input)
 
         group.setLayout(layout)
         return group
@@ -481,100 +395,68 @@ class MainWindow(QMainWindow):
         """Erstelle Beiträge-Eingabe (Selbstbeteiligung)"""
         group = QGroupBox("Schritt 3: Beiträge eingeben")
         layout = QVBoxLayout()
-        layout.setSpacing(15)
+        layout.setSpacing(12)
 
-        # Zentriertes Grid für die 3 Beiträge
-        center_layout = QHBoxLayout()
-        center_layout.addStretch()
-
+        # Horizontales Layout für die 3 Beiträge
         beitraege_layout = QHBoxLayout()
-        beitraege_layout.setSpacing(40)
+        beitraege_layout.setSpacing(20)
 
-        # 20% Selbstbeteiligung (manuell)
-        sb20_layout = QVBoxLayout()
-        sb20_layout.setSpacing(8)
-        sb20_label = QLabel("20% Selbstbeteiligung:")
-        sb20_label.setObjectName("inputLabel")
+        # 20% Selbstbeteiligung
+        sb20_widget = QWidget()
+        sb20_layout = QVBoxLayout(sb20_widget)
+        sb20_layout.setContentsMargins(0, 0, 0, 0)
+        sb20_layout.setSpacing(5)
+
+        sb20_label = QLabel("20% Selbstbeteiligung")
+        sb20_label.setStyleSheet(f"font-weight: bold; color: {COLORS['primary_blue']}; font-size: 13px;")
         sb20_layout.addWidget(sb20_label)
 
-        # Input mit € Suffix
-        sb20_input_layout = QHBoxLayout()
-        sb20_input_layout.setSpacing(8)
         self.beitrag_20_input = QLineEdit()
         self.beitrag_20_input.setPlaceholderText("z.B. 243,81")
+        self.beitrag_20_input.setMinimumHeight(40)
         self.beitrag_20_input.textChanged.connect(self._update_preview)
-        sb20_input_layout.addWidget(self.beitrag_20_input)
-        euro20 = QLabel("€")
-        euro20.setFixedWidth(25)
-        euro20.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLORS['primary_blue']};")
-        sb20_input_layout.addWidget(euro20)
-        sb20_layout.addLayout(sb20_input_layout)
+        sb20_layout.addWidget(self.beitrag_20_input)
 
-        hint20 = QLabel("✏️ Manuell eingeben")
-        hint20.setObjectName("hintLabel")
-        sb20_layout.addWidget(hint20)
-        beitraege_layout.addLayout(sb20_layout)
+        beitraege_layout.addWidget(sb20_widget)
 
-        # 10% Selbstbeteiligung (aus AMIS)
-        sb10_layout = QVBoxLayout()
-        sb10_layout.setSpacing(8)
-        sb10_label = QLabel("10% Selbstbeteiligung:")
-        sb10_label.setObjectName("inputLabel")
+        # 10% Selbstbeteiligung (aus AMIS - readonly)
+        sb10_widget = QWidget()
+        sb10_layout = QVBoxLayout(sb10_widget)
+        sb10_layout.setContentsMargins(0, 0, 0, 0)
+        sb10_layout.setSpacing(5)
+
+        sb10_label = QLabel("10% Selbstbeteiligung (AMIS)")
+        sb10_label.setStyleSheet(f"font-weight: bold; color: {COLORS['primary_blue']}; font-size: 13px;")
         sb10_layout.addWidget(sb10_label)
 
-        # Anzeige-Label mit € Suffix (wie die anderen Felder)
-        sb10_input_layout = QHBoxLayout()
-        sb10_input_layout.setSpacing(8)
         self.beitrag_10_label = QLineEdit()
         self.beitrag_10_label.setReadOnly(True)
-        self.beitrag_10_label.setPlaceholderText("—")
-        sb10_input_layout.addWidget(self.beitrag_10_label)
-        euro10 = QLabel("€")
-        euro10.setFixedWidth(25)
-        euro10.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLORS['primary_blue']};")
-        sb10_input_layout.addWidget(euro10)
-        sb10_layout.addLayout(sb10_input_layout)
+        self.beitrag_10_label.setPlaceholderText("— automatisch —")
+        self.beitrag_10_label.setMinimumHeight(40)
+        self.beitrag_10_label.setStyleSheet(f"background-color: {COLORS['light_gray']};")
+        sb10_layout.addWidget(self.beitrag_10_label)
 
-        hint10 = QLabel("🔄 Automatisch aus AMIS")
-        hint10.setObjectName("hintLabel")
-        sb10_layout.addWidget(hint10)
-        beitraege_layout.addLayout(sb10_layout)
+        beitraege_layout.addWidget(sb10_widget)
 
-        # Keine Selbstbeteiligung (manuell)
-        sb0_layout = QVBoxLayout()
-        sb0_layout.setSpacing(8)
-        sb0_label = QLabel("Keine Selbstbeteiligung:")
-        sb0_label.setObjectName("inputLabel")
+        # Keine Selbstbeteiligung
+        sb0_widget = QWidget()
+        sb0_layout = QVBoxLayout(sb0_widget)
+        sb0_layout.setContentsMargins(0, 0, 0, 0)
+        sb0_layout.setSpacing(5)
+
+        sb0_label = QLabel("Keine Selbstbeteiligung")
+        sb0_label.setStyleSheet(f"font-weight: bold; color: {COLORS['primary_blue']}; font-size: 13px;")
         sb0_layout.addWidget(sb0_label)
 
-        # Input mit € Suffix
-        sb0_input_layout = QHBoxLayout()
-        sb0_input_layout.setSpacing(8)
         self.beitrag_0_input = QLineEdit()
         self.beitrag_0_input.setPlaceholderText("z.B. 385,62")
+        self.beitrag_0_input.setMinimumHeight(40)
         self.beitrag_0_input.textChanged.connect(self._update_preview)
-        sb0_input_layout.addWidget(self.beitrag_0_input)
-        euro0 = QLabel("€")
-        euro0.setFixedWidth(25)
-        euro0.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {COLORS['primary_blue']};")
-        sb0_input_layout.addWidget(euro0)
-        sb0_layout.addLayout(sb0_input_layout)
+        sb0_layout.addWidget(self.beitrag_0_input)
 
-        hint0 = QLabel("✏️ Manuell eingeben")
-        hint0.setObjectName("hintLabel")
-        sb0_layout.addWidget(hint0)
-        beitraege_layout.addLayout(sb0_layout)
+        beitraege_layout.addWidget(sb0_widget)
 
-        center_layout.addLayout(beitraege_layout)
-        center_layout.addStretch()
-        layout.addLayout(center_layout)
-
-        # Hinweis zentriert
-        hint = QLabel("💡 Diese Beträge werden in der Vorlage (Seite 1) eingetragen")
-        hint.setObjectName("hintLabel")
-        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(hint)
-
+        layout.addLayout(beitraege_layout)
         group.setLayout(layout)
         return group
 
