@@ -33,10 +33,10 @@ STYLESHEET = f"""
     }}
 
     QLabel#titleLabel {{
-        font-size: 24px;
+        font-size: 32px;
         font-weight: bold;
         color: {COLORS['primary_blue']};
-        padding: 20px;
+        padding: 15px;
     }}
 
     QLabel#subtitleLabel {{
@@ -108,7 +108,7 @@ class LoginWindow(QMainWindow):
     def init_ui(self):
         """Initialisiere die Benutzeroberfläche"""
         self.setWindowTitle("Allianz Angebotstool - Login")
-        self.setFixedSize(500, 400)
+        self.setFixedSize(550, 500)
         self.setStyleSheet(STYLESHEET)
 
         # Zentrales Widget

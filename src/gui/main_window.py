@@ -46,12 +46,12 @@ STYLESHEET = f"""
 
     QGroupBox {{
         background-color: {COLORS['white']};
-        border: 3px solid {COLORS['primary_blue']};
-        border-radius: 12px;
-        margin-top: 20px;
-        padding: 20px;
-        padding-top: 25px;
-        font-size: 16px;
+        border: 2px solid {COLORS['border_gray']};
+        border-radius: 10px;
+        margin-top: 25px;
+        padding: 15px;
+        padding-top: 20px;
+        font-size: 14px;
         font-weight: bold;
         color: {COLORS['primary_blue']};
     }}
@@ -59,12 +59,12 @@ STYLESHEET = f"""
     QGroupBox::title {{
         subcontrol-origin: margin;
         subcontrol-position: top left;
-        padding: 8px 20px;
+        padding: 10px 25px;
         background-color: {COLORS['primary_blue']};
         color: {COLORS['white']};
-        border-radius: 8px;
-        margin-left: 15px;
-        font-size: 15px;
+        border-radius: 6px;
+        margin-left: 10px;
+        font-size: 16px;
         font-weight: bold;
     }}
 
@@ -407,32 +407,34 @@ class MainWindow(QMainWindow):
     def _create_pdf_group(self):
         """Erstelle AMIS PDF Upload"""
         group = QGroupBox("Schritt 1: AMIS Angebot hochladen")
-        layout = QHBoxLayout()
-        layout.setSpacing(20)
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
 
-        # Icon
+        # Status-Zeile
+        status_layout = QHBoxLayout()
+        status_layout.setSpacing(12)
+
         icon_label = QLabel("📄")
-        icon_label.setStyleSheet("font-size: 36px;")
-        layout.addWidget(icon_label)
-
-        pdf_info_layout = QVBoxLayout()
-        pdf_info_layout.setSpacing(8)
+        icon_label.setStyleSheet("font-size: 28px;")
+        status_layout.addWidget(icon_label)
 
         self.pdf_label = QLabel("Keine Datei ausgewählt")
-        self.pdf_label.setStyleSheet(f"color: {COLORS['text_gray']}; font-style: italic; font-size: 15px;")
-        pdf_info_layout.addWidget(self.pdf_label)
+        self.pdf_label.setStyleSheet(f"color: {COLORS['text_gray']}; font-style: italic; font-size: 14px;")
+        status_layout.addWidget(self.pdf_label)
+        status_layout.addStretch()
 
-        pdf_hint = QLabel("Wählen Sie das AMIS Pferde-Angebot (PDF)")
-        pdf_hint.setObjectName("hintLabel")
-        pdf_info_layout.addWidget(pdf_hint)
+        layout.addLayout(status_layout)
 
-        layout.addLayout(pdf_info_layout, 1)
-
+        # Button mittig
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
         upload_btn = QPushButton("📁 PDF auswählen")
         upload_btn.setObjectName("secondaryBtn")
-        upload_btn.setMinimumWidth(180)
+        upload_btn.setMinimumWidth(200)
         upload_btn.clicked.connect(self.select_pdf)
-        layout.addWidget(upload_btn)
+        btn_layout.addWidget(upload_btn)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
 
         group.setLayout(layout)
         return group
@@ -443,36 +445,50 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setSpacing(12)
 
-        # Label für Eingabefeld
+        # Eingabefeld zentriert
+        input_layout = QHBoxLayout()
+        input_layout.addStretch()
+
+        field_layout = QVBoxLayout()
+        field_layout.setSpacing(6)
+
         label = QLabel("Pferdename:")
         label.setObjectName("inputLabel")
-        layout.addWidget(label)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        field_layout.addWidget(label)
 
-        # Eingabefeld mit größerem Styling
-        input_layout = QHBoxLayout()
         self.pferdename_input = QLineEdit()
         self.pferdename_input.setPlaceholderText("z.B. Black Beauty")
+        self.pferdename_input.setMinimumWidth(350)
         self.pferdename_input.setMinimumHeight(50)
+        self.pferdename_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.pferdename_input.textChanged.connect(self._update_preview)
-        input_layout.addWidget(self.pferdename_input)
-        layout.addLayout(input_layout)
+        field_layout.addWidget(self.pferdename_input)
 
         hint = QLabel("💡 Dieser Name wird in der Vorlage eingefügt")
         hint.setObjectName("hintLabel")
-        layout.addWidget(hint)
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        field_layout.addWidget(hint)
+
+        input_layout.addLayout(field_layout)
+        input_layout.addStretch()
+        layout.addLayout(input_layout)
 
         group.setLayout(layout)
         return group
 
     def _create_beitraege_group(self):
         """Erstelle Beiträge-Eingabe (Selbstbeteiligung)"""
-        group = QGroupBox("Schritt 3: Beiträge (Selbstbeteiligung)")
+        group = QGroupBox("Schritt 3: Beiträge eingeben")
         layout = QVBoxLayout()
-        layout.setSpacing(18)
+        layout.setSpacing(15)
 
-        # Grid für die 3 Beiträge
+        # Zentriertes Grid für die 3 Beiträge
+        center_layout = QHBoxLayout()
+        center_layout.addStretch()
+
         beitraege_layout = QHBoxLayout()
-        beitraege_layout.setSpacing(25)
+        beitraege_layout.setSpacing(40)
 
         # 20% Selbstbeteiligung (manuell)
         sb20_layout = QVBoxLayout()
@@ -549,11 +565,14 @@ class MainWindow(QMainWindow):
         sb0_layout.addWidget(hint0)
         beitraege_layout.addLayout(sb0_layout)
 
-        layout.addLayout(beitraege_layout)
+        center_layout.addLayout(beitraege_layout)
+        center_layout.addStretch()
+        layout.addLayout(center_layout)
 
-        # Hinweis
+        # Hinweis zentriert
         hint = QLabel("💡 Diese Beträge werden in der Vorlage (Seite 1) eingetragen")
         hint.setObjectName("hintLabel")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(hint)
 
         group.setLayout(layout)
