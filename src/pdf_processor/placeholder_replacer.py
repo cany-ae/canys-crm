@@ -211,16 +211,16 @@ class PlaceholderReplacer:
                         # Berechne finale Textbreite
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
 
-                        # Rechteck: Etwas breiter um alten Text zu überdecken
-                        right_edge = max(inst.x1 + 15, inst.x0 + text_width + 8)
+                        # Rechteck: Breiter um alten Text + runde Ecken zu überdecken
+                        right_edge = max(inst.x1 + 8, inst.x0 + text_width + 6)
 
-                        # Rechteck etwas höher um schwarze Striche zu überdecken
-                        rect_height = inst.height * 0.9  # 90% der Original-Höhe
+                        # Rechteck größer um runde Ecken komplett zu überdecken
+                        rect_height = inst.height * 1.1  # 110% der Original-Höhe
                         y_center = (inst.y0 + inst.y1) / 2
                         cover_rect = fitz.Rect(
-                            inst.x0 - 1,
+                            inst.x0 - 5,  # Weiter nach links für runde Ecke
                             y_center - rect_height / 2,
-                            right_edge + 2,
+                            right_edge + 5,  # Weiter nach rechts für runde Ecke
                             y_center + rect_height / 2
                         )
 
