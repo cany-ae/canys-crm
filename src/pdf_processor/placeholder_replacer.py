@@ -211,8 +211,12 @@ class PlaceholderReplacer:
                         # Berechne finale Textbreite
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
 
-                        # Rechteck: Etwas breiter um alten Text zu überdecken
-                        right_edge = max(inst.x1 + 10, inst.x0 + text_width + 6)
+                        # Rechteck: Breite je nach Feld (20% kürzer, andere länger)
+                        # 243,81 = 20% Selbstbeteiligung (erstes Feld, kürzer)
+                        if old_beitrag.startswith("243,81"):
+                            right_edge = max(inst.x1 + 10, inst.x0 + text_width + 6)
+                        else:
+                            right_edge = max(inst.x1 + 15, inst.x0 + text_width + 8)
 
                         # Rechteck etwas höher um schwarze Striche zu überdecken
                         rect_height = inst.height * 0.9  # 90% der Original-Höhe
