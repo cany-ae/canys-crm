@@ -230,24 +230,46 @@ class PlaceholderReplacer:
                         # Zeichne Rechteck mit runden Ecken auf BEIDEN Seiten
                         shape = page.new_shape()
 
-                        # Pfad: Beide Seiten abgerundet (mit kubischen Bézierkurven)
-                        # Start oben links (nach dem Radius)
-                        shape.draw_line(fitz.Point(x0 + radius, y0), fitz.Point(x1 - radius, y0))  # Oben
-                        # Bogen oben rechts (kubische Bézier mit dupliziertem Kontrollpunkt)
-                        ctrl = fitz.Point(x1, y0)
-                        shape.draw_bezier(fitz.Point(x1 - radius, y0), ctrl, ctrl, fitz.Point(x1, y0 + radius))
-                        shape.draw_line(fitz.Point(x1, y0 + radius), fitz.Point(x1, y1 - radius))  # Rechts
+                        # Magic number für perfekte Kreisbogen mit kubischer Bézier
+                        k = 0.5522847498 * radius
+
+                        # Pfad: Beide Seiten perfekt abgerundet
+                        # Oben (von links nach rechts)
+                        shape.draw_line(fitz.Point(x0 + radius, y0), fitz.Point(x1 - radius, y0))
+                        # Bogen oben rechts
+                        shape.draw_bezier(
+                            fitz.Point(x1 - radius, y0),
+                            fitz.Point(x1 - radius + k, y0),
+                            fitz.Point(x1, y0 + radius - k),
+                            fitz.Point(x1, y0 + radius)
+                        )
+                        # Rechts (von oben nach unten)
+                        shape.draw_line(fitz.Point(x1, y0 + radius), fitz.Point(x1, y1 - radius))
                         # Bogen unten rechts
-                        ctrl = fitz.Point(x1, y1)
-                        shape.draw_bezier(fitz.Point(x1, y1 - radius), ctrl, ctrl, fitz.Point(x1 - radius, y1))
-                        shape.draw_line(fitz.Point(x1 - radius, y1), fitz.Point(x0 + radius, y1))  # Unten
+                        shape.draw_bezier(
+                            fitz.Point(x1, y1 - radius),
+                            fitz.Point(x1, y1 - radius + k),
+                            fitz.Point(x1 - radius + k, y1),
+                            fitz.Point(x1 - radius, y1)
+                        )
+                        # Unten (von rechts nach links)
+                        shape.draw_line(fitz.Point(x1 - radius, y1), fitz.Point(x0 + radius, y1))
                         # Bogen unten links
-                        ctrl = fitz.Point(x0, y1)
-                        shape.draw_bezier(fitz.Point(x0 + radius, y1), ctrl, ctrl, fitz.Point(x0, y1 - radius))
-                        shape.draw_line(fitz.Point(x0, y1 - radius), fitz.Point(x0, y0 + radius))  # Links
+                        shape.draw_bezier(
+                            fitz.Point(x0 + radius, y1),
+                            fitz.Point(x0 + radius - k, y1),
+                            fitz.Point(x0, y1 - radius + k),
+                            fitz.Point(x0, y1 - radius)
+                        )
+                        # Links (von unten nach oben)
+                        shape.draw_line(fitz.Point(x0, y1 - radius), fitz.Point(x0, y0 + radius))
                         # Bogen oben links
-                        ctrl = fitz.Point(x0, y0)
-                        shape.draw_bezier(fitz.Point(x0, y0 + radius), ctrl, ctrl, fitz.Point(x0 + radius, y0))
+                        shape.draw_bezier(
+                            fitz.Point(x0, y0 + radius),
+                            fitz.Point(x0, y0 + radius - k),
+                            fitz.Point(x0 + radius - k, y0),
+                            fitz.Point(x0 + radius, y0)
+                        )
 
                         shape.finish(fill=beitrag_bg_color, color=beitrag_bg_color)
                         shape.commit()
