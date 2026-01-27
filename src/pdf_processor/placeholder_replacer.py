@@ -211,8 +211,9 @@ class PlaceholderReplacer:
                         # Berechne finale Textbreite
                         text_width = fitz.get_text_length(new_beitrag, fontname=fontname, fontsize=font_size)
 
-                        # Rechteck: Schmal und flach
-                        right_edge = max(inst.x1, inst.x0 + text_width + 6)
+                        # Rechteck: VIEL breiter um alten Text komplett zu überdecken
+                        # Der alte Text hat oft noch "EUR" oder € dahinter
+                        right_edge = max(inst.x1 + 50, inst.x0 + text_width + 15)
 
                         # Kleineres Rechteck (weniger Höhe)
                         rect_height = inst.height * 0.7  # 70% der Original-Höhe
