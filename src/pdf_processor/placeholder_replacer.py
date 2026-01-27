@@ -217,15 +217,31 @@ class PlaceholderReplacer:
                         # Rechteck etwas höher um schwarze Striche zu überdecken
                         rect_height = inst.height * 0.9  # 90% der Original-Höhe
                         y_center = (inst.y0 + inst.y1) / 2
-                        cover_rect = fitz.Rect(
-                            inst.x0 - 1,
-                            y_center - rect_height / 2,
-                            right_edge + 2,
-                            y_center + rect_height / 2
-                        )
 
-                        # Überschreibe mit Hintergrundfarbe
-                        page.draw_rect(cover_rect, color=beitrag_bg_color, fill=beitrag_bg_color)
+                        # Koordinaten für das Rechteck
+                        x0 = inst.x0 - 1
+                        y0 = y_center - rect_height / 2
+                        x1 = right_edge + 2
+                        y1 = y_center + rect_height / 2
+
+                        # Radius für runde Ecken rechts
+                        radius = min(rect_height / 2, 8)  # Max 8px oder halbe Höhe
+
+                        # Zeichne Rechteck mit runden Ecken nur rechts
+                        shape = page.new_shape()
+
+                        # Pfad: Links eckig, rechts rund
+                        shape.draw_line(fitz.Point(x0, y0), fitz.Point(x1 - radius, y0))  # Oben
+                        # Bogen oben rechts (quadratische Bézierkurve)
+                        shape.draw_quad(fitz.Point(x1 - radius, y0), fitz.Point(x1, y0), fitz.Point(x1, y0 + radius))
+                        shape.draw_line(fitz.Point(x1, y0 + radius), fitz.Point(x1, y1 - radius))  # Rechts
+                        # Bogen unten rechts
+                        shape.draw_quad(fitz.Point(x1, y1 - radius), fitz.Point(x1, y1), fitz.Point(x1 - radius, y1))
+                        shape.draw_line(fitz.Point(x1 - radius, y1), fitz.Point(x0, y1))  # Unten
+                        shape.draw_line(fitz.Point(x0, y1), fitz.Point(x0, y0))  # Links
+
+                        shape.finish(fill=beitrag_bg_color, color=beitrag_bg_color)
+                        shape.commit()
 
                         # Text zentriert im Rechteck
                         text_y = y_center + font_size * 0.35
