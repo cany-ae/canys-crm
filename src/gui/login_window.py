@@ -50,9 +50,10 @@ STYLESHEET = f"""
         border: 2px solid {COLORS['border_gray']};
         border-radius: 8px;
         background-color: {COLORS['white']};
-        font-size: 14px;
+        font-size: 16px;
         color: {COLORS['text_dark']};
         min-width: 300px;
+        min-height: 45px;
     }}
 
     QLineEdit:hover {{

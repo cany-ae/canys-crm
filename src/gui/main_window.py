@@ -106,7 +106,7 @@ STYLESHEET = f"""
         font-weight: 500;
         color: {COLORS['text_dark']};
         min-width: 180px;
-        min-height: 25px;
+        min-height: 45px;
     }}
 
     QLineEdit:hover {{
@@ -315,10 +315,6 @@ class MainWindow(QMainWindow):
         # Beiträge (Selbstbeteiligung)
         beitraege_group = self._create_beitraege_group()
         layout.addWidget(beitraege_group)
-
-        # Vorschau
-        preview_group = self._create_preview_group()
-        layout.addWidget(preview_group)
 
         # Fortschrittsanzeige
         self.progress_bar = QProgressBar()
@@ -649,8 +645,7 @@ class MainWindow(QMainWindow):
   • Pferdename"""
 
     def _update_preview(self):
-        """Aktualisiere Vorschau"""
-        self.preview_label.setText(self._get_preview_text())
+        """Aktualisiere Status"""
         self._check_ready()
 
     def select_pdf(self):
