@@ -224,21 +224,26 @@ class PlaceholderReplacer:
                         x1 = right_edge + 2
                         y1 = y_center + rect_height / 2
 
-                        # Radius für runde Ecken rechts
+                        # Radius für runde Ecken (beide Seiten)
                         radius = min(rect_height / 2, 8)  # Max 8px oder halbe Höhe
 
-                        # Zeichne Rechteck mit runden Ecken nur rechts
+                        # Zeichne Rechteck mit runden Ecken auf BEIDEN Seiten
                         shape = page.new_shape()
 
-                        # Pfad: Links eckig, rechts rund
-                        shape.draw_line(fitz.Point(x0, y0), fitz.Point(x1 - radius, y0))  # Oben
-                        # Bogen oben rechts (quadratische Bézierkurve)
+                        # Pfad: Beide Seiten abgerundet
+                        # Start oben links (nach dem Radius)
+                        shape.draw_line(fitz.Point(x0 + radius, y0), fitz.Point(x1 - radius, y0))  # Oben
+                        # Bogen oben rechts
                         shape.draw_quad(fitz.Point(x1 - radius, y0), fitz.Point(x1, y0), fitz.Point(x1, y0 + radius))
                         shape.draw_line(fitz.Point(x1, y0 + radius), fitz.Point(x1, y1 - radius))  # Rechts
                         # Bogen unten rechts
                         shape.draw_quad(fitz.Point(x1, y1 - radius), fitz.Point(x1, y1), fitz.Point(x1 - radius, y1))
-                        shape.draw_line(fitz.Point(x1 - radius, y1), fitz.Point(x0, y1))  # Unten
-                        shape.draw_line(fitz.Point(x0, y1), fitz.Point(x0, y0))  # Links
+                        shape.draw_line(fitz.Point(x1 - radius, y1), fitz.Point(x0 + radius, y1))  # Unten
+                        # Bogen unten links
+                        shape.draw_quad(fitz.Point(x0 + radius, y1), fitz.Point(x0, y1), fitz.Point(x0, y1 - radius))
+                        shape.draw_line(fitz.Point(x0, y1 - radius), fitz.Point(x0, y0 + radius))  # Links
+                        # Bogen oben links
+                        shape.draw_quad(fitz.Point(x0, y0 + radius), fitz.Point(x0, y0), fitz.Point(x0 + radius, y0))
 
                         shape.finish(fill=beitrag_bg_color, color=beitrag_bg_color)
                         shape.commit()
