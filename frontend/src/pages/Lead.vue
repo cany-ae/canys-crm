@@ -17,23 +17,6 @@
         :actions="document.actions"
       />
       <AssignTo v-model="assignees.data" doctype="CRM Lead" :docname="leadId" />
-      <Dropdown
-        v-if="doc && document.statuses"
-        :options="statuses"
-        placement="right"
-      >
-        <template #default="{ open }">
-          <Button
-            v-if="doc.status"
-            :label="doc.status"
-            :iconRight="open ? 'chevron-up' : 'chevron-down'"
-          >
-            <template #prefix>
-              <IndicatorIcon :class="getLeadStatus(doc.status).color" />
-            </template>
-          </Button>
-        </template>
-      </Dropdown>
       <Button
         :label="__('In Deal umwandeln')"
         variant="solid"
@@ -434,6 +417,15 @@ const statuses = computed(() => {
   return statusOptions('lead', customStatuses, triggerStatusChange)
 })
 
+// Extract base color name from parseColor output (e.g. "!text-green-700" -> "green")
+function extractColorName(parsedColor) {
+  if (!parsedColor) return 'gray'
+  const match = parsedColor.match(/text-(\w+)-\d+/)
+  if (match) return match[1]
+  if (parsedColor.includes('ink-gray')) return 'gray'
+  return 'gray'
+}
+
 const statusColorMap = {
   'gray': { badge: 'bg-gray-100 text-gray-700 hover:bg-gray-200', dot: 'bg-gray-500' },
   'blue': { badge: 'bg-blue-100 text-blue-700 hover:bg-blue-200', dot: 'bg-blue-500' },
@@ -446,19 +438,19 @@ const statusColorMap = {
 
 const statusBadgeClass = computed(() => {
   let s = getLeadStatus(doc.value.status)
-  let colorName = (s?.color || 'gray').replace('text-', '')
+  let colorName = extractColorName(s?.color)
   return statusColorMap[colorName]?.badge || statusColorMap['gray'].badge
 })
 
 const statusDotClass = computed(() => {
   let s = getLeadStatus(doc.value.status)
-  let colorName = (s?.color || 'gray').replace('text-', '')
+  let colorName = extractColorName(s?.color)
   return statusColorMap[colorName]?.dot || statusColorMap['gray'].dot
 })
 
 const statusBoxBadgeClass = computed(() => {
   let s = getLeadStatus(doc.value.status)
-  let colorName = (s?.color || 'gray').replace('text-', '')
+  let colorName = extractColorName(s?.color)
   const map = {
     'gray': 'bg-gray-100 text-gray-800 hover:bg-gray-200',
     'blue': 'bg-blue-100 text-blue-800 hover:bg-blue-200',

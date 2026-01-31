@@ -42,7 +42,7 @@
                       <div
                         class="w-[35%] min-w-20 shrink-0 flex items-center gap-0.5"
                       >
-                        <div class="truncate text-sm text-ink-gray-5">
+                        <div class="label-text truncate text-sm text-ink-gray-5">
                           {{ __(field.label) }}
                         </div>
                         <div
@@ -520,6 +520,11 @@ function firstVisibleIndex() {
 .sections .section .column {
   max-height: 300px;
 }
+
+:global([data-theme="dark"]) .field .label-text {
+  color: var(--ink-gray-7);
+}
+
 .sections .section:last-of-type .column {
   max-height: none;
 }
