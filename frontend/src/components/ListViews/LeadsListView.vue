@@ -1,7 +1,7 @@
 <template>
   <ListView
     :class="$attrs.class"
-    :columns="columns"
+    :columns="computedColumns"
     :rows="rows"
     :options="{
       getRowRoute: (row) => ({
@@ -181,6 +181,35 @@
           </div>
         </template>
       </ListRowItem>
+      <div v-if="column.key === '_actions'" class="flex items-center justify-end gap-1">
+        <Tooltip :text="__('Anrufen')">
+          <Button
+            variant="ghost"
+            size="sm"
+            @click.stop.prevent="emit('quickCall', row)"
+          >
+            <PhoneIcon class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-gray-9" />
+          </Button>
+        </Tooltip>
+        <Tooltip :text="__('E-Mail')">
+          <Button
+            variant="ghost"
+            size="sm"
+            @click.stop.prevent="emit('quickMail', row)"
+          >
+            <Email2Icon class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-gray-9" />
+          </Button>
+        </Tooltip>
+        <Tooltip :text="__('Notiz')">
+          <Button
+            variant="ghost"
+            size="sm"
+            @click.stop.prevent="emit('quickNote', row)"
+          >
+            <NoteIcon class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-gray-9" />
+          </Button>
+        </Tooltip>
+      </div>
     </ListRows>
     <ListSelectBanner>
       <template #actions="{ selections, unselectAll }">
@@ -209,11 +238,14 @@
 import HeartIcon from '@/components/Icons/HeartIcon.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
+import Email2Icon from '@/components/Icons/Email2Icon.vue'
+import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
 import {
   Avatar,
+  Button,
   ListView,
   ListHeader,
   ListHeaderItem,
@@ -255,11 +287,21 @@ const emit = defineEmits([
   'applyLikeFilter',
   'likeDoc',
   'selectionsChanged',
+  'quickCall',
+  'quickMail',
+  'quickNote',
 ])
 
 const route = useRoute()
 
 const pageLengthCount = defineModel()
+
+const computedColumns = computed(() => {
+  return [
+    ...props.columns,
+    { label: '', key: '_actions', width: '7rem' },
+  ]
+})
 const list = defineModel('list')
 
 const isLikeFilterApplied = computed(() => {

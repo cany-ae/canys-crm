@@ -251,6 +251,9 @@
     @selectionsChanged="
       (selections) => viewControls.updateSelections(selections)
     "
+    @quickCall="handleQuickCall"
+    @quickMail="handleQuickMail"
+    @quickNote="handleQuickNote"
   />
   <div v-else-if="leads.data" class="flex h-full items-center justify-center">
     <div
@@ -310,8 +313,8 @@ import { usersStore } from '@/stores/users'
 import { statusesStore } from '@/stores/statuses'
 import { callEnabled } from '@/composables/settings'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
-import { Avatar, Tooltip, Dropdown } from 'frappe-ui'
-import { useRoute } from 'vue-router'
+import { Avatar, Tooltip, Dropdown, toast } from 'frappe-ui'
+import { useRoute, useRouter } from 'vue-router'
 import { ref, computed, reactive, h } from 'vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
@@ -321,6 +324,7 @@ const { getUser } = usersStore()
 const { getLeadStatus } = statusesStore()
 
 const route = useRoute()
+const router = useRouter()
 
 const leadsListView = ref(null)
 const showLeadModal = ref(false)
@@ -574,5 +578,27 @@ const task = ref({
 function showTask(name) {
   docname.value = name
   showTaskModal.value = true
+}
+
+function handleQuickCall(row) {
+  let mobile = row.mobile_no || ''
+  if (mobile && callEnabled.value) {
+    makeCall(mobile)
+  } else if (!mobile) {
+    toast.error(__('Keine Telefonnummer hinterlegt'))
+  }
+}
+
+function handleQuickMail(row) {
+  let email = row.email || ''
+  if (email) {
+    router.push({ name: 'Lead', params: { leadId: row.name }, hash: '#emails' })
+  } else {
+    toast.error(__('Keine E-Mail hinterlegt'))
+  }
+}
+
+function handleQuickNote(row) {
+  showNote(row.name)
 }
 </script>
