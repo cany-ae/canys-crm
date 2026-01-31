@@ -60,8 +60,13 @@
       </div>
       <ListRowItem v-else :item="item" :align="column.align">
         <template #prefix>
-          <div v-if="column.key === 'status'">
-            <IndicatorIcon :class="item.color" />
+          <div v-if="column.key === 'status'" class="flex items-center">
+            <span
+              class="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold"
+              :class="getStatusBadgeClass(item)"
+            >
+              <span class="inline-block h-1.5 w-1.5 rounded-full" :class="getStatusDotClass(item)"></span>
+            </span>
           </div>
           <div v-else-if="column.key === 'lead_name'">
             <Avatar
@@ -81,7 +86,7 @@
               size="sm"
             />
           </div>
-          <div v-else-if="column.key === 'mobile_no'">
+          <div v-else-if="column.key === 'mobile_no'" class="flex items-center gap-1">
             <PhoneIcon class="h-4 w-4" />
           </div>
         </template>
@@ -276,6 +281,49 @@ watch(pageLengthCount, (val, old_value) => {
 })
 
 const listBulkActionsRef = ref(null)
+
+
+const STATUS_COLOR_MAP = {
+  'Nicht kontaktiert': 'gray',
+  'Kontaktiert': 'blue',
+  'Kontaktiert aber nicht erreicht': 'orange',
+  'Nicht erreicht': 'orange',
+  'Rückruf geplant': 'yellow',
+  'Rueckruf geplant': 'yellow',
+  'Termin vereinbart': 'green',
+  'Kein Interesse': 'red',
+}
+
+function getStatusColor(item) {
+  const statusName = item?.label || ''
+  return STATUS_COLOR_MAP[statusName] || 'gray'
+}
+
+function getStatusBadgeClass(item) {
+  const color = getStatusColor(item)
+  const map = {
+    gray: 'bg-gray-100 text-gray-700',
+    blue: 'bg-blue-100 text-blue-700',
+    orange: 'bg-orange-100 text-orange-700',
+    yellow: 'bg-yellow-100 text-yellow-800',
+    green: 'bg-green-100 text-green-700',
+    red: 'bg-red-100 text-red-700',
+  }
+  return map[color] || map.gray
+}
+
+function getStatusDotClass(item) {
+  const color = getStatusColor(item)
+  const map = {
+    gray: 'bg-gray-500',
+    blue: 'bg-blue-500',
+    orange: 'bg-orange-500',
+    yellow: 'bg-yellow-500',
+    green: 'bg-green-500',
+    red: 'bg-red-500',
+  }
+  return map[color] || map.gray
+}
 
 defineExpose({
   customListActions: computed(

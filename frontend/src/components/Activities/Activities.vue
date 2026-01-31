@@ -236,50 +236,72 @@
         >
           <CallArea :activity="activity" />
         </div>
-        <div
-          v-else-if="activity.activity_type == 'status_change'"
-          class="mb-4 rounded-lg border-l-4 px-4 py-3"
-          :class="statusChangeBorderClass(activity.data?.value)"
+        <div v-else-if="activity.activity_type == 'status_change'"
+          class="relative -mx-4 my-4"
         >
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <div
-                class="flex h-6 w-6 items-center justify-center rounded-full"
+          <div
+            class="relative overflow-hidden rounded-xl border-2 shadow-lg"
+            :class="statusChangeBorderClass(activity.data?.value)"
+          >
+            <div class="h-1.5 w-full bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse"
+              :class="statusChangeIconBgClass(activity.data?.value)"
+            ></div>
+            <div class="relative px-5 py-4">
+              <div class="absolute inset-0 opacity-[0.04]"
                 :class="statusChangeIconBgClass(activity.data?.value)"
-              >
-                <StatusChangeIcon class="h-3.5 w-3.5 text-white" />
+              ></div>
+              <div class="relative flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center justify-center w-7 h-7 rounded-full ring-2 ring-white shadow-md"
+                    :class="statusChangeIconBgClass(activity.data?.value)"
+                  >
+                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                  </div>
+                  <span class="text-xs font-bold uppercase tracking-widest"
+                    :class="statusChangeTextClass(activity.data?.value)"
+                  >
+                    {{ __('Status Update') }}
+                  </span>
+                </div>
+                <Tooltip :text="formatDate(activity.creation)">
+                  <div class="text-[11px] text-gray-400 font-medium">
+                    {{ __(timeAgo(activity.creation)) }}
+                  </div>
+                </Tooltip>
               </div>
-              <span class="text-sm font-semibold" :class="statusChangeTextClass(activity.data?.value)">
-                {{ __('Status geändert') }}
-              </span>
+              <div class="relative flex items-center gap-3 mb-3">
+                <div class="flex-1 min-w-0">
+                  <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold opacity-60 bg-gray-100 text-gray-500 ring-1 ring-gray-200 line-through decoration-1">
+                    <span class="w-2 h-2 rounded-full flex-shrink-0" :class="statusDotClass(activity.data?.old_value)"></span>
+                    <span class="truncate">{{ activity.data?.old_value }}</span>
+                  </div>
+                </div>
+                <div class="flex-shrink-0 flex items-center gap-0.5">
+                  <div class="w-6 h-0.5 rounded-full" :class="statusChangeIconBgClass(activity.data?.value)"></div>
+                  <div class="w-8 h-0.5 rounded-full animate-pulse" :class="statusChangeIconBgClass(activity.data?.value)"></div>
+                  <svg class="w-5 h-5 -ml-1" :class="statusChangeTextClass(activity.data?.value)" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold shadow-md ring-2 ring-offset-1"
+                    :class="statusBadgeClass(activity.data?.value)"
+                  >
+                    <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="statusDotClass(activity.data?.value)"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5" :class="statusDotClass(activity.data?.value)"></span>
+                    </span>
+                    <span class="truncate">{{ activity.data?.value }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="relative flex items-center gap-1 text-[10px] text-gray-400 mt-1">
+                <span>{{ activity.owner_name }}</span>
+              </div>
             </div>
-            <Tooltip :text="formatDate(activity.creation)">
-              <div class="text-sm text-ink-gray-5">
-                {{ __(timeAgo(activity.creation)) }}
-              </div>
-            </Tooltip>
-          </div>
-          <div class="mt-2 flex items-center flex-wrap gap-2 text-sm">
-            <span class="font-medium text-ink-gray-8">
-              {{ activity.owner_name }}
-            </span>
-            <span
-              class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-              :class="statusBadgeClass(activity.data?.old_value)"
-            >
-              <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClass(activity.data?.old_value)"></span>
-              {{ activity.data?.old_value }}
-            </span>
-            <svg class="h-4 w-4 text-ink-gray-4" viewBox="0 0 16 16" fill="none">
-              <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span
-              class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
-              :class="statusBadgeClass(activity.data?.value)"
-            >
-              <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClass(activity.data?.value)"></span>
-              {{ activity.data?.value }}
-            </span>
+            <div class="h-1 w-full" :class="statusChangeIconBgClass(activity.data?.value)"></div>
           </div>
         </div>
         <div v-else class="mb-4 flex flex-col gap-2 py-1.5">
@@ -691,6 +713,11 @@ const activities = computed(() => {
     _activities = all_activities.data.versions.filter(
       (activity) => activity.activity_type === 'communication',
     )
+  } else if (title.value == 'StatusUpdates') {
+    if (!all_activities.data?.versions) return []
+    _activities = all_activities.data.versions.filter(
+      (activity) => activity.activity_type === 'status_change',
+    )
   } else if (title.value == 'Comments') {
     if (!all_activities.data?.versions) return []
     _activities = all_activities.data.versions.filter(
@@ -766,7 +793,9 @@ function update_activities_details(activity) {
 
 const emptyText = computed(() => {
   let text = 'No Activities'
-  if (title.value == 'Emails') {
+  if (title.value == 'StatusUpdates') {
+    text = 'No Status Updates'
+  } else if (title.value == 'Emails') {
     text = 'No Email Communications'
   } else if (title.value == 'Comments') {
     text = 'No Comments'
@@ -788,7 +817,9 @@ const emptyText = computed(() => {
 
 const emptyTextIcon = computed(() => {
   let icon = ActivityIcon
-  if (title.value == 'Emails') {
+  if (title.value == 'StatusUpdates') {
+    icon = ActivityIcon
+  } else if (title.value == 'Emails') {
     icon = Email2Icon
   } else if (title.value == 'Comments') {
     icon = CommentIcon
@@ -894,6 +925,7 @@ const STATUS_COLORS = {
   'Nicht kontaktiert': 'gray',
   'Kontaktiert': 'blue',
   'Nicht erreicht': 'orange',
+  'Kontaktiert aber nicht erreicht': 'orange',
   'Rueckruf geplant': 'yellow',
   'Rückruf geplant': 'yellow',
   'Termin vereinbart': 'green',

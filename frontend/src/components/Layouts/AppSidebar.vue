@@ -83,10 +83,6 @@
           :isSidebarCollapsed="isSidebarCollapsed"
           :afterUpgrade="() => capture('upgrade_plan_from_trial_banner')"
         />
-        <GettingStartedBanner
-          v-if="!isOnboardingStepsCompleted"
-          :isSidebarCollapsed="isSidebarCollapsed"
-        />
       </div>
       <SidebarLink
         v-if="isOnboardingStepsCompleted"
@@ -179,7 +175,6 @@ import {
   SignupBanner,
   TrialBanner,
   HelpModal,
-  GettingStartedBanner,
   useOnboarding,
   showHelpModal,
   minimize,
@@ -200,14 +195,14 @@ const isDemoSite = ref(window.is_demo_site)
 
 const links = [
   {
-    label: 'Dashboard',
-    icon: LucideLayoutDashboard,
-    to: 'Dashboard',
-  },
-  {
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
+  },
+  {
+    label: 'Dashboard',
+    icon: LucideLayoutDashboard,
+    to: 'Dashboard',
   },
   {
     label: 'Deals',
@@ -215,14 +210,9 @@ const links = [
     to: 'Deals',
   },
   {
-    label: 'Contacts',
-    icon: ContactsIcon,
-    to: 'Contacts',
-  },
-  {
-    label: 'Organizations',
-    icon: OrganizationsIcon,
-    to: 'Organizations',
+    label: 'Tasks',
+    icon: TaskIcon,
+    to: 'Tasks',
   },
   {
     label: 'Notes',
@@ -230,14 +220,14 @@ const links = [
     to: 'Notes',
   },
   {
-    label: 'Tasks',
-    icon: TaskIcon,
-    to: 'Tasks',
-  },
-  {
     label: 'Calendar',
     icon: CalendarIcon,
     to: 'Calendar',
+  },
+  {
+    label: 'Contacts',
+    icon: ContactsIcon,
+    to: 'Contacts',
   },
   {
     label: 'Call Logs',

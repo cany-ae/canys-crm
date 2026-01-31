@@ -35,10 +35,16 @@
         </template>
       </Dropdown>
       <Button
-        :label="__('Convert to Deal')"
+        :label="__('In Deal umwandeln')"
         variant="solid"
+        theme="green"
+        size="md"
         @click="showConvertToDealModal = true"
-      />
+      >
+        <template #prefix>
+          <FeatherIcon name="arrow-right-circle" class="h-4 w-4" />
+        </template>
+      </Button>
     </template>
   </LayoutHeader>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
@@ -121,16 +127,37 @@
                   {{ title }}
                 </div>
               </Tooltip>
+              <div v-if="doc.status" class="flex items-center gap-2">
+                <Dropdown
+                  :options="statuses"
+                  placement="right"
+                >
+                  <template #default="{ open }">
+                    <button
+                      class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-semibold transition-all duration-150"
+                      :class="statusBadgeClass"
+                    >
+                      <span class="inline-block size-2 rounded-full" :class="statusDotClass"></span>
+                      {{ doc.status }}
+                      <FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="h-3.5 w-3.5" />
+                    </button>
+                  </template>
+                </Dropdown>
+              </div>
               <div class="flex gap-1.5">
                 <Button
                   v-if="callEnabled"
                   :tooltip="__('Make a call')"
                   :icon="PhoneIcon"
                   @click="
-                    () =>
-                      doc.mobile_no
-                        ? makeCall(doc.mobile_no)
-                        : toast.error(__('No phone number set'))
+                    () => {
+                      if (doc.mobile_no) {
+                        makeCall(doc.mobile_no)
+                        setTimeout(() => triggerStatusPrompt('call'), 2000)
+                      } else {
+                        toast.error(__('No phone number set'))
+                      }
+                    }
                   "
                 />
 
@@ -138,7 +165,7 @@
                   :tooltip="__('Send an email')"
                   :icon="Email2Icon"
                   @click="
-                    doc.email ? openEmailBox() : toast.error(__('No email set'))
+                    doc.email ? openEmailBoxWithPrompt() : toast.error(__('No email set'))
                   "
                 />
                 <Button
@@ -171,6 +198,39 @@
           </div>
         </template>
       </FileUploader>
+      <!-- Current Status Box -->
+      <div class="sticky top-0 z-10 border-b bg-surface-white px-5 py-3">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Aktueller Status</span>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <Dropdown :options="statuses" placement="right">
+            <template #default="{ open }">
+              <button
+                class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition-all duration-150 w-full"
+                :class="statusBoxBadgeClass"
+              >
+                <span class="relative flex h-3 w-3 flex-shrink-0">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="statusDotClass"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3" :class="statusDotClass"></span>
+                </span>
+                {{ doc.status }}
+                <FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="ml-auto h-3.5 w-3.5" />
+              </button>
+            </template>
+          </Dropdown>
+        </div>
+        <div class="flex flex-col gap-1 text-xs text-ink-gray-5">
+          <div class="flex items-center gap-1.5" v-if="lastStatusChange">
+            <FeatherIcon name="clock" class="h-3 w-3" />
+            <span>{{ __('Letzte Änderung') }}: {{ lastStatusChange }}</span>
+          </div>
+          <div class="flex items-center gap-1.5" v-if="lastActivity">
+            <FeatherIcon name="activity" class="h-3 w-3" />
+            <span>{{ __('Letzte Aktivität') }}: {{ lastActivity }}</span>
+          </div>
+        </div>
+      </div>
       <SLASection
         v-if="doc.sla_status"
         v-model="doc"
@@ -218,6 +278,14 @@
     :docname="leadId"
     name="Leads"
   />
+  <StatusUpdatePrompt
+    v-if="showStatusPrompt"
+    v-model:show="showStatusPrompt"
+    :leadName="doc.lead_name"
+    :currentStatus="doc.status"
+    :triggerAction="statusPromptAction"
+    @statusChanged="handleStatusPromptChange"
+  />
 </template>
 <script setup>
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
@@ -246,11 +314,13 @@ import SidePanelLayout from '@/components/SidePanelLayout.vue'
 import SLASection from '@/components/SLASection.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import ConvertToDealModal from '@/components/Modals/ConvertToDealModal.vue'
+import StatusUpdatePrompt from '@/components/StatusUpdatePrompt.vue'
 import {
   openWebsite,
   setupCustomizations,
   copyToClipboard,
   validateIsImageFile,
+  timeAgo,
 } from '@/utils'
 import { getView } from '@/utils/view'
 import { getSettings } from '@/stores/settings'
@@ -270,8 +340,9 @@ import {
   call,
   usePageMeta,
   toast,
+  FeatherIcon,
 } from 'frappe-ui'
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
 
@@ -297,6 +368,8 @@ const errorMessage = ref('')
 const showDeleteLinkedDocModal = ref(false)
 const showConvertToDealModal = ref(false)
 const showFilesUploader = ref(false)
+const showStatusPrompt = ref(false)
+const statusPromptAction = ref('call')
 
 const { triggerOnChange, assignees, permissions, document, scripts, error } =
   useDocument('CRM Lead', props.leadId)
@@ -378,6 +451,69 @@ const statuses = computed(() => {
   return statusOptions('lead', customStatuses, triggerStatusChange)
 })
 
+const statusColorMap = {
+  'gray': { badge: 'bg-gray-100 text-gray-700 hover:bg-gray-200', dot: 'bg-gray-500' },
+  'blue': { badge: 'bg-blue-100 text-blue-700 hover:bg-blue-200', dot: 'bg-blue-500' },
+  'orange': { badge: 'bg-orange-100 text-orange-700 hover:bg-orange-200', dot: 'bg-orange-500' },
+  'yellow': { badge: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200', dot: 'bg-yellow-500' },
+  'green': { badge: 'bg-green-100 text-green-700 hover:bg-green-200', dot: 'bg-green-500' },
+  'red': { badge: 'bg-red-100 text-red-700 hover:bg-red-200', dot: 'bg-red-500' },
+  'purple': { badge: 'bg-purple-100 text-purple-700 hover:bg-purple-200', dot: 'bg-purple-500' },
+}
+
+const statusBadgeClass = computed(() => {
+  let s = getLeadStatus(doc.value.status)
+  let colorName = (s?.color || 'gray').replace('text-', '')
+  return statusColorMap[colorName]?.badge || statusColorMap['gray'].badge
+})
+
+const statusDotClass = computed(() => {
+  let s = getLeadStatus(doc.value.status)
+  let colorName = (s?.color || 'gray').replace('text-', '')
+  return statusColorMap[colorName]?.dot || statusColorMap['gray'].dot
+})
+
+const statusBoxBadgeClass = computed(() => {
+  let s = getLeadStatus(doc.value.status)
+  let colorName = (s?.color || 'gray').replace('text-', '')
+  const map = {
+    'gray': 'bg-gray-100 text-gray-800 hover:bg-gray-200',
+    'blue': 'bg-blue-100 text-blue-800 hover:bg-blue-200',
+    'orange': 'bg-orange-100 text-orange-800 hover:bg-orange-200',
+    'yellow': 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
+    'green': 'bg-green-100 text-green-800 hover:bg-green-200',
+    'red': 'bg-red-100 text-red-800 hover:bg-red-200',
+    'purple': 'bg-purple-100 text-purple-800 hover:bg-purple-200',
+  }
+  return map[colorName] || map['gray']
+})
+
+const lastStatusChange = computed(() => {
+  if (!activities.value?.all_activities?.data?.versions) return null
+  const statusChanges = activities.value.all_activities.data.versions.filter(
+    a => a.activity_type === 'status_change'
+  )
+  if (statusChanges.length) {
+    const last = statusChanges[statusChanges.length - 1]
+    return timeAgo(last.creation)
+  }
+  return null
+})
+
+const lastActivity = computed(() => {
+  if (!activities.value?.all_activities?.data?.versions) return null
+  const versions = activities.value.all_activities.data.versions
+  if (versions.length) {
+    const last = versions[versions.length - 1]
+    if (last.activity_type === 'communication') return 'E-Mail'
+    if (last.activity_type === 'comment') return 'Kommentar'
+    if (last.activity_type === 'status_change') return 'Status Update'
+    if (last.activity_type === 'incoming_call' || last.activity_type === 'outgoing_call') return 'Anruf'
+    return timeAgo(last.creation)
+  }
+  return null
+})
+
 usePageMeta(() => {
   return { title: title.value, icon: brand.favicon }
 })
@@ -386,48 +522,58 @@ const tabs = computed(() => {
   let tabOptions = [
     {
       name: 'Activity',
-      label: __('Activity'),
+      label: __('Alle Aktivitäten'),
       icon: ActivityIcon,
     },
     {
-      name: 'Emails',
-      label: __('Emails'),
-      icon: EmailIcon,
-    },
-    {
-      name: 'Comments',
-      label: __('Comments'),
-      icon: CommentIcon,
-    },
-    {
-      name: 'Data',
-      label: __('Data'),
-      icon: DetailsIcon,
-    },
-    {
-      name: 'Events',
-      label: __('Events'),
-      icon: EventIcon,
+      name: 'StatusUpdates',
+      label: __('Status Updates'),
+      icon: ActivityIcon,
     },
     {
       name: 'Calls',
-      label: __('Calls'),
+      label: __('Anrufe'),
       icon: PhoneIcon,
     },
     {
-      name: 'Tasks',
-      label: __('Tasks'),
-      icon: TaskIcon,
+      name: 'Emails',
+      label: __('E-Mails'),
+      icon: EmailIcon,
     },
     {
       name: 'Notes',
-      label: __('Notes'),
+      label: __('Notizen'),
       icon: NoteIcon,
     },
     {
       name: 'Attachments',
-      label: __('Attachments'),
+      label: __('Anhänge'),
       icon: AttachmentIcon,
+    },
+    {
+      name: 'InvoiceTool',
+      label: __('Angebotstool'),
+      icon: DetailsIcon,
+    },
+    {
+      name: 'Comments',
+      label: __('Kommentare'),
+      icon: CommentIcon,
+    },
+    {
+      name: 'Data',
+      label: __('Daten'),
+      icon: DetailsIcon,
+    },
+    {
+      name: 'Events',
+      label: __('Veranstaltungen'),
+      icon: EventIcon,
+    },
+    {
+      name: 'Tasks',
+      label: __('Aufgaben'),
+      icon: TaskIcon,
     },
     {
       name: 'WhatsApp',
@@ -488,6 +634,22 @@ function openEmailBox() {
   nextTick(() => (activities.value.emailBox.show = true))
 }
 
+function openEmailBoxWithPrompt() {
+  openEmailBox()
+  // Watch for email reload (indicates email was sent)
+  const unwatch = watch(
+    () => reload.value,
+    (newVal) => {
+      if (newVal) {
+        unwatch()
+        setTimeout(() => triggerStatusPrompt('email'), 1000)
+      }
+    },
+  )
+  // Auto-cleanup after 5 minutes
+  setTimeout(() => unwatch(), 300000)
+}
+
 function saveChanges(data) {
   document.save.submit(null, {
     onSuccess: () => reloadAssignees(data),
@@ -499,4 +661,67 @@ function reloadAssignees(data) {
     assignees.reload()
   }
 }
+
+// Status Update Prompt - nach Anruf, E-Mail, Task, Event
+onMounted(() => {
+  // Listen for call events
+  $socket.on('crm_call_completed', (data) => {
+    if (data.reference_name === props.leadId) {
+      statusPromptAction.value = 'call'
+      showStatusPrompt.value = true
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  $socket.off('crm_call_completed')
+})
+
+// Trigger status prompt after email send
+const originalOpenEmailBox = openEmailBox
+watch(
+  () => reload.value,
+  (newVal) => {
+    if (newVal) {
+      // Check if latest activity was an email send or call
+      // The reload trigger fires after saves including email sends
+    }
+  },
+)
+
+function triggerStatusPrompt(action) {
+  statusPromptAction.value = action
+  showStatusPrompt.value = true
+}
+
+async function handleStatusPromptChange(newStatus, note) {
+  // Update the lead status
+  await triggerOnChange('status', newStatus)
+  document.save.submit(null, {
+    onSuccess: () => {
+      reload.value = true
+      // Add note as comment if provided
+      if (note && note.trim()) {
+        call('frappe.client.insert', {
+          doc: {
+            doctype: 'Comment',
+            comment_type: 'Comment',
+            reference_doctype: 'CRM Lead',
+            reference_name: props.leadId,
+            content: note,
+          },
+        }).then(() => {
+          reload.value = true
+        })
+      }
+      toast.success(__('Status aktualisiert'))
+    },
+    onError: (err) => {
+      toast.error(err.messages?.[0] || __('Fehler beim Status-Update'))
+    },
+  })
+}
+
+// Expose triggerStatusPrompt for child components
+defineExpose({ triggerStatusPrompt })
 </script>
