@@ -21,6 +21,9 @@
     <div v-else-if="title == 'Events'" class="h-full activity">
       <EventArea :doctype="doctype" :docname="docname" />
     </div>
+    <div v-else-if="title == 'InvoiceTool'" class="h-full overflow-y-auto">
+      <AngebotArea :leadId="docname" />
+    </div>
     <div
       v-else-if="
         activities?.length ||
@@ -108,6 +111,7 @@
           @reload="all_activities.reload() && scroll()"
         />
       </div>
+
       <div
         v-else
         v-for="(activity, i) in activities"
@@ -158,6 +162,13 @@
                 ) && activity.status == 'Busy'
               "
             />
+            <div
+              v-else-if="activity.activity_type == 'status_change'"
+              class="flex h-6 w-6 items-center justify-center rounded-full"
+              :class="statusChangeIconBgClass(activity.data?.value)"
+            >
+              <StatusChangeIcon class="h-3 w-3 text-white" />
+            </div>
             <component
               v-else
               :is="activity.icon"
@@ -224,6 +235,52 @@
           class="mb-4"
         >
           <CallArea :activity="activity" />
+        </div>
+        <div
+          v-else-if="activity.activity_type == 'status_change'"
+          class="mb-4 rounded-lg border-l-4 px-4 py-3"
+          :class="statusChangeBorderClass(activity.data?.value)"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <div
+                class="flex h-6 w-6 items-center justify-center rounded-full"
+                :class="statusChangeIconBgClass(activity.data?.value)"
+              >
+                <StatusChangeIcon class="h-3.5 w-3.5 text-white" />
+              </div>
+              <span class="text-sm font-semibold" :class="statusChangeTextClass(activity.data?.value)">
+                {{ __('Status geändert') }}
+              </span>
+            </div>
+            <Tooltip :text="formatDate(activity.creation)">
+              <div class="text-sm text-ink-gray-5">
+                {{ __(timeAgo(activity.creation)) }}
+              </div>
+            </Tooltip>
+          </div>
+          <div class="mt-2 flex items-center flex-wrap gap-2 text-sm">
+            <span class="font-medium text-ink-gray-8">
+              {{ activity.owner_name }}
+            </span>
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+              :class="statusBadgeClass(activity.data?.old_value)"
+            >
+              <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClass(activity.data?.old_value)"></span>
+              {{ activity.data?.old_value }}
+            </span>
+            <svg class="h-4 w-4 text-ink-gray-4" viewBox="0 0 16 16" fill="none">
+              <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+              :class="statusBadgeClass(activity.data?.value)"
+            >
+              <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClass(activity.data?.value)"></span>
+              {{ activity.data?.value }}
+            </span>
+          </div>
         </div>
         <div v-else class="mb-4 flex flex-col gap-2 py-1.5">
           <div class="flex items-center justify-stretch gap-2 text-base">
@@ -459,6 +516,7 @@ import CallArea from '@/components/Activities/CallArea.vue'
 import NoteArea from '@/components/Activities/NoteArea.vue'
 import TaskArea from '@/components/Activities/TaskArea.vue'
 import AttachmentArea from '@/components/Activities/AttachmentArea.vue'
+import AngebotArea from '@/components/Activities/AngebotArea.vue'
 import DataFields from '@/components/Activities/DataFields.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ActivityIcon from '@/components/Icons/ActivityIcon.vue'
@@ -478,6 +536,7 @@ import MultiActionButton from '@/components/MultiActionButton.vue'
 import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import DotIcon from '@/components/Icons/DotIcon.vue'
+import StatusChangeIcon from '@/components/Icons/StatusChangeIcon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import SelectIcon from '@/components/Icons/SelectIcon.vue'
 import MissedCallIcon from '@/components/Icons/MissedCallIcon.vue'
@@ -688,6 +747,10 @@ function update_activities_details(activity) {
 
   if (activity.activity_type == 'creation') {
     activity.type = activity.data
+  } else if (activity.activity_type == 'status_change') {
+    activity.type = 'changed'
+    activity.value = 'from'
+    activity.to = 'to'
   } else if (activity.activity_type == 'added') {
     activity.type = 'added'
     activity.value = 'as'
@@ -769,6 +832,9 @@ function timelineIcon(activity_type, is_lead) {
     case 'attachment_log':
       icon = AttachmentIcon
       break
+    case 'status_change':
+      icon = StatusChangeIcon
+      break
     default:
       icon = DotIcon
   }
@@ -822,6 +888,81 @@ const callActions = computed(() => {
     action.condition ? action.condition() : true,
   )
 })
+
+
+const STATUS_COLORS = {
+  'Nicht kontaktiert': 'gray',
+  'Kontaktiert': 'blue',
+  'Nicht erreicht': 'orange',
+  'Rueckruf geplant': 'yellow',
+  'Rückruf geplant': 'yellow',
+  'Termin vereinbart': 'green',
+  'Kein Interesse': 'red',
+}
+
+function getStatusColor(status) {
+  return STATUS_COLORS[status] || 'gray'
+}
+
+function statusChangeBorderClass(status) {
+  const colorMap = {
+    gray: 'border-gray-400 bg-gray-50',
+    blue: 'border-blue-500 bg-blue-50',
+    orange: 'border-orange-500 bg-orange-50',
+    yellow: 'border-yellow-500 bg-yellow-50',
+    green: 'border-green-500 bg-green-50',
+    red: 'border-red-500 bg-red-50',
+  }
+  return colorMap[getStatusColor(status)] || colorMap.gray
+}
+
+function statusChangeIconBgClass(status) {
+  const colorMap = {
+    gray: 'bg-gray-500',
+    blue: 'bg-blue-600',
+    orange: 'bg-orange-500',
+    yellow: 'bg-yellow-500',
+    green: 'bg-green-600',
+    red: 'bg-red-500',
+  }
+  return colorMap[getStatusColor(status)] || colorMap.gray
+}
+
+function statusChangeTextClass(status) {
+  const colorMap = {
+    gray: 'text-gray-800',
+    blue: 'text-blue-800',
+    orange: 'text-orange-800',
+    yellow: 'text-yellow-800',
+    green: 'text-green-800',
+    red: 'text-red-800',
+  }
+  return colorMap[getStatusColor(status)] || colorMap.gray
+}
+
+function statusBadgeClass(status) {
+  const colorMap = {
+    gray: 'bg-gray-100 text-gray-700 ring-1 ring-gray-300',
+    blue: 'bg-blue-100 text-blue-700 ring-1 ring-blue-300',
+    orange: 'bg-orange-100 text-orange-700 ring-1 ring-orange-300',
+    yellow: 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300',
+    green: 'bg-green-100 text-green-700 ring-1 ring-green-300',
+    red: 'bg-red-100 text-red-700 ring-1 ring-red-300',
+  }
+  return colorMap[getStatusColor(status)] || colorMap.gray
+}
+
+function statusDotClass(status) {
+  const colorMap = {
+    gray: 'bg-gray-500',
+    blue: 'bg-blue-500',
+    orange: 'bg-orange-500',
+    yellow: 'bg-yellow-500',
+    green: 'bg-green-500',
+    red: 'bg-red-500',
+  }
+  return colorMap[getStatusColor(status)] || colorMap.gray
+}
 
 defineExpose({ emailBox, all_activities, changeTabTo })
 </script>

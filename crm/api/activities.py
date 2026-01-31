@@ -98,6 +98,10 @@ def get_deal_activities(name):
 					"value": change[1],
 				}
 
+		# Mark status changes as special activity type
+		if change[0] == "status":
+			activity_type = "status_change"
+
 		activity = {
 			"activity_type": activity_type,
 			"creation": version.creation,
@@ -229,6 +233,10 @@ def get_lead_activities(name):
 					"field_label": field_label,
 					"value": change[1],
 				}
+
+		# Mark status changes as special activity type
+		if change[0] == "status":
+			activity_type = "status_change"
 
 		activity = {
 			"activity_type": activity_type,
