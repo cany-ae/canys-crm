@@ -127,23 +127,6 @@
                   {{ title }}
                 </div>
               </Tooltip>
-              <div v-if="doc.status" class="flex items-center gap-2">
-                <Dropdown
-                  :options="statuses"
-                  placement="right"
-                >
-                  <template #default="{ open }">
-                    <button
-                      class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-semibold transition-all duration-150"
-                      :class="statusBadgeClass"
-                    >
-                      <span class="inline-block size-2 rounded-full" :class="statusDotClass"></span>
-                      {{ doc.status }}
-                      <FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="h-3.5 w-3.5" />
-                    </button>
-                  </template>
-                </Dropdown>
-              </div>
               <div class="flex gap-1.5">
                 <Button
                   v-if="callEnabled"
@@ -519,7 +502,7 @@ usePageMeta(() => {
 })
 
 const tabs = computed(() => {
-  let tabOptions = [
+  return [
     {
       name: 'Activity',
       label: __('Alle Aktivitäten'),
@@ -541,29 +524,9 @@ const tabs = computed(() => {
       icon: EmailIcon,
     },
     {
-      name: 'Notes',
-      label: __('Notizen'),
-      icon: NoteIcon,
-    },
-    {
       name: 'Attachments',
       label: __('Anhänge'),
       icon: AttachmentIcon,
-    },
-    {
-      name: 'InvoiceTool',
-      label: __('Angebotstool'),
-      icon: DetailsIcon,
-    },
-    {
-      name: 'Comments',
-      label: __('Kommentare'),
-      icon: CommentIcon,
-    },
-    {
-      name: 'Data',
-      label: __('Daten'),
-      icon: DetailsIcon,
     },
     {
       name: 'Events',
@@ -571,18 +534,21 @@ const tabs = computed(() => {
       icon: EventIcon,
     },
     {
-      name: 'Tasks',
-      label: __('Aufgaben'),
-      icon: TaskIcon,
+      name: 'Notes',
+      label: __('Notizen'),
+      icon: NoteIcon,
     },
     {
-      name: 'WhatsApp',
-      label: __('WhatsApp'),
-      icon: WhatsAppIcon,
-      condition: () => whatsappEnabled.value,
+      name: 'InvoiceTool',
+      label: __('Angebotstool'),
+      icon: DetailsIcon,
+    },
+    {
+      name: 'Data',
+      label: __('Daten'),
+      icon: DetailsIcon,
     },
   ]
-  return tabOptions.filter((tab) => (tab.condition ? tab.condition() : true))
 })
 
 const { tabIndex, changeTabTo } = useActiveTabManager(tabs, 'lastLeadTab')

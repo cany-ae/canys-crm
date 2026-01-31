@@ -499,6 +499,7 @@ function firstVisibleIndex() {
 
 :deep(.form-control button) {
   gap: 0;
+  color: var(--text-ink-gray-8);
 }
 :deep(.form-control [type='checkbox']) {
   margin-left: 9px;
