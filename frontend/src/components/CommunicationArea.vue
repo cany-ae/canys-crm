@@ -93,7 +93,7 @@ import { usersStore } from '@/stores/users'
 import { useStorage } from '@vueuse/core'
 import { call, createResource } from 'frappe-ui'
 import { useOnboarding } from 'frappe-ui/frappe'
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
 const props = defineProps({
   doctype: {
@@ -291,6 +291,36 @@ function toggleCommentBox() {
   }
   showCommentBox.value = !showCommentBox.value
 }
+
+
+// Listen for Angebot email event from Activities/AngebotArea
+function handleAngebotEmail(e) {
+  const { fileData, lead } = e.detail
+  showCommentBox.value = false
+  showEmailBox.value = true
+  nextTick(() => {
+    const editor = newEmailEditor.value
+    if (editor) {
+      editor.subject = 'Ihr Angebot - ' + (lead.lead_name || lead.first_name || '')
+      if (lead.email) {
+        editor.toEmails = [lead.email]
+      }
+    }
+    attachments.value = [{
+      name: fileData.file_doc_name,
+      file_name: fileData.file_name,
+      file_url: fileData.file_url,
+    }]
+  })
+}
+
+onMounted(() => {
+  window.addEventListener('open-email-with-angebot', handleAngebotEmail)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('open-email-with-angebot', handleAngebotEmail)
+})
 
 defineExpose({
   attachments,

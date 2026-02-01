@@ -997,34 +997,17 @@ function statusDotClass(status) {
 }
 
 function openEmailWithAngebot(fileData) {
-  // Switch to Emails tab first, then wait for CommunicationArea to mount
-  changeTabTo('emails')
-  // CommunicationArea uses v-if, so emailBox ref needs time to mount
-  let attempts = 0
-  const tryOpenEmail = () => {
-    attempts++
-    if (emailBox.value) {
-      emailBox.value.show = true
-      nextTick(() => {
-        if (emailBox.value.editor) {
-          emailBox.value.editor.subject = 'Ihr Angebot - ' + (doc.value.lead_name || doc.value.first_name || '')
-        }
-        if (emailBox.value.editor && doc.value.email) {
-          emailBox.value.editor.toEmails = [doc.value.email]
-        }
-        if (emailBox.value.attachments !== undefined) {
-          emailBox.value.attachments = [{
-            name: fileData.file_doc_name,
-            file_name: fileData.file_name,
-            file_url: fileData.file_url,
-          }]
-        }
-      })
-    } else if (attempts < 20) {
-      setTimeout(tryOpenEmail, 100)
-    }
-  }
-  nextTick(tryOpenEmail)
+  changeTabTo('activity')
+  nextTick(() => {
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('open-email-with-angebot', {
+        detail: {
+          fileData,
+          lead: doc.value,
+        },
+      }))
+    }, 300)
+  })
 }
 
 defineExpose({ emailBox, all_activities, changeTabTo })
