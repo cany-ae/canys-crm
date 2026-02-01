@@ -68,19 +68,22 @@
         @click="whatsappBox.show()"
       />
     </div>
-    <Dropdown v-else-if="title == 'Activity'" :options="filterOptions" placement="right" @click.stop>
-      <template v-slot="{ open }">
+    <div v-else-if="title == 'Activity'" class="flex items-center">
+      <Dropdown :options="filterOptions" placement="right" @click.stop>
         <Button
-          variant="outline"
-          size="sm"
-          class="flex items-center gap-1.5 whitespace-nowrap"
-        >
-          <FeatherIcon name="filter" class="h-3 w-3 text-ink-gray-5" />
-          <span class="text-sm text-ink-gray-7">{{ activityFilter === 'all' ? __('Alle') : filterLabels[activityFilter] }}</span>
-          <FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="h-3 w-3 text-ink-gray-5" />
-        </Button>
-      </template>
-    </Dropdown>
+          :label="isFiltered ? filterLabels[activityFilter] : __('Filter')"
+          :class="isFiltered ? 'rounded-r-none' : ''"
+          :iconLeft="FilterIcon"
+        />
+      </Dropdown>
+      <Button
+        v-if="isFiltered"
+        :tooltip="__('Filter zurücksetzen')"
+        class="rounded-l-none border-l"
+        icon="x"
+        @click.stop="activityFilter = 'all'"
+      />
+    </div>
     <Dropdown v-else-if="!['Activity', 'StatusUpdates', 'Data', 'InvoiceTool'].includes(title)" :options="defaultActions" @click.stop>
       <template v-slot="{ open }">
         <Button
@@ -106,7 +109,7 @@ import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
 import { globalStore } from '@/stores/global'
 import { whatsappEnabled, callEnabled } from '@/composables/settings'
-import { DropdownOption } from '@/utils'
+import FilterIcon from '@/components/Icons/FilterIcon.vue'
 import { Dropdown, FeatherIcon } from 'frappe-ui'
 import { computed, h } from 'vue'
 
@@ -135,16 +138,22 @@ const filterLabels = {
   comment: 'Kommentare',
 }
 
+const isFiltered = computed(() => activityFilter.value !== 'all')
+
 const filterOptions = computed(() => {
-  return Object.entries(filterLabels).map(([key, label]) => ({
-    label: __(label),
-    onClick: () => { activityFilter.value = key },
-    component: (props) =>
-      DropdownOption({
-        option: __(label),
-        selected: activityFilter.value === key,
-      }),
-  }))
+  const options = Object.entries(filterLabels)
+    .filter(([key]) => key !== 'all')
+    .map(([key, label]) => ({
+      label: __(label),
+      onClick: () => { activityFilter.value = key },
+    }))
+  if (isFiltered.value) {
+    options.push({
+      label: __('Filter zurücksetzen'),
+      onClick: () => { activityFilter.value = 'all' },
+    })
+  }
+  return options
 })
 
 const defaultActions = computed(() => {
