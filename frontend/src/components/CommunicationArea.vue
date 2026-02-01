@@ -36,18 +36,7 @@
         disabled: emailEmpty,
       }"
       :discardButtonProps="{
-        onClick: async () => {
-          saveDraftIfContent()
-          await deleteAttachedFiles()
-          showEmailBox = false
-          newEmailEditor.subject = subject
-          newEmailEditor.toEmails = doc.email ? [doc.email] : []
-          newEmailEditor.ccEmails = []
-          newEmailEditor.bccEmails = []
-          newEmailEditor.cc = false
-          newEmailEditor.bcc = false
-          newEmail = ''
-        },
+        onClick: discardEmail,
       }"
       :editable="showEmailBox"
       v-model="doc"
@@ -92,6 +81,7 @@ import Email2Icon from '@/components/Icons/Email2Icon.vue'
 import { capture } from '@/telemetry'
 import { usersStore } from '@/stores/users'
 import { useStorage } from '@vueuse/core'
+import { useDebounceFn } from '@vueuse/core'
 import { call, createResource } from 'frappe-ui'
 import { useOnboarding } from 'frappe-ui/frappe'
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
@@ -127,7 +117,7 @@ const sendEmailRef = ref(null)
 const isAngebotFlow = ref(false)
 const skipSignature = ref(false)
 
-// Draft-Speicher pro Lead
+// --- Draft System ---
 const draftsKey = `emailDrafts-${getUser().email}-${props.doctype}-${doc.value.name}`
 const drafts = useStorage(draftsKey, [], localStorage, {
   serializer: {
@@ -135,6 +125,12 @@ const drafts = useStorage(draftsKey, [], localStorage, {
     write: (v) => JSON.stringify(v),
   },
 })
+
+// ID des aktuell bearbeiteten Drafts (null = kein aktiver Draft)
+const currentDraftId = ref(null)
+
+// Flag: Draft-Save unterdruecken (z.B. nach Send/Reset)
+const suppressDraftSave = ref(false)
 
 const attachments = useStorage(
   `attachments-${getUser().email}-${props.doctype}-${doc.value.name}`,
@@ -175,6 +171,7 @@ function setSignature(editor) {
   editor.commands.focus('start')
 }
 
+// --- Signature-Watcher ---
 watch(
   () => showEmailBox.value,
   (value) => {
@@ -198,6 +195,7 @@ watch(
   },
 )
 
+// --- Computed ---
 const commentEmpty = computed(() => {
   return !newComment.value || newComment.value === '<p></p>'
 })
@@ -210,6 +208,87 @@ const emailEmpty = computed(() => {
   )
 })
 
+// Prueft ob der Compose tatsaechlich User-Content hat (nicht nur Signatur)
+function hasComposableContent() {
+  const hasContent = newEmail.value && newEmail.value !== '<p></p>'
+  const hasAttachments = attachments.value && attachments.value.length > 0
+  const editorRef = newEmailEditor.value
+  const hasCustomSubject = editorRef?.subject && editorRef.subject !== subject.value
+  return hasContent || hasAttachments || hasCustomSubject
+}
+
+// --- Draft Save/Update ---
+function saveOrUpdateDraft() {
+  if (suppressDraftSave.value) return
+  if (!showEmailBox.value) return
+  if (!hasComposableContent()) return
+
+  const editorRef = newEmailEditor.value
+  const draftData = {
+    subject: editorRef?.subject || '',
+    content: newEmail.value || '',
+    toEmails: editorRef?.toEmails || [],
+    ccEmails: editorRef?.ccEmails || [],
+    bccEmails: editorRef?.bccEmails || [],
+    attachmentsList: [...(attachments.value || [])],
+    updated_at: new Date().toISOString(),
+  }
+
+  if (currentDraftId.value) {
+    // Bestehenden Draft aktualisieren
+    const idx = drafts.value.findIndex(d => d.id === currentDraftId.value)
+    if (idx !== -1) {
+      const updated = { ...drafts.value[idx], ...draftData }
+      const newDrafts = [...drafts.value]
+      newDrafts[idx] = updated
+      drafts.value = newDrafts
+      return
+    }
+  }
+
+  // Neuen Draft erstellen
+  const newId = Date.now()
+  const draft = {
+    id: newId,
+    ...draftData,
+    created_at: new Date().toISOString(),
+  }
+  const currentDrafts = [...drafts.value]
+  currentDrafts.unshift(draft)
+  if (currentDrafts.length > 10) currentDrafts.pop()
+  drafts.value = currentDrafts
+  currentDraftId.value = newId
+}
+
+// Debounced Auto-Save: 1.5 Sekunden nach letzter Aenderung
+const debouncedSaveDraft = useDebounceFn(() => {
+  saveOrUpdateDraft()
+}, 1500)
+
+// --- Auto-Save Watcher: Content ---
+watch(
+  () => newEmail.value,
+  (val, oldVal) => {
+    if (suppressDraftSave.value) return
+    if (!showEmailBox.value) return
+    if (val !== oldVal) {
+      debouncedSaveDraft()
+    }
+  },
+)
+
+// --- Auto-Save Watcher: Attachments ---
+watch(
+  () => attachments.value,
+  () => {
+    if (suppressDraftSave.value) return
+    if (!showEmailBox.value) return
+    debouncedSaveDraft()
+  },
+  { deep: true }
+)
+
+// --- Mail senden ---
 async function sendMail() {
   let recipients = newEmailEditor.value.toEmails
   let subject = newEmailEditor.value.subject
@@ -266,17 +345,25 @@ async function deleteAttachedFiles() {
   })
 
   await Promise.all(deletePromises)
-
   attachments.value = []
 }
 
 async function submitEmail() {
   if (emailEmpty.value) return
+
+  // Draft loeschen nach Senden
+  suppressDraftSave.value = true
+  if (currentDraftId.value) {
+    drafts.value = drafts.value.filter(d => d.id !== currentDraftId.value)
+    currentDraftId.value = null
+  }
+
   showEmailBox.value = false
   await sendMail()
   newEmail.value = ''
   attachments.value = []
   isAngebotFlow.value = false
+  suppressDraftSave.value = false
   reload.value = true
   emit('scroll')
   capture('email_sent', { doctype: props.doctype })
@@ -295,95 +382,45 @@ async function submitComment() {
   updateOnboardingStep('add_first_comment')
 }
 
-function toggleEmailBox() {
-  if (showCommentBox.value) {
-    showCommentBox.value = false
+// --- Ablegen (Discard) ---
+async function discardEmail() {
+  // Draft speichern bevor Inhalt geloescht wird
+  saveOrUpdateDraft()
+  suppressDraftSave.value = true
+  currentDraftId.value = null
+  await deleteAttachedFiles()
+  showEmailBox.value = false
+  if (newEmailEditor.value) {
+    newEmailEditor.value.subject = subject.value
+    newEmailEditor.value.toEmails = doc.value.email ? [doc.value.email] : []
+    newEmailEditor.value.ccEmails = []
+    newEmailEditor.value.bccEmails = []
+    newEmailEditor.value.cc = false
+    newEmailEditor.value.bcc = false
   }
-  if (!showEmailBox.value) {
-    // Beim Oeffnen: Wenn nicht vom Angebot-Flow, immer frisch starten
-    if (!isAngebotFlow.value) {
-      // Vorhandenen Content als Draft speichern (falls vorhanden)
-      saveDraftIfContent()
-      // Frischen State setzen
-      newEmail.value = ''
-      attachments.value = []
-      nextTick(() => {
-        const editor = newEmailEditor.value
-        if (editor) {
-          editor.subject = subject.value
-          editor.toEmails = doc.value.email ? [doc.value.email] : []
-          editor.ccEmails = []
-          editor.bccEmails = []
-          editor.cc = false
-          editor.bcc = false
-        }
-      })
-    }
-    isAngebotFlow.value = false
-  }
-  showEmailBox.value = !showEmailBox.value
+  newEmail.value = ''
+  attachments.value = []
+  suppressDraftSave.value = false
 }
 
-function saveDraftIfContent() {
-  const hasContent = newEmail.value && newEmail.value !== '<p></p>'
-  const hasAttachments = attachments.value && attachments.value.length > 0
-  if (!hasContent && !hasAttachments) return
-  const editorRef = newEmailEditor.value
-  const draft = {
-    id: Date.now(),
-    subject: editorRef?.subject || '',
-    content: newEmail.value,
-    toEmails: editorRef?.toEmails || [],
-    ccEmails: editorRef?.ccEmails || [],
-    bccEmails: editorRef?.bccEmails || [],
-    attachmentsList: [...(attachments.value || [])],
-    created_at: new Date().toISOString(),
-  }
-  // Max 10 Drafts pro Lead
-  const currentDrafts = [...drafts.value]
-  currentDrafts.unshift(draft)
-  if (currentDrafts.length > 10) currentDrafts.pop()
-  drafts.value = currentDrafts
-}
-
-function loadDraft(draft) {
-  showCommentBox.value = false
-  skipSignature.value = true
-  isAngebotFlow.value = true
-  showEmailBox.value = true
-  nextTick(() => {
-    const editorRef = newEmailEditor.value
-    if (editorRef) {
-      editorRef.subject = draft.subject || subject.value
-      editorRef.toEmails = draft.toEmails || []
-      editorRef.ccEmails = draft.ccEmails || []
-      editorRef.bccEmails = draft.bccEmails || []
-      const editor = editorRef.editor
-      if (editor) {
-        editor.commands.setContent(draft.content || '')
-      }
-    }
-    newEmail.value = draft.content || ''
-    attachments.value = draft.attachmentsList || []
-    drafts.value = drafts.value.filter(d => d.id !== draft.id)
-    isAngebotFlow.value = false
-  })
-}
-
-function deleteDraft(draftId) {
-  drafts.value = drafts.value.filter(d => d.id !== draftId)
-}
-
+// --- Neue E-Mail (immer leer) ---
 function openNewEmail() {
   if (showCommentBox.value) {
     showCommentBox.value = false
   }
-  saveDraftIfContent()
+  // Aktuellen Compose als Draft speichern
+  saveOrUpdateDraft()
+
+  // Reset
+  suppressDraftSave.value = true
+  currentDraftId.value = null
   newEmail.value = ''
   attachments.value = []
   isAngebotFlow.value = false
   skipSignature.value = true
   showEmailBox.value = true
+  suppressDraftSave.value = false
+
   nextTick(() => {
     const editorRef = newEmailEditor.value
     if (editorRef) {
@@ -403,24 +440,106 @@ function openNewEmail() {
   })
 }
 
+// --- Toggle (Reply-Button) ---
+function toggleEmailBox() {
+  if (showCommentBox.value) {
+    showCommentBox.value = false
+  }
+  if (!showEmailBox.value) {
+    // Beim Oeffnen: Wenn nicht vom Angebot-Flow, frisch starten
+    if (!isAngebotFlow.value) {
+      saveOrUpdateDraft()
+      suppressDraftSave.value = true
+      currentDraftId.value = null
+      newEmail.value = ''
+      attachments.value = []
+      suppressDraftSave.value = false
+      nextTick(() => {
+        const editor = newEmailEditor.value
+        if (editor) {
+          editor.subject = subject.value
+          editor.toEmails = doc.value.email ? [doc.value.email] : []
+          editor.ccEmails = []
+          editor.bccEmails = []
+          editor.cc = false
+          editor.bcc = false
+        }
+      })
+    }
+    isAngebotFlow.value = false
+  } else {
+    // Beim Schliessen: Draft speichern
+    saveOrUpdateDraft()
+    currentDraftId.value = null
+  }
+  showEmailBox.value = !showEmailBox.value
+}
+
+// --- Draft laden ---
+function loadDraft(draft) {
+  showCommentBox.value = false
+  skipSignature.value = true
+  isAngebotFlow.value = true
+  suppressDraftSave.value = true
+  showEmailBox.value = true
+
+  // Draft aus Liste entfernen und als aktiv setzen
+  currentDraftId.value = draft.id
+
+  nextTick(() => {
+    const editorRef = newEmailEditor.value
+    if (editorRef) {
+      editorRef.subject = draft.subject || subject.value
+      editorRef.toEmails = draft.toEmails || []
+      editorRef.ccEmails = draft.ccEmails || []
+      editorRef.bccEmails = draft.bccEmails || []
+      const editor = editorRef.editor
+      if (editor) {
+        editor.commands.setContent(draft.content || '')
+      }
+    }
+    newEmail.value = draft.content || ''
+    attachments.value = draft.attachmentsList || []
+    isAngebotFlow.value = false
+    suppressDraftSave.value = false
+  })
+}
+
+// --- Draft loeschen ---
+function deleteDraft(draftId) {
+  drafts.value = drafts.value.filter(d => d.id !== draftId)
+  if (currentDraftId.value === draftId) {
+    currentDraftId.value = null
+  }
+}
+
+// --- Toggle Comment ---
 function toggleCommentBox() {
   if (showEmailBox.value) {
+    // E-Mail Box schliessen → Draft speichern
+    saveOrUpdateDraft()
+    currentDraftId.value = null
     showEmailBox.value = false
   }
   showCommentBox.value = !showCommentBox.value
 }
 
-
-// Listen for Angebot email event from Activities/AngebotArea
+// --- Angebot-Flow: Mail vorbefuellen + sofort Draft ---
 function handleAngebotEmail(e) {
   const { fileData, lead } = e.detail
-  // Vorhandenen Content als Draft speichern
-  saveDraftIfContent()
+
+  // Vorhandenen Compose speichern
+  saveOrUpdateDraft()
+
+  suppressDraftSave.value = true
+  currentDraftId.value = null
   isAngebotFlow.value = true
   showCommentBox.value = false
   newEmail.value = ''
   attachments.value = []
   showEmailBox.value = true
+  suppressDraftSave.value = false
+
   nextTick(() => {
     const editor = newEmailEditor.value
     if (editor) {
@@ -434,19 +553,35 @@ function handleAngebotEmail(e) {
       file_name: fileData.file_name,
       file_url: fileData.file_url,
     }]
+
+    // Sofort als Draft speichern (Offer-Flow)
+    nextTick(() => {
+      saveOrUpdateDraft()
+    })
   })
 }
 
+// --- Lifecycle ---
 onMounted(() => {
   window.addEventListener('open-email-with-angebot', handleAngebotEmail)
+  // beforeunload: Draft speichern wenn Browser/Tab geschlossen wird
+  window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('open-email-with-angebot', handleAngebotEmail)
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+  // Component wird unmounted (Tab-Wechsel, Route-Wechsel) → Draft speichern
   if (showEmailBox.value) {
-    saveDraftIfContent()
+    saveOrUpdateDraft()
   }
 })
+
+function handleBeforeUnload() {
+  if (showEmailBox.value) {
+    saveOrUpdateDraft()
+  }
+}
 
 defineExpose({
   attachments,
