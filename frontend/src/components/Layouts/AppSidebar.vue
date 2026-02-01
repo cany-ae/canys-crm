@@ -62,7 +62,7 @@
             <SidebarLink
               v-for="link in view.views"
               :icon="link.icon"
-              :label="__(link.label)"
+              :label="link.label"
               :to="link.to"
               :isCollapsed="isSidebarCollapsed"
               class="mx-2 my-0.5"
@@ -210,27 +210,27 @@ const links = [
     to: 'Deals',
   },
   {
-    label: 'Tasks',
+    label: 'Aufgaben',
     icon: TaskIcon,
     to: 'Tasks',
   },
   {
-    label: 'Notes',
+    label: 'Hinweise',
     icon: NoteIcon,
     to: 'Notes',
   },
   {
-    label: 'Calendar',
+    label: 'Kalender',
     icon: CalendarIcon,
     to: 'Calendar',
   },
   {
-    label: 'Contacts',
+    label: 'Kontakte',
     icon: ContactsIcon,
     to: 'Contacts',
   },
   {
-    label: 'Call Logs',
+    label: 'Anrufprotokolle',
     icon: PhoneIcon,
     to: 'Call Logs',
   },
