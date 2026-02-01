@@ -109,8 +109,16 @@ class CRMLead(Document):
 			existing_contact = self.contact_exists(throw=False)
 
 			if existing_contact:
-				# Bestehenden Kontakt mit Lead verknuepfen
-				self._link_contact_to_lead(existing_contact)
+				# Pruefen ob Kontakt intern ist - dann nicht verknuepfen, neuen erstellen
+				contact_type = frappe.db.get_value('Contact', existing_contact, 'custom_contact_type')
+				if contact_type == 'Intern':
+					# Interner Kontakt: neuen Kunden-Kontakt erstellen statt verknuepfen
+					contact_name = self.create_contact(existing_contact=False, throw=False)
+					if contact_name:
+						self._link_contact_to_lead(contact_name)
+				else:
+					# Bestehenden Kunden-Kontakt mit Lead verknuepfen
+					self._link_contact_to_lead(existing_contact)
 			else:
 				# Neuen Kontakt erstellen
 				contact_name = self.create_contact(existing_contact=False, throw=False)
@@ -293,6 +301,8 @@ class CRMLead(Document):
 			contact.append("phone_nos", {"phone": self.mobile_no, "is_primary_mobile_no": 1})
 
 		contact.insert(ignore_permissions=True)
+		# Aus Lead erstellte Kontakte sind immer Kunden
+		frappe.db.set_value('Contact', contact.name, 'custom_contact_type', 'Kunde')
 		contact.reload()  # load changes by hooks on contact
 
 		return contact.name

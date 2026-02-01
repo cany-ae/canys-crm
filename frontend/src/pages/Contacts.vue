@@ -16,13 +16,29 @@
       />
     </template>
   </LayoutHeader>
+  <!-- Tab Navigation -->
+  <div class="flex border-b px-5">
+    <button
+      v-for="tab in contactTabs"
+      :key="tab.key"
+      @click="activeTab = tab.key"
+      class="px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px"
+      :class="activeTab === tab.key
+        ? 'border-surface-gray-7 text-ink-gray-9'
+        : 'border-transparent text-ink-gray-5 hover:text-ink-gray-7'"
+    >
+      {{ tab.label }}
+    </button>
+  </div>
   <ViewControls
     ref="viewControls"
+    :key="activeTab"
     v-model="contacts"
     v-model:loadMore="loadMore"
     v-model:resizeColumn="triggerResize"
     v-model:updatedPageCount="updatedPageCount"
     doctype="Contact"
+    :filters="contactTypeFilter"
   />
   <ContactsListView
     ref="contactsListView"
@@ -55,7 +71,7 @@
       class="flex flex-col items-center gap-3 text-xl font-medium text-ink-gray-4"
     >
       <ContactsIcon class="h-10 w-10" />
-      <span>{{ __('No {0} Found', [__('Contacts')]) }}</span>
+      <span>{{ activeTab === 'intern' ? __('Keine internen Kontakte vorhanden') : __('Keine Kundenkontakte vorhanden') }}</span>
       <Button
         :label="__('Create')"
         iconLeft="plus"
@@ -81,7 +97,7 @@ import ViewControls from '@/components/ViewControls.vue'
 import { getMeta } from '@/stores/meta'
 import { organizationsStore } from '@/stores/organizations.js'
 import { formatDate, timeAgo } from '@/utils'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('Contact')
@@ -91,12 +107,31 @@ const showContactModal = ref(false)
 
 const contactsListView = ref(null)
 
+// Tab state
+const activeTab = ref('kunden')
+const contactTabs = [
+  { key: 'kunden', label: 'Kunden' },
+  { key: 'intern', label: 'Intern' },
+]
+
+const contactTypeFilter = computed(() => {
+  if (activeTab.value === 'intern') {
+    return { custom_contact_type: 'Intern' }
+  }
+  return { custom_contact_type: 'Kunde' }
+})
+
 // contacts data is loaded in the ViewControls component
 const contacts = ref({})
 const loadMore = ref(1)
 const triggerResize = ref(1)
 const updatedPageCount = ref(20)
 const viewControls = ref(null)
+
+// Reset list when tab changes (ViewControls re-mounts via :key)
+watch(activeTab, () => {
+  contacts.value = {}
+})
 
 const rows = computed(() => {
   if (
