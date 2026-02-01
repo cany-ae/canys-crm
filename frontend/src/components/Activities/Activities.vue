@@ -3,6 +3,7 @@
     v-model="tabIndex"
     v-model:showWhatsappTemplates="showWhatsappTemplates"
     v-model:showFilesUploader="showFilesUploader"
+    v-model:activityFilter="activityFilter"
     :tabs="tabs"
     :title="title"
     :doc="doc"
@@ -622,6 +623,7 @@ const doc = computed(() => _document.doc || {})
 const reload_email = ref(false)
 const modalRef = ref(null)
 const showFilesUploader = ref(false)
+const activityFilter = ref('all')
 
 const title = computed(() => props.tabs?.[tabIndex.value]?.name || 'Activity')
 
@@ -708,6 +710,14 @@ const activities = computed(() => {
   let _activities = []
   if (title.value == 'Activity') {
     _activities = get_activities()
+    if (activityFilter.value !== 'all') {
+      _activities = _activities.filter((a) => {
+        if (activityFilter.value === 'calls') {
+          return a.activity_type === 'incoming_call' || a.activity_type === 'outgoing_call'
+        }
+        return a.activity_type === activityFilter.value
+      })
+    }
   } else if (title.value == 'Emails') {
     if (!all_activities.data?.versions) return []
     _activities = all_activities.data.versions.filter(

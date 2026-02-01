@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="title !== 'Data'"
+    v-if="title !== 'Data' && title !== 'InvoiceTool'"
     class="mx-4 my-3 flex items-center justify-between text-lg font-medium sm:mx-10 sm:mb-4 sm:mt-8"
   >
     <div class="flex h-8 items-center text-xl font-semibold text-ink-gray-8">
@@ -68,7 +68,19 @@
         @click="whatsappBox.show()"
       />
     </div>
-    <Dropdown v-else :options="defaultActions" @click.stop>
+    <Dropdown v-else-if="title == 'Activity'" :options="filterOptions" @click.stop>
+      <template v-slot="{ open }">
+        <Button
+          variant="ghost"
+          class="flex items-center gap-1 text-sm"
+          :iconRight="open ? 'chevron-up' : 'chevron-down'"
+        >
+          <FeatherIcon name="filter" class="h-3.5 w-3.5" />
+          <span>{{ activityFilter === 'all' ? __('Alle') : filterLabels[activityFilter] }}</span>
+        </Button>
+      </template>
+    </Dropdown>
+    <Dropdown v-else-if="!['Activity', 'StatusUpdates', 'Data', 'InvoiceTool'].includes(title)" :options="defaultActions" @click.stop>
       <template v-slot="{ open }">
         <Button
           variant="solid"
@@ -93,7 +105,7 @@ import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
 import { globalStore } from '@/stores/global'
 import { whatsappEnabled, callEnabled } from '@/composables/settings'
-import { Dropdown } from 'frappe-ui'
+import { Dropdown, FeatherIcon } from 'frappe-ui'
 import { computed, h } from 'vue'
 
 const props = defineProps({
@@ -110,6 +122,23 @@ const { makeCall } = globalStore()
 const tabIndex = defineModel()
 const showWhatsappTemplates = defineModel('showWhatsappTemplates')
 const showFilesUploader = defineModel('showFilesUploader')
+const activityFilter = defineModel('activityFilter')
+
+const filterLabels = {
+  all: 'Alle',
+  status_change: 'Status Updates',
+  calls: 'Anrufe',
+  communication: 'E-Mails',
+  attachment_log: 'Anhänge',
+  comment: 'Kommentare',
+}
+
+const filterOptions = computed(() => {
+  return Object.entries(filterLabels).map(([key, label]) => ({
+    label: __(label),
+    onClick: () => { activityFilter.value = key },
+  }))
+})
 
 const defaultActions = computed(() => {
   let actions = [
