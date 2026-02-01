@@ -125,6 +125,7 @@ const newEmailEditor = ref(null)
 const newCommentEditor = ref(null)
 const sendEmailRef = ref(null)
 const isAngebotFlow = ref(false)
+const skipSignature = ref(false)
 
 // Draft-Speicher pro Lead
 const draftsKey = `emailDrafts-${getUser().email}-${props.doctype}-${doc.value.name}`
@@ -180,7 +181,10 @@ watch(
     if (value) {
       let editor = newEmailEditor.value.editor
       editor.commands.focus()
-      setSignature(editor)
+      if (!skipSignature.value) {
+        setSignature(editor)
+      }
+      skipSignature.value = false
     }
   },
 )
@@ -321,7 +325,9 @@ function toggleEmailBox() {
 }
 
 function saveDraftIfContent() {
-  if (!newEmail.value || newEmail.value === '<p></p>') return
+  const hasContent = newEmail.value && newEmail.value !== '<p></p>'
+  const hasAttachments = attachments.value && attachments.value.length > 0
+  if (!hasContent && !hasAttachments) return
   const editorRef = newEmailEditor.value
   const draft = {
     id: Date.now(),
@@ -342,19 +348,23 @@ function saveDraftIfContent() {
 
 function loadDraft(draft) {
   showCommentBox.value = false
+  skipSignature.value = true
+  isAngebotFlow.value = true
   showEmailBox.value = true
-  isAngebotFlow.value = true // Verhindert Reset
   nextTick(() => {
+    const editorRef = newEmailEditor.value
+    if (editorRef) {
+      editorRef.subject = draft.subject || subject.value
+      editorRef.toEmails = draft.toEmails || []
+      editorRef.ccEmails = draft.ccEmails || []
+      editorRef.bccEmails = draft.bccEmails || []
+      const editor = editorRef.editor
+      if (editor) {
+        editor.commands.setContent(draft.content || '')
+      }
+    }
     newEmail.value = draft.content || ''
     attachments.value = draft.attachmentsList || []
-    const editor = newEmailEditor.value
-    if (editor) {
-      editor.subject = draft.subject || subject.value
-      editor.toEmails = draft.toEmails || []
-      editor.ccEmails = draft.ccEmails || []
-      editor.bccEmails = draft.bccEmails || []
-    }
-    // Draft aus Liste entfernen
     drafts.value = drafts.value.filter(d => d.id !== draft.id)
     isAngebotFlow.value = false
   })
@@ -362,6 +372,35 @@ function loadDraft(draft) {
 
 function deleteDraft(draftId) {
   drafts.value = drafts.value.filter(d => d.id !== draftId)
+}
+
+function openNewEmail() {
+  if (showCommentBox.value) {
+    showCommentBox.value = false
+  }
+  saveDraftIfContent()
+  newEmail.value = ''
+  attachments.value = []
+  isAngebotFlow.value = false
+  skipSignature.value = true
+  showEmailBox.value = true
+  nextTick(() => {
+    const editorRef = newEmailEditor.value
+    if (editorRef) {
+      editorRef.subject = subject.value
+      editorRef.toEmails = doc.value.email ? [doc.value.email] : []
+      editorRef.ccEmails = []
+      editorRef.bccEmails = []
+      editorRef.cc = false
+      editorRef.bcc = false
+      const editor = editorRef.editor
+      if (editor) {
+        editor.commands.setContent('')
+        setSignature(editor)
+        editor.commands.focus('start')
+      }
+    }
+  })
 }
 
 function toggleCommentBox() {
@@ -379,6 +418,8 @@ function handleAngebotEmail(e) {
   saveDraftIfContent()
   isAngebotFlow.value = true
   showCommentBox.value = false
+  newEmail.value = ''
+  attachments.value = []
   showEmailBox.value = true
   nextTick(() => {
     const editor = newEmailEditor.value
@@ -402,6 +443,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('open-email-with-angebot', handleAngebotEmail)
+  if (showEmailBox.value) {
+    saveDraftIfContent()
+  }
 })
 
 defineExpose({
@@ -412,5 +456,6 @@ defineExpose({
   drafts,
   loadDraft,
   deleteDraft,
+  openNewEmail,
 })
 </script>

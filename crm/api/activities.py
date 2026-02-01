@@ -162,7 +162,7 @@ def get_deal_activities(name):
 	for info_log in docinfo.info_logs:
 		activity = {
 			"name": info_log.name,
-			"activity_type": "info",
+			"activity_type": "angebot" if "Angebot erstellt" in (info_log.content or "") else "info",
 			"creation": info_log.creation,
 			"owner": info_log.owner,
 			"content": info_log.content,
@@ -312,7 +312,7 @@ def get_lead_activities(name):
 	for info_log in docinfo.info_logs:
 		activity = {
 			"name": info_log.name,
-			"activity_type": "info",
+			"activity_type": "angebot" if "Angebot erstellt" in (info_log.content or "") else "info",
 			"creation": info_log.creation,
 			"owner": info_log.owner,
 			"content": info_log.content,

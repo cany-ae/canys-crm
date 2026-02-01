@@ -11,7 +11,7 @@
       variant="solid"
       :label="__('New Email')"
       iconLeft="plus"
-      @click="emailBox.show = true"
+      @click="emailBox.openNewEmail()"
     />
     <Button
       v-else-if="title == 'Comments'"
@@ -134,6 +134,7 @@ const filterLabels = {
   status_change: 'Status Updates',
   calls: 'Anrufe',
   communication: 'E-Mails',
+  angebot: 'Angebote',
   attachment_log: 'Anhänge',
   comment: 'Kommentare',
 }
@@ -161,7 +162,7 @@ const defaultActions = computed(() => {
     {
       icon: h(Email2Icon, { class: 'h-4 w-4' }),
       label: __('New Email'),
-      onClick: () => (props.emailBox.show = true),
+      onClick: () => props.emailBox.openNewEmail(),
     },
     {
       icon: h(CommentIcon, { class: 'h-4 w-4' }),

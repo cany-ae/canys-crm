@@ -272,7 +272,7 @@
         <div
           class="mb-4 flex flex-col gap-2 py-1.5"
           :id="activity.name"
-          v-else-if="activity.activity_type == 'info'"
+          v-else-if="activity.activity_type == 'info' || activity.activity_type == 'angebot'"
         >
           <div class="flex items-center justify-stretch gap-2 text-base">
             <div
@@ -530,7 +530,7 @@
       <Button
         v-else-if="title == 'Emails'"
         :label="__('New Email')"
-        @click="emailBox.show = true"
+        @click="emailBox.openNewEmail()"
       />
       <Button
         v-else-if="title == 'Comments'"
@@ -946,6 +946,9 @@ function timelineIcon(activity_type, is_lead) {
       icon = StatusChangeIcon
       break
     case 'info':
+      icon = ActivityIcon
+      break
+    case 'angebot':
       icon = ActivityIcon
       break
     default:
