@@ -375,6 +375,10 @@ def get_data(
 		if group_by_field and group_by_field not in rows:
 			rows.append(group_by_field)
 
+		# Immer custom_contact_type laden fuer Contact (Tab-Filterung)
+		if doctype == 'Contact' and 'custom_contact_type' not in rows:
+			rows.append('custom_contact_type')
+
 		data = (
 			frappe.get_list(
 				doctype,

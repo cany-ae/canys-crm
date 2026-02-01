@@ -32,20 +32,18 @@
   </div>
   <ViewControls
     ref="viewControls"
-    :key="activeTab"
     v-model="contacts"
     v-model:loadMore="loadMore"
     v-model:resizeColumn="triggerResize"
     v-model:updatedPageCount="updatedPageCount"
     doctype="Contact"
-    :filters="contactTypeFilter"
   />
   <ContactsListView
     ref="contactsListView"
-    v-if="contacts.data && rows.length"
+    v-if="contacts.data && filteredRows.length"
     v-model="contacts.data.page_length_count"
     v-model:list="contacts"
-    :rows="rows"
+    :rows="filteredRows"
     :columns="contacts.data.columns"
     :options="{
       showTooltip: false,
@@ -97,14 +95,13 @@ import ViewControls from '@/components/ViewControls.vue'
 import { getMeta } from '@/stores/meta'
 import { organizationsStore } from '@/stores/organizations.js'
 import { formatDate, timeAgo } from '@/utils'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('Contact')
 const { getOrganization } = organizationsStore()
 
 const showContactModal = ref(false)
-
 const contactsListView = ref(null)
 
 // Tab state
@@ -114,24 +111,12 @@ const contactTabs = [
   { key: 'intern', label: 'Intern' },
 ]
 
-const contactTypeFilter = computed(() => {
-  if (activeTab.value === 'intern') {
-    return { custom_contact_type: 'Intern' }
-  }
-  return { custom_contact_type: 'Kunde' }
-})
-
 // contacts data is loaded in the ViewControls component
 const contacts = ref({})
 const loadMore = ref(1)
 const triggerResize = ref(1)
 const updatedPageCount = ref(20)
 const viewControls = ref(null)
-
-// Reset list when tab changes (ViewControls re-mounts via :key)
-watch(activeTab, () => {
-  contacts.value = {}
-})
 
 const rows = computed(() => {
   if (
@@ -141,6 +126,8 @@ const rows = computed(() => {
     return []
   return contacts.value?.data.data.map((contact) => {
     let _rows = {}
+    // Store raw contact_type for filtering
+    _rows._contact_type = contact.custom_contact_type || 'Kunde'
     contacts.value?.data.rows.forEach((row) => {
       _rows[row] = contact[row]
 
@@ -188,5 +175,14 @@ const rows = computed(() => {
     })
     return _rows
   })
+})
+
+// Frontend-Filter nach Tab
+const filteredRows = computed(() => {
+  if (activeTab.value === 'intern') {
+    return rows.value.filter(r => r._contact_type === 'Intern')
+  }
+  // Kunden: alles was nicht Intern ist (inkl. leer/Kunde)
+  return rows.value.filter(r => r._contact_type !== 'Intern')
 })
 </script>
