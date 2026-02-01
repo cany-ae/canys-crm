@@ -12,6 +12,47 @@
     :modalRef="modalRef"
   />
   <FadedScrollableDiv class="flex flex-col h-full overflow-y-auto">
+    <!-- Entwuerfe-Sektion im E-Mail Tab -->
+    <div
+      v-if="title == 'Emails' && emailBox?.drafts?.length && !all_activities?.loading"
+      class="px-3 sm:px-10 mb-2 pt-3"
+    >
+      <div class="rounded-lg border border-outline-gray-modals bg-surface-gray-2 p-3">
+        <div class="flex items-center gap-2 mb-2">
+          <svg class="h-4 w-4 text-ink-gray-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          <span class="text-sm font-medium text-ink-gray-7">Entwürfe ({{ emailBox.drafts.length }})</span>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <div
+            v-for="draft in emailBox.drafts"
+            :key="draft.id"
+            class="flex items-center justify-between gap-2 rounded-md bg-surface-white px-3 py-2 text-sm border border-outline-gray-modals"
+          >
+            <div class="flex flex-col min-w-0 flex-1">
+              <span class="font-medium text-ink-gray-8 truncate">{{ draft.subject || 'Kein Betreff' }}</span>
+              <span class="text-xs text-ink-gray-5">{{ formatDraftDate(draft.created_at) }}</span>
+            </div>
+            <div class="flex gap-1.5 shrink-0">
+              <Button
+                size="sm"
+                variant="subtle"
+                label="Fortsetzen"
+                @click="emailBox.loadDraft(draft)"
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="x"
+                @click="emailBox.deleteDraft(draft.id)"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div
       v-if="all_activities?.loading"
       class="flex flex-1 flex-col items-center justify-center gap-3 text-xl font-medium text-ink-gray-4"
@@ -218,6 +259,27 @@
                 name="lock"
                 class="size-3"
               />
+            </div>
+            <div class="ml-auto whitespace-nowrap">
+              <Tooltip :text="formatDate(activity.creation)">
+                <div class="text-sm text-ink-gray-5">
+                  {{ __(timeAgo(activity.creation)) }}
+                </div>
+              </Tooltip>
+            </div>
+          </div>
+        </div>
+        <div
+          class="mb-4 flex flex-col gap-2 py-1.5"
+          :id="activity.name"
+          v-else-if="activity.activity_type == 'info'"
+        >
+          <div class="flex items-center justify-stretch gap-2 text-base">
+            <div
+              class="inline-flex items-center flex-wrap gap-1.5 text-ink-gray-8 font-medium"
+            >
+              <span class="font-medium">{{ activity.owner_name }}</span>
+              <span class="text-ink-gray-5">{{ activity.content }}</span>
             </div>
             <div class="ml-auto whitespace-nowrap">
               <Tooltip :text="formatDate(activity.creation)">
@@ -776,6 +838,13 @@ function sortByModified(list) {
   return list.sort((b, a) => new Date(a.modified) - new Date(b.modified))
 }
 
+function formatDraftDate(isoString) {
+  if (!isoString) return ''
+  const d = new Date(isoString)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function update_activities_details(activity) {
   activity.owner_name = getUser(activity.owner).full_name
   activity.type = ''
@@ -802,25 +871,25 @@ function update_activities_details(activity) {
 }
 
 const emptyText = computed(() => {
-  let text = 'No Activities'
+  let text = 'Keine Aktivitäten'
   if (title.value == 'StatusUpdates') {
-    text = 'No Status Updates'
+    text = 'Keine Status-Updates'
   } else if (title.value == 'Emails') {
-    text = 'No Email Communications'
+    text = 'Keine E-Mails'
   } else if (title.value == 'Comments') {
-    text = 'No Comments'
+    text = 'Keine Kommentare'
   } else if (title.value == 'Data') {
-    text = 'No Data'
+    text = 'Keine Daten'
   } else if (title.value == 'Calls') {
-    text = 'No Call Logs'
+    text = 'Keine Anrufe'
   } else if (title.value == 'Notes') {
-    text = 'No Notes'
+    text = 'Keine Notizen'
   } else if (title.value == 'Tasks') {
-    text = 'No Tasks'
+    text = 'Keine Aufgaben'
   } else if (title.value == 'Attachments') {
-    text = 'No Attachments'
+    text = 'Keine Anhänge'
   } else if (title.value == 'WhatsApp') {
-    text = 'No WhatsApp Messages'
+    text = 'Keine WhatsApp-Nachrichten'
   }
   return text
 })
@@ -875,6 +944,9 @@ function timelineIcon(activity_type, is_lead) {
       break
     case 'status_change':
       icon = StatusChangeIcon
+      break
+    case 'info':
+      icon = ActivityIcon
       break
     default:
       icon = DotIcon

@@ -43,11 +43,11 @@ def get_deal_activities(name):
 	notes = []
 	tasks = []
 	attachments = []
-	creation_text = "created this deal"
+	creation_text = "hat diesen Deal erstellt"
 
 	if lead:
 		activities, calls, notes, tasks, attachments = get_lead_activities(lead)
-		creation_text = "converted the lead to this deal"
+		creation_text = "hat den Lead in diesen Deal umgewandelt"
 
 	activities.append(
 		{
@@ -101,6 +101,8 @@ def get_deal_activities(name):
 		# Mark status changes as special activity type
 		if change[0] == "status":
 			activity_type = "status_change"
+			data["old_color"] = get_status_color("CRM Deal Status", data.get("old_value"))
+			data["new_color"] = get_status_color("CRM Deal Status", data.get("value"))
 
 		activity = {
 			"activity_type": activity_type,
@@ -157,6 +159,18 @@ def get_deal_activities(name):
 		}
 		activities.append(activity)
 
+	for info_log in docinfo.info_logs:
+		activity = {
+			"name": info_log.name,
+			"activity_type": "info",
+			"creation": info_log.creation,
+			"owner": info_log.owner,
+			"content": info_log.content,
+			"is_lead": False,
+		}
+		activities.append(activity)
+
+
 	calls = calls + get_linked_calls(name).get("calls", [])
 	notes = notes + get_linked_notes(name) + get_linked_calls(name).get("notes", [])
 	tasks = tasks + get_linked_tasks(name) + get_linked_calls(name).get("tasks", [])
@@ -190,7 +204,7 @@ def get_lead_activities(name):
 			"activity_type": "creation",
 			"creation": doc[0],
 			"owner": doc[1],
-			"data": "created this lead",
+			"data": "hat diesen Lead erstellt",
 			"is_lead": True,
 		}
 	]
@@ -237,6 +251,8 @@ def get_lead_activities(name):
 		# Mark status changes as special activity type
 		if change[0] == "status":
 			activity_type = "status_change"
+			data["old_color"] = get_status_color("CRM Lead Status", data.get("old_value"))
+			data["new_color"] = get_status_color("CRM Lead Status", data.get("value"))
 
 		activity = {
 			"activity_type": activity_type,
@@ -293,6 +309,17 @@ def get_lead_activities(name):
 		}
 		activities.append(activity)
 
+	for info_log in docinfo.info_logs:
+		activity = {
+			"name": info_log.name,
+			"activity_type": "info",
+			"creation": info_log.creation,
+			"owner": info_log.owner,
+			"content": info_log.content,
+			"is_lead": True,
+		}
+		activities.append(activity)
+
 	calls = get_linked_calls(name).get("calls", [])
 	notes = get_linked_notes(name) + get_linked_calls(name).get("notes", [])
 	tasks = get_linked_tasks(name) + get_linked_calls(name).get("tasks", [])
@@ -302,6 +329,15 @@ def get_lead_activities(name):
 	activities = handle_multiple_versions(activities)
 
 	return activities, calls, notes, tasks, attachments
+
+
+
+def get_status_color(doctype, status):
+	"""Get the color for a status from CRM Lead Status or CRM Deal Status."""
+	if not status:
+		return "gray"
+	color = frappe.db.get_value(doctype, status, "color")
+	return color or "gray"
 
 
 def get_attachments(doctype, name):

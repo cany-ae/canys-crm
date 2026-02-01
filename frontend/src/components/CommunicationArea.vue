@@ -37,6 +37,7 @@
       }"
       :discardButtonProps="{
         onClick: async () => {
+          saveDraftIfContent()
           await deleteAttachedFiles()
           showEmailBox = false
           newEmailEditor.subject = subject
@@ -123,6 +124,17 @@ const newComment = useStorage(
 const newEmailEditor = ref(null)
 const newCommentEditor = ref(null)
 const sendEmailRef = ref(null)
+const isAngebotFlow = ref(false)
+
+// Draft-Speicher pro Lead
+const draftsKey = `emailDrafts-${getUser().email}-${props.doctype}-${doc.value.name}`
+const drafts = useStorage(draftsKey, [], localStorage, {
+  serializer: {
+    read: (v) => v ? JSON.parse(v) : [],
+    write: (v) => JSON.stringify(v),
+  },
+})
+
 const attachments = useStorage(
   `attachments-${getUser().email}-${props.doctype}-${doc.value.name}`,
   [],
@@ -260,6 +272,7 @@ async function submitEmail() {
   await sendMail()
   newEmail.value = ''
   attachments.value = []
+  isAngebotFlow.value = false
   reload.value = true
   emit('scroll')
   capture('email_sent', { doctype: props.doctype })
@@ -282,7 +295,73 @@ function toggleEmailBox() {
   if (showCommentBox.value) {
     showCommentBox.value = false
   }
+  if (!showEmailBox.value) {
+    // Beim Oeffnen: Wenn nicht vom Angebot-Flow, immer frisch starten
+    if (!isAngebotFlow.value) {
+      // Vorhandenen Content als Draft speichern (falls vorhanden)
+      saveDraftIfContent()
+      // Frischen State setzen
+      newEmail.value = ''
+      attachments.value = []
+      nextTick(() => {
+        const editor = newEmailEditor.value
+        if (editor) {
+          editor.subject = subject.value
+          editor.toEmails = doc.value.email ? [doc.value.email] : []
+          editor.ccEmails = []
+          editor.bccEmails = []
+          editor.cc = false
+          editor.bcc = false
+        }
+      })
+    }
+    isAngebotFlow.value = false
+  }
   showEmailBox.value = !showEmailBox.value
+}
+
+function saveDraftIfContent() {
+  if (!newEmail.value || newEmail.value === '<p></p>') return
+  const editorRef = newEmailEditor.value
+  const draft = {
+    id: Date.now(),
+    subject: editorRef?.subject || '',
+    content: newEmail.value,
+    toEmails: editorRef?.toEmails || [],
+    ccEmails: editorRef?.ccEmails || [],
+    bccEmails: editorRef?.bccEmails || [],
+    attachmentsList: [...(attachments.value || [])],
+    created_at: new Date().toISOString(),
+  }
+  // Max 10 Drafts pro Lead
+  const currentDrafts = [...drafts.value]
+  currentDrafts.unshift(draft)
+  if (currentDrafts.length > 10) currentDrafts.pop()
+  drafts.value = currentDrafts
+}
+
+function loadDraft(draft) {
+  showCommentBox.value = false
+  showEmailBox.value = true
+  isAngebotFlow.value = true // Verhindert Reset
+  nextTick(() => {
+    newEmail.value = draft.content || ''
+    attachments.value = draft.attachmentsList || []
+    const editor = newEmailEditor.value
+    if (editor) {
+      editor.subject = draft.subject || subject.value
+      editor.toEmails = draft.toEmails || []
+      editor.ccEmails = draft.ccEmails || []
+      editor.bccEmails = draft.bccEmails || []
+    }
+    // Draft aus Liste entfernen
+    drafts.value = drafts.value.filter(d => d.id !== draft.id)
+    isAngebotFlow.value = false
+  })
+}
+
+function deleteDraft(draftId) {
+  drafts.value = drafts.value.filter(d => d.id !== draftId)
 }
 
 function toggleCommentBox() {
@@ -296,6 +375,9 @@ function toggleCommentBox() {
 // Listen for Angebot email event from Activities/AngebotArea
 function handleAngebotEmail(e) {
   const { fileData, lead } = e.detail
+  // Vorhandenen Content als Draft speichern
+  saveDraftIfContent()
+  isAngebotFlow.value = true
   showCommentBox.value = false
   showEmailBox.value = true
   nextTick(() => {
@@ -327,5 +409,8 @@ defineExpose({
   show: showEmailBox,
   showComment: showCommentBox,
   editor: newEmailEditor,
+  drafts,
+  loadDraft,
+  deleteDraft,
 })
 </script>

@@ -349,7 +349,7 @@ watch(error, (err) => {
     errorTitle.value = __(
       err.exc_type == 'DoesNotExistError'
         ? 'Document not found'
-        : 'Error occurred',
+        : 'Fehler aufgetreten',
     )
     errorMessage.value = __(err.messages?.[0] || 'An error occurred')
   } else {
