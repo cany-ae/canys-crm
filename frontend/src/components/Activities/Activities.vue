@@ -997,7 +997,7 @@ function statusDotClass(status) {
 }
 
 function openEmailWithAngebot(fileData) {
-  changeTabTo('activity')
+  changeTabTo('emails')
   nextTick(() => {
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('open-email-with-angebot', {
