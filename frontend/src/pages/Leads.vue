@@ -26,6 +26,7 @@
     :filters="{ converted: 0 }"
     :options="{
       allowedViews: ['list', 'group_by', 'kanban'],
+      hideColumnsButton: true,
     }"
   />
   <KanbanView
@@ -238,7 +239,7 @@
     :columns="leads.data.columns"
     :options="{
       showTooltip: false,
-      resizeColumn: true,
+      resizeColumn: false,
       rowCount: leads.data.row_count,
       totalCount: leads.data.total_count,
     }"

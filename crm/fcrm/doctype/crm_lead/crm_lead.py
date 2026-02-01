@@ -66,6 +66,8 @@ class CRMLead(Document):
 	# end: auto-generated types
 
 	def before_validate(self):
+		if not self.status:
+			self.status = "Nicht kontaktiert"
 		self.set_sla()
 
 	def validate(self):
@@ -77,11 +79,27 @@ class CRMLead(Document):
 			self.share_with_agent(self.lead_owner)
 			self.assign_agent(self.lead_owner)
 		if self.has_value_changed("status"):
+			old_doc = self.get_doc_before_save()
+			self._old_status = old_doc.status if old_doc else None
 			add_status_change_log(self)
 
 	def after_insert(self):
 		if self.lead_owner:
 			self.assign_agent(self.lead_owner)
+
+	def on_update(self):
+		self.add_status_timeline_comment()
+
+	def add_status_timeline_comment(self):
+		old_status = getattr(self, "_old_status", None)
+		if old_status and old_status != self.status:
+			frappe.get_doc({
+				"doctype": "Comment",
+				"comment_type": "Info",
+				"reference_doctype": "CRM Lead",
+				"reference_name": self.name,
+				"content": "🚦 STATUS UPDATE: {0} → {1}".format(old_status, self.status),
+			}).insert(ignore_permissions=True)
 
 	def before_save(self):
 		self.apply_sla()
@@ -379,77 +397,21 @@ class CRMLead(Document):
 	@staticmethod
 	def default_list_data():
 		columns = [
-			{
-				"label": "Name",
-				"type": "Data",
-				"key": "lead_name",
-				"width": "12rem",
-			},
-			{
-				"label": "Organization",
-				"type": "Link",
-				"key": "organization",
-				"options": "CRM Organization",
-				"width": "10rem",
-			},
-			{
-				"label": "Status",
-				"type": "Select",
-				"key": "status",
-				"width": "8rem",
-			},
-			{
-				"label": "Email",
-				"type": "Data",
-				"key": "email",
-				"width": "12rem",
-			},
-			{
-				"label": "Mobile No",
-				"type": "Data",
-				"key": "mobile_no",
-				"width": "11rem",
-			},
-			{
-				"label": "Assigned To",
-				"type": "Text",
-				"key": "_assign",
-				"width": "10rem",
-			},
-			{
-				"label": "Last Modified",
-				"type": "Datetime",
-				"key": "modified",
-				"width": "8rem",
-			},
+			{"label": "Name", "type": "Data", "key": "lead_name", "width": "14rem"},
+			{"label": "E-Mail", "type": "Data", "key": "email", "width": "13rem"},
+			{"label": "Mobilfunknummer", "type": "Data", "key": "mobile_no", "width": "11rem"},
+			{"label": "Zugewiesen zu", "type": "Link", "key": "_assign", "width": "10rem"},
+			{"label": "Zuletzt bearbeitet", "type": "Datetime", "key": "modified", "width": "10rem"},
+			{"label": "Status", "type": "Select", "key": "status", "width": "12rem"},
+			{"label": "Liste", "type": "Select", "key": "custom_liste", "width": "9rem"},
 		]
 		rows = [
-			"name",
-			"lead_name",
-			"organization",
-			"status",
-			"email",
-			"mobile_no",
-			"lead_owner",
-			"first_name",
-			"sla_status",
-			"response_by",
-			"first_response_time",
-			"first_responded_on",
-			"modified",
-			"_assign",
-			"image",
+			"name", "lead_name", "email", "mobile_no", "modified",
+			"custom_liste", "status", "organization", "lead_owner", "first_name",
+			"sla_status", "response_by", "first_response_time",
+			"first_responded_on", "_assign", "image",
 		]
 		return {"columns": columns, "rows": rows}
-
-	@staticmethod
-	def default_kanban_settings():
-		return {
-			"column_field": "status",
-			"title_field": "lead_name",
-			"kanban_fields": '["organization", "email", "mobile_no", "_assign", "modified"]',
-		}
-
 
 @frappe.whitelist()
 def convert_to_deal(lead, doc=None, deal=None, existing_contact=None, existing_organization=None):
@@ -468,3 +430,28 @@ def convert_to_deal(lead, doc=None, deal=None, existing_contact=None, existing_o
 	organization = lead.create_organization(existing_organization)
 	_deal = lead.create_deal(contact, organization, deal)
 	return _deal
+
+
+@frappe.whitelist()
+def update_lead_status(lead_name, new_status, note=None):
+	"""Update lead status and optionally add a comment note."""
+	if not frappe.has_permission("CRM Lead", "write", lead_name):
+		frappe.throw(_("Keine Berechtigung"), frappe.PermissionError)
+
+	lead = frappe.get_doc("CRM Lead", lead_name)
+	old_status = lead.status
+	lead.status = new_status
+	lead.save(ignore_permissions=True)
+
+	# Add note as comment if provided
+	if note and note.strip():
+		frappe.get_doc({
+			"doctype": "Comment",
+			"comment_type": "Comment",
+			"reference_doctype": "CRM Lead",
+			"reference_name": lead_name,
+			"content": _("Status geaendert von {0} nach {1}: {2}").format(old_status, new_status, note),
+		}).insert(ignore_permissions=True)
+
+	frappe.db.commit()
+	return {"status": "success", "old_status": old_status, "new_status": new_status}
