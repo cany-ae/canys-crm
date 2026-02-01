@@ -86,6 +86,36 @@ class CRMLead(Document):
 	def after_insert(self):
 		if self.lead_owner:
 			self.assign_agent(self.lead_owner)
+		self._create_initial_status_update()
+
+	def _create_initial_status_update(self):
+		"""Erstelle initialen Status-Update-Eintrag fuer neue Leads."""
+		if not self.status:
+			return
+		# Pruefen ob bereits eine Version mit status-Aenderung existiert
+		existing = frappe.db.exists("Version", {
+			"ref_doctype": "CRM Lead",
+			"docname": self.name,
+		})
+		if existing:
+			return
+		import json
+		# Frappe Version erstellen, die als status_change erkannt wird
+		version = frappe.new_doc("Version")
+		version.ref_doctype = "CRM Lead"
+		version.docname = self.name
+		version.data = json.dumps({
+			"changed": [["status", "\u2014", self.status]]
+		})
+		version.insert(ignore_permissions=True)
+		# Timeline-Comment fuer die Aktivitaeten-Ansicht
+		frappe.get_doc({
+			"doctype": "Comment",
+			"comment_type": "Info",
+			"reference_doctype": "CRM Lead",
+			"reference_name": self.name,
+			"content": "\U0001f6a6 STATUS UPDATE: \u2014 \u2192 {0}".format(self.status),
+		}).insert(ignore_permissions=True)
 
 	def on_update(self):
 		self.add_status_timeline_comment()

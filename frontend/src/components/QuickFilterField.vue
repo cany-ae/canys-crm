@@ -30,13 +30,23 @@
     @change="(v) => updateFilter(filter, v)"
     :placeholder="filter.label"
   />
-  <FormControl
-    v-else
-    v-model="filter.value"
-    type="text"
-    :placeholder="filter.label"
-    @input.stop="debouncedFn(filter, $event.target.value)"
-  />
+  <div v-else class="relative">
+    <div
+      v-if="filter.fieldname === 'lead_name'"
+      class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5"
+    >
+      <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    </div>
+    <FormControl
+      v-model="filter.value"
+      type="text"
+      :placeholder="filter.fieldname === 'lead_name' ? 'Suche' : filter.label"
+      :class="filter.fieldname === 'lead_name' ? '[&_input]:pl-8' : ''"
+      @input.stop="debouncedFn(filter, $event.target.value)"
+    />
+  </div>
 </template>
 <script setup>
 import Link from '@/components/Controls/Link.vue'

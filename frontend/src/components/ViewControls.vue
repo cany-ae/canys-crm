@@ -129,9 +129,49 @@
       <Button icon="x" @click="customizeQuickFilter = false" />
     </div>
   </div>
-  <div v-else class="flex items-center justify-between gap-2 px-5 py-4">
+  <div v-else class="flex items-center justify-end gap-2 px-5 py-4">
+    <div
+      v-if="viewUpdated && route.query.view && (!view.public || isManager())"
+      class="flex items-center gap-2 border-r pr-2 mr-auto"
+    >
+      <Button :label="__('Cancel')" @click="cancelChanges" />
+      <Button :label="__('Save Changes')" @click="saveView" />
+    </div>
+    <div class="flex items-center gap-2">
+      <Button
+        :tooltip="__('Refresh')"
+        :icon="RefreshIcon"
+        :loading="isLoading"
+        @click="reload()"
+      />
+      <GroupBy
+        v-if="route.params.viewType === 'group_by'"
+        v-model="list"
+        :doctype="doctype"
+        @update="updateGroupBy"
+      />
+      <SortBy
+        v-if="route.params.viewType !== 'kanban'"
+        v-model="list"
+        :doctype="doctype"
+        @update="updateSort"
+      />
+      <KanbanSettings
+        v-if="route.params.viewType === 'kanban'"
+        v-model="list"
+        :doctype="doctype"
+        @update="updateKanbanSettings"
+      />
+      <ColumnSettings
+        v-else-if="!options.hideColumnsButton"
+        v-model="list"
+        :doctype="doctype"
+        @update="(isDefault) => updateColumns(isDefault)"
+      />
+    </div>
+    <div class="h-[70%] border-l" />
     <FadedScrollableDiv
-      class="flex flex-1 items-center overflow-x-auto -ml-1"
+      class="flex items-center overflow-x-auto"
       orientation="horizontal"
     >
       <div
@@ -145,84 +185,6 @@
         />
       </div>
     </FadedScrollableDiv>
-    <div class="-ml-2 h-[70%] border-l" />
-    <div class="flex items-center gap-2">
-      <div
-        v-if="viewUpdated && route.query.view && (!view.public || isManager())"
-        class="flex items-center gap-2 border-r pr-2"
-      >
-        <Button :label="__('Cancel')" @click="cancelChanges" />
-        <Button :label="__('Save Changes')" @click="saveView" />
-      </div>
-      <div class="flex items-center gap-2">
-        <Button
-          :tooltip="__('Refresh')"
-          :icon="RefreshIcon"
-          :loading="isLoading"
-          @click="reload()"
-        />
-        <GroupBy
-          v-if="route.params.viewType === 'group_by'"
-          v-model="list"
-          :doctype="doctype"
-          @update="updateGroupBy"
-        />
-        <Filter
-          v-model="list"
-          :doctype="doctype"
-          :default_filters="filters"
-          @update="updateFilter"
-        />
-        <SortBy
-          v-if="route.params.viewType !== 'kanban'"
-          v-model="list"
-          :doctype="doctype"
-          @update="updateSort"
-        />
-        <KanbanSettings
-          v-if="route.params.viewType === 'kanban'"
-          v-model="list"
-          :doctype="doctype"
-          @update="updateKanbanSettings"
-        />
-        <ColumnSettings
-          v-else-if="!options.hideColumnsButton"
-          v-model="list"
-          :doctype="doctype"
-          @update="(isDefault) => updateColumns(isDefault)"
-        />
-        <Dropdown
-          v-if="route.params.viewType !== 'kanban' || isManager()"
-          placement="right"
-          :options="[
-            {
-              group: __('Options'),
-              hideLabel: true,
-              items: [
-                {
-                  label: __('Export'),
-                  icon: () => h(ExportIcon, { class: 'h-4 w-4' }),
-                  onClick: () => (showExportDialog = true),
-                  condition: () =>
-                    !options.hideColumnsButton &&
-                    route.params.viewType !== 'kanban',
-                },
-                {
-                  label: __('Customize quick filters'),
-                  icon: () => h(QuickFilterIcon, { class: 'h-4 w-4' }),
-                  onClick: () => showCustomizeQuickFilter(),
-                  condition: () => isManager(),
-                },
-              ],
-            },
-          ]"
-        >
-          <template #default>
-            <Button :tooltip="__('More Options')" icon="more-horizontal" />
-          </template>
-        </Dropdown>
-      </div>
-    </div>
   </div>
   <ViewModal
     v-model="showViewModal"
