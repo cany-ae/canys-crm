@@ -68,15 +68,16 @@
         @click="whatsappBox.show()"
       />
     </div>
-    <Dropdown v-else-if="title == 'Activity'" :options="filterOptions" @click.stop>
+    <Dropdown v-else-if="title == 'Activity'" :options="filterOptions" placement="right" @click.stop>
       <template v-slot="{ open }">
         <Button
-          variant="ghost"
-          class="flex items-center gap-1 text-sm"
-          :iconRight="open ? 'chevron-up' : 'chevron-down'"
+          variant="outline"
+          size="sm"
+          class="flex items-center gap-1.5 whitespace-nowrap"
         >
-          <FeatherIcon name="filter" class="h-3.5 w-3.5" />
-          <span>{{ activityFilter === 'all' ? __('Alle') : filterLabels[activityFilter] }}</span>
+          <FeatherIcon name="filter" class="h-3 w-3 text-ink-gray-5" />
+          <span class="text-sm text-ink-gray-7">{{ activityFilter === 'all' ? __('Alle') : filterLabels[activityFilter] }}</span>
+          <FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="h-3 w-3 text-ink-gray-5" />
         </Button>
       </template>
     </Dropdown>
@@ -105,6 +106,7 @@ import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
 import { globalStore } from '@/stores/global'
 import { whatsappEnabled, callEnabled } from '@/composables/settings'
+import { DropdownOption } from '@/utils'
 import { Dropdown, FeatherIcon } from 'frappe-ui'
 import { computed, h } from 'vue'
 
@@ -137,6 +139,11 @@ const filterOptions = computed(() => {
   return Object.entries(filterLabels).map(([key, label]) => ({
     label: __(label),
     onClick: () => { activityFilter.value = key },
+    component: (props) =>
+      DropdownOption({
+        option: __(label),
+        selected: activityFilter.value === key,
+      }),
   }))
 })
 
