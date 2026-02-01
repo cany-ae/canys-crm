@@ -115,7 +115,10 @@ def update_call_log(call_sid, status=None):
 		return call_log
 	except Exception:
 		frappe.log_error(title="Error while updating call record")
-		frappe.db.commit()
+		try:
+			frappe.db.rollback()
+		except Exception:
+			pass
 
 
 @frappe.whitelist(allow_guest=True)
@@ -146,8 +149,12 @@ def update_call_status_info(**kwargs):
 			"To": args.To,
 		}
 
-		client = Twilio.get_twilio_client()
-		client.calls(args.ParentCallSid).user_defined_messages.create(content=json.dumps(call_info))
+		# user_defined_messages nur fuer Client-Calls (Outgoing) senden,
+		# bei Incoming (PSTN) ist es nicht unterstuetzt und verursacht Fehler
+		is_client_call = args.get("Caller", "").lower().startswith("client:")
+		if is_client_call:
+			client = Twilio.get_twilio_client()
+			client.calls(args.ParentCallSid).user_defined_messages.create(content=json.dumps(call_info))
 	except Exception:
 		frappe.log_error(title=_("Failed to update Twilio call status"))
 
