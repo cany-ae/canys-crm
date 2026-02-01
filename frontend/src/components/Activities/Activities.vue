@@ -237,7 +237,7 @@
           <CallArea :activity="activity" />
         </div>
         <div v-else-if="activity.activity_type == 'status_change'"
-          class="relative -mx-4 my-4"
+          class="relative -mx-4 my-2"
         >
           <div
             class="relative overflow-hidden rounded-xl border-2 shadow-lg"
@@ -246,11 +246,11 @@
             <div class="h-1.5 w-full bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse"
               :class="statusChangeIconBgClass(activity.data?.value)"
             ></div>
-            <div class="relative px-5 py-4">
+            <div class="relative px-5 py-2">
               <div class="absolute inset-0 opacity-[0.04]"
                 :class="statusChangeIconBgClass(activity.data?.value)"
               ></div>
-              <div class="relative flex items-center justify-between mb-3">
+              <div class="relative flex items-center justify-between mb-1.5">
                 <div class="flex items-center gap-2">
                   <div class="flex items-center justify-center w-7 h-7 rounded-full ring-2 ring-white shadow-md"
                     :class="statusChangeIconBgClass(activity.data?.value)"
@@ -271,7 +271,7 @@
                   </div>
                 </Tooltip>
               </div>
-              <div class="relative flex items-center gap-3 mb-3">
+              <div class="relative flex items-center gap-3 mb-1">
                 <div class="flex-1 min-w-0">
                   <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold opacity-60 bg-gray-100 text-gray-500 ring-1 ring-gray-200 line-through decoration-1">
                     <span class="w-2 h-2 rounded-full flex-shrink-0" :class="statusDotClass(activity.data?.old_value)"></span>
