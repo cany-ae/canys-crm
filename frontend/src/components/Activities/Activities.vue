@@ -22,7 +22,7 @@
       <EventArea :doctype="doctype" :docname="docname" />
     </div>
     <div v-else-if="title == 'InvoiceTool'" class="h-full overflow-y-auto">
-      <AngebotArea :leadId="docname" />
+      <AngebotArea :leadId="docname" @angebotCreated="openEmailWithAngebot" />
     </div>
     <div
       v-else-if="
@@ -994,6 +994,34 @@ function statusDotClass(status) {
     red: 'bg-red-500',
   }
   return colorMap[getStatusColor(status)] || colorMap.gray
+}
+
+function openEmailWithAngebot(fileData) {
+  // Switch to Emails tab
+  changeTabTo('emails')
+  nextTick(() => {
+    if (!emailBox.value) return
+    // Open email box
+    emailBox.value.show = true
+    nextTick(() => {
+      // Set subject
+      if (emailBox.value.editor) {
+        emailBox.value.editor.subject = 'Ihr Angebot - ' + (doc.value.lead_name || doc.value.first_name || '')
+      }
+      // Set recipient from lead email
+      if (emailBox.value.editor && doc.value.email) {
+        emailBox.value.editor.toEmails = [doc.value.email]
+      }
+      // Add the generated PDF as attachment
+      if (emailBox.value.attachments) {
+        emailBox.value.attachments = [{
+          name: fileData.file_doc_name,
+          file_name: fileData.file_name,
+          file_url: fileData.file_url,
+        }]
+      }
+    })
+  })
 }
 
 defineExpose({ emailBox, all_activities, changeTabTo })

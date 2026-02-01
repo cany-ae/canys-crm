@@ -293,6 +293,7 @@ function toggleCommentBox() {
 }
 
 defineExpose({
+  attachments,
   show: showEmailBox,
   showComment: showCommentBox,
   editor: newEmailEditor,
