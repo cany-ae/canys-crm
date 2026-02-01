@@ -3607,7 +3607,7 @@ msgstr ""
 #: frontend/src/pages/InvalidPage.vue:9 frontend/src/pages/Lead.vue:343
 #: frontend/src/pages/MobileLead.vue:291
 msgid "Leads"
-msgstr "Interessenten"
+msgstr "Leads"
 
 #: crm/api/dashboard.py:973
 #: frontend/src/components/Dashboard/AddChartModal.vue:106

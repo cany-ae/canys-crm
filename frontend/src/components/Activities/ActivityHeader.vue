@@ -4,7 +4,7 @@
     class="mx-4 my-3 flex items-center justify-between text-lg font-medium sm:mx-10 sm:mb-4 sm:mt-8"
   >
     <div class="flex h-8 items-center text-xl font-semibold text-ink-gray-8">
-      {{ __(title) }}
+      {{ __(titleLabel || title) }}
     </div>
     <Button
       v-if="title == 'Emails'"
@@ -116,6 +116,7 @@ import { computed, h } from 'vue'
 const props = defineProps({
   tabs: Array,
   title: String,
+  titleLabel: String,
   doc: Object,
   modalRef: Object,
   emailBox: Object,

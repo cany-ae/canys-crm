@@ -87,6 +87,52 @@ class CRMLead(Document):
 		if self.lead_owner:
 			self.assign_agent(self.lead_owner)
 		self._create_initial_status_update()
+		self.auto_link_contact()
+
+	def auto_link_contact(self):
+		"""Automatisch Kontakt erstellen oder verknuepfen beim Lead-Erstellen.
+		Matching: 1) Email, 2) Mobilnummer, 3) kein Auto-Kontakt."""
+		if not self.email and not self.mobile_no and not self.phone:
+			return
+
+		try:
+			# Pruefen ob bereits ein Kontakt verknuepft ist
+			existing_link = frappe.db.exists("Dynamic Link", {
+				"link_doctype": "CRM Lead",
+				"link_name": self.name,
+				"parenttype": "Contact",
+			})
+			if existing_link:
+				return
+
+			# Bestehenden Kontakt suchen (Email > Phone > Mobile)
+			existing_contact = self.contact_exists(throw=False)
+
+			if existing_contact:
+				# Bestehenden Kontakt mit Lead verknuepfen
+				self._link_contact_to_lead(existing_contact)
+			else:
+				# Neuen Kontakt erstellen
+				contact_name = self.create_contact(existing_contact=False, throw=False)
+				if contact_name:
+					self._link_contact_to_lead(contact_name)
+		except Exception:
+			# Fehler beim Auto-Kontakt soll Lead-Erstellung nicht blockieren
+			frappe.log_error("Auto-Kontakt Erstellung fehlgeschlagen fuer Lead: {0}".format(self.name))
+
+	def _link_contact_to_lead(self, contact_name):
+		"""Dynamic Link zwischen Contact und CRM Lead erstellen."""
+		contact = frappe.get_doc("Contact", contact_name)
+		# Pruefen ob Link bereits existiert
+		for link in contact.links:
+			if link.link_doctype == "CRM Lead" and link.link_name == self.name:
+				return
+		contact.append("links", {
+			"link_doctype": "CRM Lead",
+			"link_name": self.name,
+		})
+		contact.flags.ignore_permissions = True
+		contact.save()
 
 	def _create_initial_status_update(self):
 		"""Erstelle initialen Status-Update-Eintrag fuer neue Leads."""

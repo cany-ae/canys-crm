@@ -6,6 +6,7 @@
     v-model:activityFilter="activityFilter"
     :tabs="tabs"
     :title="title"
+    :titleLabel="titleLabel"
     :doc="doc"
     :emailBox="emailBox"
     :whatsappBox="whatsappBox"
@@ -688,6 +689,7 @@ const showFilesUploader = ref(false)
 const activityFilter = ref('all')
 
 const title = computed(() => props.tabs?.[tabIndex.value]?.name || 'Activity')
+const titleLabel = computed(() => props.tabs?.[tabIndex.value]?.label || title.value)
 
 const changeTabTo = (tabName) => {
   const tabNames = props.tabs?.map((tab) => tab.name?.toLowerCase())
