@@ -95,7 +95,7 @@ import ViewControls from '@/components/ViewControls.vue'
 import { getMeta } from '@/stores/meta'
 import { organizationsStore } from '@/stores/organizations.js'
 import { formatDate, timeAgo } from '@/utils'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('Contact')
@@ -174,6 +174,17 @@ const rows = computed(() => {
       }
     })
     return _rows
+  })
+})
+
+// Force-Reload beim Navigieren zurueck zur Liste (Cache-Bypass)
+onMounted(() => {
+  nextTick(() => {
+    setTimeout(() => {
+      if (viewControls.value?.reload) {
+        viewControls.value.reload()
+      }
+    }, 300)
   })
 })
 
