@@ -3,7 +3,25 @@ from bs4 import BeautifulSoup
 from frappe.core.api.file import get_max_file_size
 from frappe.translate import get_all_translations
 from frappe.utils import cstr, split_emails, validate_email_address
-from frappe.utils.modules import get_modules_from_all_apps_for_user
+# Frappe v15 compatibility patch - respects Module Profile
+def get_modules_from_all_apps_for_user():
+    """Get modules accessible to user, respecting Module Profile blocks."""
+    import frappe
+    user = frappe.session.user
+    if user == "Administrator":
+        modules = frappe.get_all("Module Def", pluck="name")
+        return [{"module_name": m} for m in modules]
+
+    all_modules = set(frappe.get_all("Module Def", pluck="name"))
+
+    # Check Module Profile for blocked modules
+    module_profile = frappe.db.get_value("User", user, "module_profile")
+    if module_profile:
+        blocked = set(frappe.get_all("Block Module",
+            filters={"parent": module_profile}, pluck="module"))
+        all_modules -= blocked
+
+    return [{"module_name": m} for m in all_modules]
 from frappe.utils.telemetry import POSTHOG_HOST_FIELD, POSTHOG_PROJECT_FIELD
 
 

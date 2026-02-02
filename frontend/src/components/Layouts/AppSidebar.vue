@@ -234,6 +234,12 @@ const links = [
     icon: PhoneIcon,
     to: 'Call Logs',
   },
+  {
+    label: 'Mitarbeiterverwaltung',
+    icon: ContactsIcon,
+    to: 'Employee Management',
+    condition: () => isManager(),
+  },
 ]
 
 const allViews = computed(() => {
