@@ -5,6 +5,8 @@
       <router-view :key="$route.fullPath" />
     </Layout>
     <Dialogs />
+    <!-- KI-Assistent Sidebar -->
+    <AISidebar v-if="session().isLoggedIn" />
   </FrappeUIProvider>
 </template>
 
@@ -14,6 +16,7 @@ import { Dialogs } from '@/utils/dialogs'
 import { sessionStore as session } from '@/stores/session'
 import { FrappeUIProvider, setConfig } from 'frappe-ui'
 import { computed, defineAsyncComponent } from 'vue'
+import AISidebar from '@/components/AISidebar.vue'
 
 const MobileLayout = defineAsyncComponent(
   () => import('./components/Layouts/MobileLayout.vue'),

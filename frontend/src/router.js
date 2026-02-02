@@ -95,16 +95,6 @@ const routes = [
     component: () => import('@/pages/Welcome.vue'),
   },
   {
-    path: '/employee-management',
-    name: 'Employee Management',
-    component: () => import('@/pages/EmployeeManagement.vue'),
-  },
-  {
-    path: '/employee-management',
-    name: 'Employee Management',
-    component: () => import('@/pages/EmployeeManagement.vue'),
-  },
-  {
     path: '/:invalidpath',
     name: 'Invalid Page',
     component: () => import('@/pages/InvalidPage.vue'),

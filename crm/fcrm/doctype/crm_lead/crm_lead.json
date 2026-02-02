@@ -105,7 +105,7 @@
    "options": "Gender"
   },
   {
-   "default": "New",
+   "default": "Nicht kontaktiert",
    "fieldname": "status",
    "fieldtype": "Link",
    "in_list_view": 1,

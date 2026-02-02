@@ -3,6 +3,7 @@ from frappe import _
 
 
 def validate(doc, method):
+	frappe.log_error(title="Contact Validate Debug", message="Contact: {} | custom_contact_type: {} | modified_by: {}".format(doc.name, doc.custom_contact_type, doc.modified_by))  # DEBUG_LOG
 	update_deals_email_mobile_no(doc)
 
 
