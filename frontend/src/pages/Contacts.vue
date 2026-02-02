@@ -95,7 +95,7 @@ import ViewControls from '@/components/ViewControls.vue'
 import { getMeta } from '@/stores/meta'
 import { organizationsStore } from '@/stores/organizations.js'
 import { formatDate, timeAgo } from '@/utils'
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('Contact')
@@ -106,10 +106,14 @@ const contactsListView = ref(null)
 
 // Tab state
 const activeTab = ref('kunden')
-const contactTabs = [
-  { key: 'kunden', label: 'Kunden' },
-  { key: 'intern', label: 'Intern' },
-]
+const contactTabs = computed(() => {
+  const kundenCount = rows.value.filter(r => r._contact_type !== 'Intern').length
+  const internCount = rows.value.filter(r => r._contact_type === 'Intern').length
+  return [
+    { key: 'kunden', label: 'Kunden (' + kundenCount + ')' },
+    { key: 'intern', label: 'Intern (' + internCount + ')' },
+  ]
+})
 
 // contacts data is loaded in the ViewControls component
 const contacts = ref({})
@@ -177,16 +181,38 @@ const rows = computed(() => {
   })
 })
 
-// Force-Reload beim Navigieren zurueck zur Liste (Cache-Bypass)
-// Direkt auf der Resource reload() aufrufen, um den isLoading-Guard
-// in ViewControls zu umgehen und immer frische Daten zu erhalten.
+// Force-Reload beim Navigieren zurueck zur Liste.
+// frappe-ui createResource gibt bei gleichem Cache-Key das gecachte
+// Resource-Objekt mit alten Daten zurueck (ohne auto-reload).
+// Wir setzen fetched=false damit der naechste reload() nicht uebersprungen
+// wird, und erzwingen dann einen frischen Server-Fetch.
 onMounted(() => {
   nextTick(() => {
-    if (contacts.value?.reload) {
-      contacts.value.reload()
+    if (contacts.value) {
+      contacts.value.fetched = false
+      contacts.value.previousData = null
+      if (contacts.value.reload) {
+        contacts.value.reload()
+      }
     }
   })
 })
+
+// Smart Tab Switch: Wenn nach einem Data-Update der aktive Tab leer ist
+// aber der andere Tab Eintraege hat, automatisch zum gefuellten Tab wechseln.
+// Das loest das Problem, dass nach Typ-Aenderung der Kontakt "verschwindet",
+// weil der User auf dem nun leeren Tab bleibt.
+watch(rows, (newRows) => {
+  if (!newRows.length) return
+  const kundenRows = newRows.filter(r => r._contact_type !== 'Intern')
+  const internRows = newRows.filter(r => r._contact_type === 'Intern')
+
+  if (activeTab.value === 'kunden' && kundenRows.length === 0 && internRows.length > 0) {
+    activeTab.value = 'intern'
+  } else if (activeTab.value === 'intern' && internRows.length === 0 && kundenRows.length > 0) {
+    activeTab.value = 'kunden'
+  }
+}, { immediate: true })
 
 // Frontend-Filter nach Tab
 const filteredRows = computed(() => {
