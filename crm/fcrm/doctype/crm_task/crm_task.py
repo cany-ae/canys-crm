@@ -10,6 +10,7 @@ from crm.fcrm.doctype.crm_notification.crm_notification import notify_user
 
 class CRMTask(Document):
 	def after_insert(self):
+		self._check_assignment_policy()
 		self.assign_to()
 
 	def validate(self):
@@ -17,8 +18,16 @@ class CRMTask(Document):
 			return
 
 		if self.get_doc_before_save().assigned_to != self.assigned_to:
+			self._check_assignment_policy()
 			self.unassign_from_previous_user(self.get_doc_before_save().assigned_to)
 			self.assign_to()
+
+	def _check_assignment_policy(self):
+		"""Enforce role-based assignment policy before assigning."""
+		if not self.assigned_to:
+			return
+		from crm.api.assignment_policy import can_assign_to
+		can_assign_to(self.assigned_to)
 
 	def unassign_from_previous_user(self, user):
 		unassign(self.doctype, self.name, user)
