@@ -178,13 +178,13 @@ const rows = computed(() => {
 })
 
 // Force-Reload beim Navigieren zurueck zur Liste (Cache-Bypass)
+// Direkt auf der Resource reload() aufrufen, um den isLoading-Guard
+// in ViewControls zu umgehen und immer frische Daten zu erhalten.
 onMounted(() => {
   nextTick(() => {
-    setTimeout(() => {
-      if (viewControls.value?.reload) {
-        viewControls.value.reload()
-      }
-    }, 300)
+    if (contacts.value?.reload) {
+      contacts.value.reload()
+    }
   })
 })
 
