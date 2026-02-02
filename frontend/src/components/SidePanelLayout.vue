@@ -91,7 +91,7 @@
                           v-else-if="field.fieldtype == 'Check'"
                           class="form-control"
                           type="checkbox"
-                          v-model="doc[field.fieldname]"
+                          :modelValue="doc[field.fieldname]"
                           @change.stop="
                             fieldChange($event.target.checked, field)
                           "
@@ -111,16 +111,16 @@
                           :value="doc[field.fieldname]"
                           :placeholder="field.placeholder"
                           :debounce="500"
-                          @change.stop="fieldChange($event.target.value, field)"
+                          @update:modelValue="(val) => fieldChange(val, field)"
                         />
                         <FormControl
                           v-else-if="field.fieldtype === 'Select'"
                           class="form-control cursor-pointer [&_select]:cursor-pointer truncate"
                           type="select"
-                          v-model="doc[field.fieldname]"
+                          :modelValue="doc[field.fieldname]"
                           :options="field.options"
                           :placeholder="field.placeholder"
-                          @change.stop="fieldChange($event.target.value, field)"
+                          @update:modelValue="(val) => fieldChange(val, field)"
                         />
                         <Link
                           v-else-if="field.fieldtype === 'User'"
@@ -226,7 +226,7 @@
                           :value="doc[field.fieldname]"
                           :placeholder="field.placeholder"
                           :debounce="500"
-                          @change.stop="fieldChange($event.target.value, field)"
+                          @update:modelValue="(val) => fieldChange(val, field)"
                           :disabled="Boolean(field.read_only)"
                         />
                         <FormattedInput
@@ -236,7 +236,7 @@
                           :value="doc[field.fieldname] || '0'"
                           :placeholder="field.placeholder"
                           :debounce="500"
-                          @change.stop="fieldChange($event.target.value, field)"
+                          @update:modelValue="(val) => fieldChange(val, field)"
                           :disabled="Boolean(field.read_only)"
                         />
                         <FormattedInput
@@ -270,7 +270,7 @@
                           :value="doc[field.fieldname]"
                           :placeholder="field.placeholder"
                           :debounce="500"
-                          @change.stop="fieldChange($event.target.value, field)"
+                          @update:modelValue="(val) => fieldChange(val, field)"
                         />
                       </div>
                       <div class="ml-1">
