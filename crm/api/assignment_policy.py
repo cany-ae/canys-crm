@@ -103,9 +103,9 @@ def can_assign_to(target_user):
         return True
 
     elif actor_level == "executive":
-        if target_level != "agent":
+        if target_level not in ("agent", "teamlead"):
             frappe.throw(
-                _("Zuweisung nur an Vertriebler erlaubt."),
+                _("Zuweisung nur an Vertriebler und Teamleiter erlaubt."),
                 frappe.PermissionError,
             )
         return True
@@ -182,7 +182,7 @@ def get_assignable_users():
             "User",
             filters={
                 **base_filters,
-                "role_profile_name": ["in", list(SALES_AGENT_PROFILES)],
+                "role_profile_name": ["in", list(SALES_AGENT_PROFILES + TEAM_LEAD_PROFILES)],
             },
             fields=fields,
             order_by="full_name asc",
