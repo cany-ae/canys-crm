@@ -23,12 +23,52 @@
     v-model:resizeColumn="triggerResize"
     v-model:updatedPageCount="updatedPageCount"
     doctype="CRM Lead"
-    :filters="{ converted: 0 }"
+    :filters="computedFilters"
     :options="{
       allowedViews: ['list', 'group_by', 'kanban'],
       hideColumnsButton: true,
     }"
   />
+  <div v-if="route.params.viewType !== 'kanban'" class="flex items-center gap-3 sm:px-5 px-3 py-2">
+    <div class="flex items-center gap-1.5">
+      <button
+        v-for="liste in leadLists"
+        :key="liste"
+        class="px-3 py-1 text-xs font-semibold rounded-md border transition-all duration-150"
+        :class="selectedLeadList === liste
+          ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100'
+          : 'bg-transparent text-ink-gray-5 border-outline-gray-2 hover:border-outline-gray-3 hover:text-ink-gray-7'"
+        @click="toggleLeadList(liste)"
+      >
+        {{ liste }}
+      </button>
+    </div>
+    <div v-if="selectedLeadList" class="flex items-center gap-0.5 ml-2 border-l pl-3 border-outline-gray-2">
+      <button
+        class="px-3 py-1 text-xs font-medium rounded-md transition-all duration-150"
+        :class="listScope === 'mine'
+          ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
+          : 'text-ink-gray-5 hover:text-ink-gray-7'"
+        @click="listScope = 'mine'"
+      >
+        {{ __('Meine') }}
+      </button>
+      <button
+        class="px-3 py-1 text-xs font-medium rounded-md transition-all duration-150"
+        :class="listScope === 'all'
+          ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
+          : 'text-ink-gray-5 hover:text-ink-gray-7'"
+        @click="listScope = 'all'"
+      >
+        {{ __('Alle') }}
+      </button>
+    </div>
+    <div class="text-xs text-ink-gray-4 ml-auto">
+      <span v-if="!selectedLeadList">{{ __('Meine Leads') }}</span>
+      <span v-else-if="listScope === 'mine'">{{ selectedLeadList }} · {{ __('Meine') }}</span>
+      <span v-else>{{ selectedLeadList }} · {{ __('Alle') }}</span>
+    </div>
+  </div>
   <KanbanView
     v-if="route.params.viewType == 'kanban'"
     v-model="leads"
@@ -308,6 +348,7 @@ import LeadModal from '@/components/Modals/LeadModal.vue'
 import NoteModal from '@/components/Modals/NoteModal.vue'
 import TaskModal from '@/components/Modals/TaskModal.vue'
 import ViewControls from '@/components/ViewControls.vue'
+import { sessionStore } from '@/stores/session'
 import { getMeta } from '@/stores/meta'
 import { globalStore } from '@/stores/global'
 import { usersStore } from '@/stores/users'
@@ -316,7 +357,7 @@ import { callEnabled } from '@/composables/settings'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
 import { Avatar, Tooltip, Dropdown, toast } from 'frappe-ui'
 import { useRoute, useRouter } from 'vue-router'
-import { ref, computed, reactive, h } from 'vue'
+import { ref, computed, reactive, h, watch, nextTick } from 'vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('CRM Lead')
@@ -326,6 +367,8 @@ const { getLeadStatus } = statusesStore()
 
 const route = useRoute()
 const router = useRouter()
+
+const { user } = sessionStore()
 
 const leadsListView = ref(null)
 const showLeadModal = ref(false)
@@ -338,6 +381,46 @@ const loadMore = ref(1)
 const triggerResize = ref(1)
 const updatedPageCount = ref(20)
 const viewControls = ref(null)
+
+// Lead List A-E filtering
+const leadLists = ['Liste A', 'Liste B', 'Liste C', 'Liste D', 'Liste E']
+const selectedLeadList = ref(null)
+const listScope = ref('mine')
+
+function toggleLeadList(liste) {
+  if (selectedLeadList.value === liste) {
+    selectedLeadList.value = null
+    listScope.value = 'mine'
+  } else {
+    selectedLeadList.value = liste
+    listScope.value = 'mine'
+  }
+}
+
+const computedFilters = computed(() => {
+  let filters = { converted: 0 }
+
+  if (selectedLeadList.value) {
+    filters.custom_liste = selectedLeadList.value
+    if (listScope.value === 'mine') {
+      filters._assign = ['LIKE', '%' + user + '%']
+    }
+  } else {
+    // Default: show only my leads
+    filters._assign = ['LIKE', '%' + user + '%']
+  }
+
+  return filters
+})
+
+// Watch for filter changes and reload
+watch([selectedLeadList, listScope], () => {
+  nextTick(() => {
+    if (viewControls.value) {
+      viewControls.value.reload()
+    }
+  })
+})
 
 function getRow(name, field) {
   function getValue(value) {
