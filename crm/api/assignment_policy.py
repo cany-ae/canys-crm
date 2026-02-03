@@ -2,8 +2,8 @@ import frappe
 from frappe import _
 
 # Role profiles recognized by the assignment policy.
-# "Sales" (ERPNext default) is treated as equivalent to "Vertriebler".
-SALES_AGENT_PROFILES = ("Vertriebler", "Sales")
+# Only profiles managed by Mitarbeiterverwaltung app.
+SALES_AGENT_PROFILES = ("Vertriebler",)
 TEAM_LEAD_PROFILES = ("Teamleiter",)
 EXECUTIVE_PROFILES = ("Geschäftsführer",)
 ALL_CRM_PROFILES = SALES_AGENT_PROFILES + TEAM_LEAD_PROFILES + EXECUTIVE_PROFILES
@@ -103,9 +103,9 @@ def can_assign_to(target_user):
         return True
 
     elif actor_level == "executive":
-        if target_level not in ("agent", "teamlead"):
+        if target_level not in ("agent", "teamlead", "executive"):
             frappe.throw(
-                _("Zuweisung nur an Vertriebler und Teamleiter erlaubt."),
+                _("Zuweisung nur an Mitarbeiter der Mitarbeiterverwaltung erlaubt."),
                 frappe.PermissionError,
             )
         return True
@@ -182,7 +182,7 @@ def get_assignable_users():
             "User",
             filters={
                 **base_filters,
-                "role_profile_name": ["in", list(SALES_AGENT_PROFILES + TEAM_LEAD_PROFILES)],
+                "role_profile_name": ["in", list(ALL_CRM_PROFILES)],
             },
             fields=fields,
             order_by="full_name asc",
