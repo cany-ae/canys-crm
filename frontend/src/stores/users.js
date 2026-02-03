@@ -35,7 +35,6 @@ export const usersStore = defineStore('crm-users', () => {
 
   const assignableUsersResource = createResource({
     url: 'crm.api.session.get_assignable_users',
-    cache: 'crm-assignable-users',
     initialData: [],
     auto: true,
     onSuccess(data) {
@@ -44,7 +43,10 @@ export const usersStore = defineStore('crm-users', () => {
   })
 
   function getAssignableUserNames() {
-    return assignableUsers.value.map((u) => u.name)
+    const names = assignableUsers.value.map((u) => u.name)
+    // Fallback: if not loaded yet, only allow self-assignment
+    if (!names.length) return [session.user]
+    return names
   }
 
   function reloadAssignableUsers() {
