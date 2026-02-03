@@ -55,16 +55,11 @@
               </template>
             </Button>
           </Dropdown>
-          <Link
+          <AssignUserSelect
             class="form-control"
             :value="getUser(_task.assigned_to).full_name"
-            doctype="User"
             @change="(option) => (_task.assigned_to = option)"
-            :placeholder="__('John Doe')"
-            :filters="{
-              name: ['in', getAssignableUserNames()],
-            }"
-            :hideMe="true"
+            :placeholder="__('Zuweisen an...')"
           >
             <template #prefix>
               <UserAvatar class="mr-2 !h-4 !w-4" :user="_task.assigned_to" />
@@ -79,7 +74,7 @@
                 </div>
               </Tooltip>
             </template>
-          </Link>
+          </AssignUserSelect>
           <div class="w-36">
             <DateTimePicker
               class="datepicker"
@@ -117,7 +112,7 @@ import TaskStatusIcon from '@/components/Icons/TaskStatusIcon.vue'
 import TaskPriorityIcon from '@/components/Icons/TaskPriorityIcon.vue'
 import ArrowUpRightIcon from '@/components/Icons/ArrowUpRightIcon.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
-import Link from '@/components/Controls/Link.vue'
+import AssignUserSelect from '@/components/Controls/AssignUserSelect.vue'
 import { taskStatusOptions, taskPriorityOptions, getFormat } from '@/utils'
 import { usersStore } from '@/stores/users'
 import { capture } from '@/telemetry'
@@ -147,7 +142,7 @@ const tasks = defineModel('reloadTasks')
 const emit = defineEmits(['updateTask', 'after'])
 
 const router = useRouter()
-const { users, getUser, getAssignableUserNames } = usersStore()
+const { users, getUser } = usersStore()
 const { updateOnboardingStep } = useOnboarding('frappecrm')
 
 const error = ref(null)
