@@ -193,3 +193,95 @@ removed,entfernt,
 results,Ergebnisse,
 to,zu,
 value,Wert,
+
+Add First Name...,Vorname eingeben...
+Add Last Name...,Nachname eingeben...
+Add Email...,E-Mail eingeben...
+Add Mobile No...,Mobilnummer eingeben...
+Add Organization...,Firma eingeben...
+Add Website...,Website eingeben...
+Add Job Title...,Stellenbezeichnung eingeben...
+Add Territory...,Gebiet auswählen...
+Add Industry...,Branche auswählen...
+Add Source...,Quelle auswählen...
+Add description...,Beschreibung eingeben...
+Add Lead or Deal,Lead oder Deal hinzufügen
+Add description,Beschreibung eingeben
+Select Territory...,Gebiet auswählen...
+Select Industry...,Branche auswählen...
+Select Source...,Quelle auswählen...
+Select Organization...,Firma auswählen...
+Select First Name...,Vorname auswählen...
+Public views,Öffentliche Ansichten
+Public Views,Öffentliche Ansichten
+Pinned views,Angepinnte Ansichten
+Pinned Views,Angepinnte Ansichten
+My views,Meine Ansichten
+Initiated,Eingeleitet
+Declined,Abgelehnt
+Failed,Fehlgeschlagen
+Queued,In Warteschlange
+Canceled,Abgebrochen
+Ringing,Klingelt
+Missed Call,Verpasster Anruf
+Status Update,Statusänderung
+STATUS UPDATE,STATUSÄNDERUNG
+Load More,Mehr laden
+Qualification,Qualifizierung
+Proposal/Price Quote,Angebot/Preisanfrage
+Negotiation,Verhandlung
+Won,Gewonnen
+Lost,Verloren
+Proposal,Angebot
+Interested,Interessiert
+Converted,Konvertiert
+Do Not Contact,Nicht kontaktieren
+Replied,Geantwortet
+Create New,Neu erstellen
+No results found,Keine Ergebnisse gefunden
+No data,Keine Daten
+Actions,Aktionen
+Filters,Filter
+Sort,Sortieren
+Reset,Zurücksetzen
+Incoming,Eingehend
+Outgoing,Ausgehend
+This field is read only and cannot be edited.,Dieses Feld ist schreibgeschützt und kann nicht bearbeitet werden.
+required,erforderlich
+Website,Webseite
+Territory,Gebiet
+Industry,Branche
+Job Title,Stellenbezeichnung
+Source,Quelle
+Phone,Telefon
+Salutation,Anrede
+Gender,Geschlecht
+Details,Details
+Person,Person
+seconds ago,Sekunden her
+week ago,Woche her
+weeks ago,Wochen her
+month ago,Monat her
+months ago,Monaten her
+year ago,Jahr her
+years ago,Jahren her
+Settings,Einstellungen
+Preferences,Präferenzen
+Help,Hilfe
+No {0} Available,Keine {0} vorhanden
+No activities,Keine Aktivitäten
+No emails,Keine E-Mails
+No comments,Keine Kommentare
+No tasks,Keine Aufgaben
+No notes,Keine Notizen
+No attachments,Keine Anhänge
+List,Liste
+Kanban,Kanban
+Group By,Gruppieren nach
+Columns,Spalten
+Attach File,Datei anhängen
+Drag and drop files here,Dateien hierher ziehen
+Browse,Durchsuchen
+Mark as read,Als gelesen markieren
+Mark all as read,Alle als gelesen markieren
+Notifications,BenachrichtigungenLoad More,Mehr laden

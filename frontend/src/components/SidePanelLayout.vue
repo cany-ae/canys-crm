@@ -132,7 +132,7 @@
                           doctype="User"
                           :filters="field.filters"
                           @change="(v) => fieldChange(v, field)"
-                          :placeholder="'Select' + ' ' + field.label + '...'"
+                          :placeholder="__('Select') + ' ' + __(field.label) + '...'"
                           :hideMe="true"
                         >
                           <template v-if="doc[field.fieldname]" #prefix>
@@ -412,7 +412,7 @@ function parsedField(field) {
   let _field = {
     ...field,
     filters: field.link_filters && JSON.parse(field.link_filters),
-    placeholder: field.placeholder || field.label,
+    placeholder: __(field.placeholder || field.label),
     display_via_depends_on: evaluateDependsOnValue(field.depends_on, doc.value),
     mandatory_via_depends_on: evaluateDependsOnValue(
       field.mandatory_depends_on,

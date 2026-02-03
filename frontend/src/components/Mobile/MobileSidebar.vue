@@ -160,7 +160,7 @@ const allViews = computed(() => {
   ]
   if (getPublicViews().length) {
     _views.push({
-      name: 'Public views',
+      name: __('Public views'),
       opened: true,
       views: parseView(getPublicViews()),
     })

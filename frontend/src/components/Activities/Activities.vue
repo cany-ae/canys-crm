@@ -811,9 +811,18 @@ const activities = computed(() => {
     return sortByModified(all_activities.data.attachments)
   }
 
-  // FIX: Status-changed Activities herausfiltern - Status-Card zeigt das bereits an
+  // FIX: Doppelte Status-Anzeige entfernen
+  // 1. Status-"changed" Activities filtern (Card zeigt das bereits)
+  // 2. Info-Comments mit "STATUS UPDATE" filtern (Card zeigt das bereits)
   _activities = _activities.filter((activity) => {
     if (activity.activity_type === 'changed' && activity.data?.field === 'status') {
+      return false
+    }
+    if (
+      (activity.activity_type === 'comment' || activity.activity_type === 'info') &&
+      activity.content &&
+      activity.content.includes('STATUS UPDATE')
+    ) {
       return false
     }
     return true
