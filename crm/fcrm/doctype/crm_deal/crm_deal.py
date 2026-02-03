@@ -80,6 +80,7 @@ class CRMDeal(Document):
 		self.set_primary_contact()
 		self.set_primary_email_mobile_no()
 		if not self.is_new() and self.has_value_changed("deal_owner") and self.deal_owner:
+			self._check_assignment_policy(self.deal_owner)
 			self.share_with_agent(self.deal_owner)
 			self.assign_agent(self.deal_owner)
 		if self.has_value_changed("status"):
@@ -92,6 +93,7 @@ class CRMDeal(Document):
 
 	def after_insert(self):
 		if self.deal_owner:
+			self._check_assignment_policy(self.deal_owner)
 			self.assign_agent(self.deal_owner)
 
 	def before_save(self):
@@ -133,6 +135,13 @@ class CRMDeal(Document):
 			self.email = ""
 			self.mobile_no = ""
 			self.phone = ""
+
+	def _check_assignment_policy(self, target_user):
+		"""Enforce role-based assignment policy."""
+		if not target_user:
+			return
+		from crm.api.assignment_policy import can_assign_to
+		can_assign_to(target_user)
 
 	def assign_agent(self, agent):
 		if not agent:

@@ -52,6 +52,13 @@ def get_users():
 
 
 @frappe.whitelist()
+def get_assignable_users():
+	"""Return users the current session user can assign tasks/leads/deals to."""
+	from crm.api.assignment_policy import get_assignable_users as _get
+	return _get()
+
+
+@frappe.whitelist()
 def get_organizations():
 	organizations = frappe.qb.get_query(
 		"CRM Organization",

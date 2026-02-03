@@ -12,7 +12,7 @@
         @change="(option) => addValue(option) && ($refs.input.value = '')"
         :placeholder="__('John Doe')"
         :filters="{
-          name: ['in', users.data.crmUsers?.map((user) => user.name)],
+          name: ['in', getAssignableUserNames()],
         }"
         :hideMe="true"
       >
@@ -116,7 +116,7 @@ const oldAssignees = ref([])
 
 const error = ref('')
 
-const { users, getUser } = usersStore()
+const { users, getUser, getAssignableUserNames } = usersStore()
 
 const removeValue = (value) => {
   assignees.value = assignees.value.filter(

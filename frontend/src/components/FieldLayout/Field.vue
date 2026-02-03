@@ -248,7 +248,7 @@ const isGridRow = inject('isGridRow')
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta(doctype)
 
-const { users, getUser } = usersStore()
+const { users, getUser, getAssignableUserNames } = usersStore()
 
 let triggerOnChange
 let parentDoc
@@ -285,7 +285,7 @@ const field = computed(() => {
     field.fieldtype = 'User'
     field.link_filters = JSON.stringify({
       ...(field.link_filters ? JSON.parse(field.link_filters) : {}),
-      name: ['in', users.data.crmUsers?.map((user) => user.name)],
+      name: ['in', getAssignableUserNames()],
     })
   }
 

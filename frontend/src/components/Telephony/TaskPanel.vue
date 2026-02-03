@@ -46,7 +46,7 @@
         @change="(option) => (task.assigned_to = option)"
         :placeholder="__('John Doe')"
         :filters="{
-          name: ['in', users.data?.crmUsers?.map((user) => user.name)],
+          name: ['in', getAssignableUserNames()],
         }"
         :hideMe="true"
       >
@@ -97,7 +97,7 @@ const props = defineProps({
   },
 })
 
-const { users, getUser } = usersStore()
+const { users, getUser, getAssignableUserNames } = usersStore()
 
 function updateTaskStatus(status) {
   props.task.status = status

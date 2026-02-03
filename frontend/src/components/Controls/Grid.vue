@@ -411,7 +411,7 @@ const {
   getGridSettings,
 } = getMeta(props.doctype)
 getMeta(props.parentDoctype)
-const { users, getUser } = usersStore()
+const { users, getUser, getAssignableUserNames } = usersStore()
 
 const rows = defineModel()
 const parentDoc = defineModel('parent')
@@ -460,7 +460,7 @@ function getFieldObj(field) {
     field.fieldtype = 'User'
     field.link_filters = JSON.stringify({
       ...(field.link_filters ? JSON.parse(field.link_filters) : {}),
-      name: ['in', users.data.crmUsers?.map((user) => user.name)],
+      name: ['in', getAssignableUserNames()],
     })
   }
 

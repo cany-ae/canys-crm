@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { createResource } from 'frappe-ui'
 import { sessionStore } from './session'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 export const usersStore = defineStore('crm-users', () => {
@@ -9,6 +9,8 @@ export const usersStore = defineStore('crm-users', () => {
 
   let usersByName = reactive({})
   const router = useRouter()
+
+  const assignableUsers = ref([])
 
   const users = createResource({
     url: 'crm.api.session.get_users',
@@ -30,6 +32,24 @@ export const usersStore = defineStore('crm-users', () => {
       }
     },
   })
+
+  const assignableUsersResource = createResource({
+    url: 'crm.api.session.get_assignable_users',
+    cache: 'crm-assignable-users',
+    initialData: [],
+    auto: true,
+    onSuccess(data) {
+      assignableUsers.value = data || []
+    },
+  })
+
+  function getAssignableUserNames() {
+    return assignableUsers.value.map((u) => u.name)
+  }
+
+  function reloadAssignableUsers() {
+    assignableUsersResource.reload()
+  }
 
   function getUser(email) {
     if (!email || email === 'sessionUser') {
@@ -79,6 +99,9 @@ export const usersStore = defineStore('crm-users', () => {
 
   return {
     users,
+    assignableUsers,
+    getAssignableUserNames,
+    reloadAssignableUsers,
     getUser,
     isAdmin,
     isManager,

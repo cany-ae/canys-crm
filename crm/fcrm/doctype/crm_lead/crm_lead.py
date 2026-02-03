@@ -76,6 +76,7 @@ class CRMLead(Document):
 		self.set_title()
 		self.validate_email()
 		if not self.is_new() and self.has_value_changed("lead_owner") and self.lead_owner:
+			self._check_assignment_policy(self.lead_owner)
 			self.share_with_agent(self.lead_owner)
 			self.assign_agent(self.lead_owner)
 		if self.has_value_changed("status"):
@@ -85,6 +86,7 @@ class CRMLead(Document):
 
 	def after_insert(self):
 		if self.lead_owner:
+			self._check_assignment_policy(self.lead_owner)
 			self.assign_agent(self.lead_owner)
 		self._create_initial_status_update()
 		self.auto_link_contact()
@@ -227,6 +229,13 @@ class CRMLead(Document):
 
 			if self.is_new() or not self.image:
 				self.image = has_gravatar(self.email)
+
+	def _check_assignment_policy(self, target_user):
+		"""Enforce role-based assignment policy."""
+		if not target_user:
+			return
+		from crm.api.assignment_policy import can_assign_to
+		can_assign_to(target_user)
 
 	def assign_agent(self, agent):
 		if not agent:

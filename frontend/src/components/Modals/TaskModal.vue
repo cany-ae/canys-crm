@@ -62,7 +62,7 @@
             @change="(option) => (_task.assigned_to = option)"
             :placeholder="__('John Doe')"
             :filters="{
-              name: ['in', users.data.crmUsers?.map((user) => user.name)],
+              name: ['in', getAssignableUserNames()],
             }"
             :hideMe="true"
           >
@@ -147,7 +147,7 @@ const tasks = defineModel('reloadTasks')
 const emit = defineEmits(['updateTask', 'after'])
 
 const router = useRouter()
-const { users, getUser } = usersStore()
+const { users, getUser, getAssignableUserNames } = usersStore()
 const { updateOnboardingStep } = useOnboarding('frappecrm')
 
 const error = ref(null)
