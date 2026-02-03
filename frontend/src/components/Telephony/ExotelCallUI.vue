@@ -193,11 +193,27 @@
             @click="showTaskWindow"
           />
           <Button
-            v-if="contact.deal || contact.lead"
+            v-if="lookupResult.type === 'lead'"
             class="bg-surface-gray-6 text-ink-white hover:bg-surface-gray-5"
             size="md"
             :iconRight="ArrowUpRightIcon"
-            :label="contact.deal ? __('Deal') : __('Lead')"
+            :label="__('Lead')"
+            @click="openDealOrLead"
+          />
+          <Button
+            v-else-if="lookupResult.type === 'contact' && lookupResult.deal"
+            class="bg-surface-gray-6 text-ink-white hover:bg-surface-gray-5"
+            size="md"
+            :iconRight="ArrowUpRightIcon"
+            :label="__('Deal')"
+            @click="openDealOrLead"
+          />
+          <Button
+            v-else-if="lookupResult.type === 'unknown' && phoneNumber"
+            class="bg-surface-gray-6 text-ink-white hover:bg-surface-gray-5"
+            size="md"
+            :iconRight="ArrowUpRightIcon"
+            :label="__('Lead erstellen')"
             @click="openDealOrLead"
           />
         </div>
@@ -275,23 +291,56 @@ const contact = ref({
   mobile_no: '',
 })
 
-const getContact = createResource({
-  url: 'crm.integrations.api.get_contact_by_phone_number',
+const lookupResult = ref({ type: 'unknown' })
+const lastLookedUpNumber = ref('')
+
+const lookupByPhone = createResource({
+  url: 'crm.integrations.api.lookup_by_phone',
   makeParams() {
     return {
       phone_number: phoneNumber.value,
     }
   },
   onSuccess(data) {
-    contact.value = data
+    lookupResult.value = data
+    contact.value = {
+      full_name: data.full_name || '',
+      image: data.image || '',
+      mobile_no: data.mobile_no || phoneNumber.value,
+      deal: data.deal || null,
+      lead: data.type === 'lead' ? data.name : null,
+    }
+    // Auto-navigate to the matched record
+    autoNavigate(data)
   },
 })
+
+function autoNavigate(data) {
+  const route = router.currentRoute.value
+  if (data.type === 'lead' && data.name) {
+    // Don't navigate if already on this lead
+    if (route.name === 'Lead' && route.params.leadId === data.name) return
+    router.push({ name: 'Lead', params: { leadId: data.name } })
+  } else if (data.type === 'contact') {
+    if (data.deal) {
+      if (route.name === 'Deal' && route.params.dealId === data.deal) return
+      router.push({ name: 'Deal', params: { dealId: data.deal } })
+    } else if (data.name) {
+      // Navigate to contact (if CRM has a contact page)
+      // For now, don't navigate for contacts without deals
+    }
+  }
+  // type === 'unknown': no navigation
+}
 
 watch(
   phoneNumber,
   (value) => {
     if (!value) return
-    getContact.fetch()
+    // Anti-spam: only lookup once per number per call session
+    if (lastLookedUpNumber.value === value) return
+    lastLookedUpNumber.value = value
+    lookupByPhone.fetch()
   },
   { immediate: true },
 )
@@ -436,22 +485,22 @@ onBeforeUnmount(() => {
 const router = useRouter()
 
 function openDealOrLead() {
-  if (contact.value.deal) {
-    router.push({
-      name: 'Deal',
-      params: { dealId: contact.value.deal },
-    })
-  } else if (contact.value.lead) {
-    router.push({
-      name: 'Lead',
-      params: { leadId: contact.value.lead },
-    })
+  const data = lookupResult.value
+  if (data.type === 'lead' && data.name) {
+    router.push({ name: 'Lead', params: { leadId: data.name } })
+  } else if (data.type === 'contact' && data.deal) {
+    router.push({ name: 'Deal', params: { dealId: data.deal } })
+  } else if (data.type === 'unknown') {
+    // Create new lead with pre-filled phone
+    router.push({ name: 'Lead', query: { mobile_no: phoneNumber.value } })
   }
 }
 
 function closeCallPopup() {
   showCallPopup.value = false
   showSmallCallPopup.value = false
+  lastLookedUpNumber.value = ''
+  lookupResult.value = { type: 'unknown' }
   note.value = {
     name: '',
     content: '',

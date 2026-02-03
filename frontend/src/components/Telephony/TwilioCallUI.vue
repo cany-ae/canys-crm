@@ -185,6 +185,7 @@ import { useDraggable, useWindowSize } from '@vueuse/core'
 import { capture } from '@/telemetry'
 import { Avatar, call, createResource } from 'frappe-ui'
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 let device = ''
 let log = ref('Connecting...')
@@ -207,23 +208,44 @@ const contact = ref({
   mobile_no: '',
 })
 
+const lookupResult = ref({ type: 'unknown' })
+const lastLookedUpNumber = ref('')
+
 watch(phoneNumber, (value) => {
   if (!value) return
-  getContact.fetch()
+  if (lastLookedUpNumber.value === value) return
+  lastLookedUpNumber.value = value
+  lookupByPhone.fetch()
 })
 
-const getContact = createResource({
-  url: 'crm.integrations.api.get_contact_by_phone_number',
+const lookupByPhone = createResource({
+  url: 'crm.integrations.api.lookup_by_phone',
   makeParams() {
     return {
       phone_number: phoneNumber.value,
     }
   },
-  cache: ['contact', phoneNumber.value],
   onSuccess(data) {
-    contact.value = data
+    lookupResult.value = data
+    contact.value = {
+      full_name: data.full_name || '',
+      image: data.image || '',
+      mobile_no: data.mobile_no || phoneNumber.value,
+    }
+    autoNavigate(data)
   },
 })
+
+function autoNavigate(data) {
+  const route = router.currentRoute.value
+  if (data.type === 'lead' && data.name) {
+    if (route.name === 'Lead' && route.params.leadId === data.name) return
+    router.push({ name: 'Lead', params: { leadId: data.name } })
+  } else if (data.type === 'contact' && data.deal) {
+    if (route.name === 'Deal' && route.params.dealId === data.deal) return
+    router.push({ name: 'Deal', params: { dealId: data.deal } })
+  }
+}
 
 const showNoteModal = ref(false)
 const note = ref({
@@ -357,6 +379,8 @@ function hangUpCall() {
 
 function handleDisconnectedIncomingCall() {
   log.value = `Call ended from handle disconnected Incoming call.`
+  lastLookedUpNumber.value = ''
+  lookupResult.value = { type: 'unknown' }
   showCallPopup.value = false
   if (showSmallCallWindow.value == undefined) {
     showSmallCallWindow = false

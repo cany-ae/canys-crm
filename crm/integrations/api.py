@@ -196,3 +196,118 @@ def get_contact(phone_number, country="IN", exact_match=False):
 		return contacts[0]
 
 	return {"mobile_no": phone_number}
+
+
+@frappe.whitelist()
+def lookup_by_phone(phone_number):
+	"""Lookup Lead (priority) or Contact by phone number.
+	Returns: {type: "lead"|"contact"|"unknown", name, full_name, image, mobile_no}
+	Lead priority: open leads (converted=0), prefer assigned to current user.
+	"""
+	if not phone_number:
+		return {"type": "unknown", "mobile_no": phone_number}
+
+	number = parse_phone_number(phone_number)
+	if number.get("is_valid"):
+		cleaned = number.get("national_number")
+		country = number.get("country")
+		exact = False
+	else:
+		cleaned = phone_number
+		country = number.get("country") or "DE"
+		exact = True
+
+	# Normalize: strip spaces, dashes, parentheses, +
+	cleaned_number = (
+		str(cleaned).strip()
+		.replace(" ", "")
+		.replace("-", "")
+		.replace("(", "")
+		.replace(")", "")
+		.replace("+", "")
+	)
+
+	# Also try DE variants: +49xxx <-> 0xxx
+	alt_numbers = [cleaned_number]
+	if cleaned_number.startswith("49"):
+		alt_numbers.append("0" + cleaned_number[2:])
+	elif cleaned_number.startswith("0"):
+		alt_numbers.append("49" + cleaned_number[1:])
+
+	current_user = frappe.session.user
+
+	# --- STEP 1: Search Leads (priority) ---
+	Lead = frappe.qb.DocType("CRM Lead")
+	normalized_phone = Replace(
+		Replace(Replace(Replace(Replace(Lead.mobile_no, " ", ""), "-", ""), "(", ""), ")", ""), "+", ""
+	)
+
+	# Build OR condition for all number variants
+	from pypika import Criterion
+	phone_conditions = Criterion.any([normalized_phone.like(f"%{n}%") for n in alt_numbers])
+
+	query = (
+		frappe.qb.from_(Lead)
+		.select(Lead.name, Lead.lead_name, Lead.image, Lead.mobile_no, Lead._assign)
+		.where(Lead.converted == 0)
+		.where(phone_conditions)
+		.orderby("modified", order=Order.desc)
+	)
+	leads = query.run(as_dict=True)
+
+	if leads:
+		# Prefer lead assigned to current user
+		my_lead = None
+		any_lead = None
+		for lead in leads:
+			assign = lead.get("_assign") or ""
+			if current_user in assign:
+				my_lead = lead
+				break
+			elif not any_lead:
+				any_lead = lead
+
+		chosen = my_lead or any_lead
+		if chosen:
+			return {
+				"type": "lead",
+				"name": chosen.name,
+				"full_name": chosen.lead_name,
+				"image": chosen.image,
+				"mobile_no": chosen.mobile_no,
+			}
+
+	# --- STEP 2: Search Contacts (fallback) ---
+	Contact = frappe.qb.DocType("Contact")
+	normalized_phone_c = Replace(
+		Replace(Replace(Replace(Replace(Contact.mobile_no, " ", ""), "-", ""), "(", ""), ")", ""), "+", ""
+	)
+	phone_conditions_c = Criterion.any([normalized_phone_c.like(f"%{n}%") for n in alt_numbers])
+
+	query = (
+		frappe.qb.from_(Contact)
+		.select(Contact.name, Contact.full_name, Contact.image, Contact.mobile_no)
+		.where(phone_conditions_c)
+		.orderby("modified", order=Order.desc)
+	)
+	contacts = query.run(as_dict=True)
+
+	if contacts:
+		for c in contacts:
+			if True:  # LIKE query with alt_numbers handles matching
+				# Check if contact has a deal
+				deal = None
+				if frappe.db.exists("CRM Contacts", {"contact": c.name, "is_primary": 1}):
+					deal = frappe.db.get_value(
+						"CRM Contacts", {"contact": c.name, "is_primary": 1}, "parent"
+					)
+				return {
+					"type": "contact",
+					"name": c.name,
+					"full_name": c.full_name,
+					"image": c.image,
+					"mobile_no": c.mobile_no,
+					"deal": deal,
+				}
+
+	return {"type": "unknown", "mobile_no": phone_number}
