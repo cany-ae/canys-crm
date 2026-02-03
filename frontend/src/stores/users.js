@@ -34,6 +34,7 @@ export const usersStore = defineStore('crm-users', () => {
   })
 
   let _assignRetries = 0
+  console.log('[UsersStore] creating assignableUsersResource, auto=true')
   const assignableUsersResource = createResource({
     url: 'crm.api.session.get_assignable_users',
     initialData: [],

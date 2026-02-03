@@ -10,7 +10,7 @@
       :size="size || 'sm'"
       :variant="variant"
       :placeholder="placeholder"
-      :disabled="disabled"
+      :disabled="disabled || isSingleUser"
     >
       <template #target="{ open, togglePopover }">
         <slot name="target" v-bind="{ open, togglePopover }" />
@@ -46,6 +46,7 @@
 <script setup>
 import Autocomplete from '@/components/frappe-ui/Autocomplete.vue'
 import { usersStore } from '@/stores/users'
+import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
@@ -60,8 +61,30 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'change'])
 
-const { assignableUsers, getUser } = usersStore()
+const store = usersStore()
+const { assignableUsers } = storeToRefs(store)
 const autocomplete = ref(null)
+
+// If store is empty, trigger reload
+if (!assignableUsers.value?.length) {
+  store.reloadAssignableUsers()
+}
+
+// Vertriebler: only 1 user (self) -> disable dropdown, auto-assign
+const isSingleUser = computed(() => {
+  const users = assignableUsers.value || []
+  return users.length === 1
+})
+
+// Auto-assign when only one user available and no value set
+watch(assignableUsers, (users) => {
+  if (users?.length === 1) {
+    const current = valuePropPassed.value ? props.value : props.modelValue
+    if (!current) {
+      emit(valuePropPassed.value ? 'change' : 'update:modelValue', users[0].name)
+    }
+  }
+}, { immediate: true })
 
 const valuePropPassed = computed(() => 'value' in props && props.value !== '')
 
@@ -77,7 +100,6 @@ const filteredOptions = computed(() => {
   const query = (autocomplete.value?.query || '').toLowerCase()
   const users = assignableUsers.value || []
 
-  // Fail-closed: if no data loaded, return empty (UI shows nothing, not everything)
   if (!users.length) return []
 
   return users

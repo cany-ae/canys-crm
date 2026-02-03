@@ -811,6 +811,14 @@ const activities = computed(() => {
     return sortByModified(all_activities.data.attachments)
   }
 
+  // FIX: Status-changed Activities herausfiltern - Status-Card zeigt das bereits an
+  _activities = _activities.filter((activity) => {
+    if (activity.activity_type === 'changed' && activity.data?.field === 'status') {
+      return false
+    }
+    return true
+  })
+
   _activities.forEach((activity) => {
     activity.icon = timelineIcon(activity.activity_type, activity.is_lead)
 
