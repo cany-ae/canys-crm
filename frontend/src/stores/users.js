@@ -33,12 +33,22 @@ export const usersStore = defineStore('crm-users', () => {
     },
   })
 
+  let _assignRetries = 0
   const assignableUsersResource = createResource({
     url: 'crm.api.session.get_assignable_users',
     initialData: [],
     auto: true,
     onSuccess(data) {
+      _assignRetries = 0
       assignableUsers.value = data || []
+      console.log('[AssignableUsers] loaded', assignableUsers.value.length, 'users')
+    },
+    onError(error) {
+      console.error('[AssignableUsers] API error, retry', _assignRetries, error)
+      if (_assignRetries < 3) {
+        _assignRetries++
+        setTimeout(() => assignableUsersResource.reload(), 2000 * _assignRetries)
+      }
     },
   })
 

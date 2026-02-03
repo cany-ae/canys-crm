@@ -117,20 +117,25 @@ const resolvedOptions = computed(() => {
   if (props.doctype === 'User') {
     const query = (text.value || '').toLowerCase()
     let users = assignableUsers.value || []
-    if (query) {
-      users = users.filter(u =>
-        (u.full_name || '').toLowerCase().includes(query) ||
-        (u.name || '').toLowerCase().includes(query)
-      )
+    // If store has loaded users, use them (bypasses search_link permission issue)
+    if (users.length > 0) {
+      if (query) {
+        users = users.filter(u =>
+          (u.full_name || '').toLowerCase().includes(query) ||
+          (u.name || '').toLowerCase().includes(query)
+        )
+      }
+      let mapped = users.map(u => ({
+        label: u.full_name || u.name,
+        value: u.name,
+      }))
+      if (!props.hideMe) {
+        mapped.unshift({ label: '@me', value: '@me' })
+      }
+      return mapped
     }
-    let mapped = users.map(u => ({
-      label: u.full_name || u.name,
-      value: u.name,
-    }))
-    if (!props.hideMe) {
-      mapped.unshift({ label: '@me', value: '@me' })
-    }
-    return mapped
+    // Fallback: store not loaded yet, use search_link results
+    return options.data || []
   }
   return options.data
 })
@@ -189,7 +194,7 @@ const options = createResource({
 
 function reload(val, force=false) {
   if (!props.doctype) return
-  if (props.doctype === 'User') return
+  // Allow search_link as fallback for User doctype when store is empty
   if (
     !force &&
     options.data?.length &&
