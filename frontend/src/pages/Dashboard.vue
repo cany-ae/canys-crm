@@ -87,9 +87,9 @@
           <h3 class="text-base font-semibold text-ink-gray-9 mb-3">
             {{ __('Leads nach Liste') }}
           </h3>
-          <div class="h-64"><DonutChart
-            v-if="donutConfig.data.length"
-            :config="donutConfig"
+          <div class="h-auto min-h-[16rem]"><ECharts
+            v-if="donutEchartOptions.series[0].data.length"
+            :options="donutEchartOptions"
           />
           <EmptyState v-else :message="__('Keine Daten')" /></div>
         </div>
@@ -102,7 +102,7 @@
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import ViewBreadcrumbs from '@/components/ViewBreadcrumbs.vue'
 import LucideRefreshCcw from '~icons/lucide/refresh-ccw'
-import { createResource, usePageMeta, AxisChart, DonutChart } from 'frappe-ui'
+import { createResource, usePageMeta, AxisChart, ECharts } from 'frappe-ui'
 import { ref, computed, h, watch } from 'vue'
 
 // frappe-ui chart components
@@ -133,30 +133,77 @@ const data = computed(() => dashboardData.data)
 // --- Chart Configs ---
 
 const leadsChartConfig = computed(() => ({
-  data: data.value?.leads?.by_period || [],
+  data: (data.value?.leads?.by_period || []).map(r => ({ ...r, Anzahl: r.count })),
   title: '',
   colors: ['#3b82f6'],
   xAxis: { key: 'label', type: 'category', title: '' },
   yAxis: { title: '' },
-  series: [{ name: 'count', type: 'bar' }],
+  series: [{ name: 'Anzahl', type: 'bar' }],
 }))
 
 const dealsChartConfig = computed(() => ({
-  data: data.value?.deals?.by_period || [],
+  data: (data.value?.deals?.by_period || []).map(r => ({ ...r, Anzahl: r.count })),
   title: '',
   colors: ['#22c55e'],
   xAxis: { key: 'label', type: 'category', title: '' },
   yAxis: { title: '' },
-  series: [{ name: 'count', type: 'bar' }],
+  series: [{ name: 'Anzahl', type: 'bar' }],
 }))
 
-const donutConfig = computed(() => ({
-  data: data.value?.leads?.by_list || [],
-  title: '',
-  categoryColumn: 'label',
-  valueColumn: 'count',
-  colors: ['#3b82f6', '#06b6d4', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280'],
-}))
+const donutColors = ['#3b82f6', '#06b6d4', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280']
+
+const donutEchartOptions = computed(() => {
+  const rawData = data.value?.leads?.by_list || []
+  const total = rawData.reduce((sum, r) => sum + (r.count || 0), 0)
+  const seriesData = rawData.map((r) => ({ name: r.label, value: r.count }))
+
+  return {
+    animation: true,
+    animationDuration: 700,
+    color: donutColors,
+    textStyle: { fontFamily: ['InterVar', 'sans-serif'] },
+    series: [
+      {
+        type: 'pie',
+        center: ['50%', '45%'],
+        radius: ['40%', '70%'],
+        data: seriesData,
+        label: { show: false },
+        labelLine: { show: false },
+        emphasis: { scaleSize: 5 },
+      },
+    ],
+    legend: {
+      show: true,
+      type: 'plain',
+      bottom: 0,
+      left: 'center',
+      orient: 'horizontal',
+      itemGap: 12,
+      padding: [8, 10, 0, 10],
+      formatter: function (name) {
+        const item = rawData.find((r) => r.label === name)
+        const pct = total > 0 && item ? ((item.count / total) * 100).toFixed(0) : 0
+        return name + ' (' + pct + '%)'
+      },
+      textStyle: {
+        padding: [0, 0, 0, -5],
+        color: 'var(--ink-gray-8)',
+      },
+      icon: 'circle',
+    },
+    tooltip: {
+      trigger: 'item',
+      confine: true,
+      formatter: function (p) {
+        const pct = total > 0 ? ((p.value / total) * 100).toFixed(0) : 0
+        return '<div class="flex items-center justify-between gap-5">' +
+          '<div>' + p.name + '</div>' +
+          '<div class="font-bold">' + p.value + ' (' + pct + '%)</div></div>'
+      },
+    },
+  }
+})
 
 function formatDays(val) {
   if (!val || val === 0) return '–'
