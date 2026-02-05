@@ -21,6 +21,7 @@
     :options="{
       hideColumnsButton: true,
       defaultViewName: __('Notes View'),
+      lockView: true,
     }"
   />
   <div class="flex-1 overflow-y-auto">

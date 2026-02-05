@@ -158,7 +158,7 @@ const editing = ref(false)
 
 const showDatePicker = ref(false)
 const datePickerRef = ref(null)
-const preset = ref('Last 30 Days')
+const preset = ref('Letzte 30 Tage')
 const showAddChartModal = ref(false)
 
 const filters = reactive({
@@ -188,33 +188,33 @@ const options = computed(() => [
     hideLabel: true,
     items: [
       {
-        label: 'Last 7 Days',
+        label: 'Letzte 7 Tage',
         onClick: () => {
-          preset.value = 'Last 7 Days'
+          preset.value = 'Letzte 7 Tage'
           filters.period = getLastXDays(7)
           dashboardItems.reload()
         },
       },
       {
-        label: 'Last 30 Days',
+        label: 'Letzte 30 Tage',
         onClick: () => {
-          preset.value = 'Last 30 Days'
+          preset.value = 'Letzte 30 Tage'
           filters.period = getLastXDays(30)
           dashboardItems.reload()
         },
       },
       {
-        label: 'Last 60 Days',
+        label: 'Letzte 60 Tage',
         onClick: () => {
-          preset.value = 'Last 60 Days'
+          preset.value = 'Letzte 60 Tage'
           filters.period = getLastXDays(60)
           dashboardItems.reload()
         },
       },
       {
-        label: 'Last 90 Days',
+        label: 'Letzte 90 Tage',
         onClick: () => {
-          preset.value = 'Last 90 Days'
+          preset.value = 'Letzte 90 Tage'
           filters.period = getLastXDays(90)
           dashboardItems.reload()
         },
@@ -222,11 +222,11 @@ const options = computed(() => [
     ],
   },
   {
-    label: 'Custom Range',
+    label: 'Eigener Zeitraum',
     onClick: () => {
       showDatePicker.value = true
       setTimeout(() => datePickerRef.value?.open(), 0)
-      preset.value = 'Custom Range'
+      preset.value = 'Eigener Zeitraum'
       filters.period = null // Reset period to allow custom date selection
     },
   },

@@ -100,7 +100,7 @@
           &middot;
         </span>
         <span v-if="summary.last_activity_date">
-          Letzte Aktivitaet: {{ formatDateShort(summary.last_activity_date) }}
+          Letzte Aktivität: {{ formatDateShort(summary.last_activity_date) }}
         </span>
       </div>
     </div>
@@ -209,7 +209,7 @@ function truncateStatus(status) {
   const shortNames = {
     'Kontaktiert aber nicht erreicht': 'Nicht erreicht',
     'Nicht kontaktiert': 'Nicht kontaktiert',
-    'Rueckruf geplant': 'Rueckruf',
+    'Rückruf geplant': 'Rückruf',
     'R\u00fcckruf geplant': 'Rueckruf',
     'Termin vereinbart': 'Termin',
   }

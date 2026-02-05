@@ -30,6 +30,25 @@
       {{ tab.label }}
     </button>
   </div>
+  <!-- Search bar -->
+  <div class="px-5 pt-3 pb-1">
+    <div class="relative">
+      <FeatherIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-gray-4" />
+      <input
+        v-model="searchQuery"
+        type="text"
+        :placeholder="__('Suche nach Name oder Nummer...')"
+        class="w-full rounded-md border border-outline-gray-2 bg-surface-gray-1 py-1.5 pl-9 pr-3 text-sm text-ink-gray-8 placeholder:text-ink-gray-4 focus:border-outline-gray-3 focus:outline-none focus:ring-1 focus:ring-outline-gray-3"
+      />
+      <button
+        v-if="searchQuery"
+        @click="searchQuery = ''"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-gray-4 hover:text-ink-gray-6"
+      >
+        <FeatherIcon name="x" class="h-4 w-4" />
+      </button>
+    </div>
+  </div>
   <ViewControls
     ref="viewControls"
     v-model="contacts"
@@ -37,29 +56,36 @@
     v-model:resizeColumn="triggerResize"
     v-model:updatedPageCount="updatedPageCount"
     doctype="Contact"
+    :options="{
+      lockView: true,
+      hideColumnsButton: true,
+    }"
   />
   <ContactsListView
     ref="contactsListView"
     v-if="contacts.data && filteredRows.length"
     v-model="contacts.data.page_length_count"
     v-model:list="contacts"
-    :rows="filteredRows"
+    :rows="paginatedRows"
     :columns="contacts.data.columns"
     :options="{
       showTooltip: false,
       resizeColumn: true,
-      rowCount: contacts.data.row_count,
-      totalCount: contacts.data.total_count,
+      rowCount: paginatedRows.length,
+      totalCount: filteredRows.length,
+      currentPage: contactPage,
+      totalPages: contactTotalPages,
     }"
     @loadMore="() => loadMore++"
     @columnWidthUpdated="() => triggerResize++"
     @updatePageCount="(count) => (updatedPageCount = count)"
-    @applyFilter="(data) => viewControls.applyFilter(data)"
-    @applyLikeFilter="(data) => viewControls.applyLikeFilter(data)"
+
     @likeDoc="(data) => viewControls.likeDoc(data)"
     @selectionsChanged="
       (selections) => viewControls.updateSelections(selections)
     "
+    @prevPage="contactPrevPage"
+    @nextPage="contactNextPage"
   />
   <div
     v-else-if="contacts.data"
@@ -102,6 +128,8 @@ const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
 const { getOrganization } = organizationsStore()
 
 const showContactModal = ref(false)
+const searchQuery = ref('')
+const contactPage = ref(1)
 const contactsListView = ref(null)
 
 // Tab state
@@ -119,7 +147,7 @@ const contactTabs = computed(() => {
 const contacts = ref({})
 const loadMore = ref(1)
 const triggerResize = ref(1)
-const updatedPageCount = ref(20)
+const updatedPageCount = ref(999)
 const viewControls = ref(null)
 
 const rows = computed(() => {
@@ -216,10 +244,49 @@ watch(rows, (newRows) => {
 
 // Frontend-Filter nach Tab
 const filteredRows = computed(() => {
+  let result = rows.value
+  // Tab filter
   if (activeTab.value === 'intern') {
-    return rows.value.filter(r => r._contact_type === 'Intern')
+    result = result.filter(r => r._contact_type === 'Intern')
+  } else {
+    result = result.filter(r => r._contact_type !== 'Intern')
   }
-  // Kunden: alles was nicht Intern ist (inkl. leer/Kunde)
-  return rows.value.filter(r => r._contact_type !== 'Intern')
+  // Search filter
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(r => {
+      const firstName = (r.first_name || r.full_name?.label || '').toLowerCase()
+      const lastName = (r.last_name || '').toLowerCase()
+      const fullName = (r.full_name?.label || '').toLowerCase()
+      const mobile = (r.mobile_no || '').toLowerCase()
+      const email = (r.email_id || '').toLowerCase()
+      return firstName.includes(q) || lastName.includes(q) || fullName.includes(q) || mobile.includes(q) || email.includes(q)
+    })
+  }
+  return result
 })
+
+const CONTACTS_PAGE_SIZE = 50
+
+const paginatedRows = computed(() => {
+  const start = (contactPage.value - 1) * CONTACTS_PAGE_SIZE
+  return filteredRows.value.slice(start, start + CONTACTS_PAGE_SIZE)
+})
+
+const contactTotalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredRows.value.length / CONTACTS_PAGE_SIZE))
+})
+
+// Reset page when filter/search/tab changes
+watch([activeTab, searchQuery], () => {
+  contactPage.value = 1
+})
+
+function contactPrevPage() {
+  if (contactPage.value > 1) contactPage.value--
+}
+
+function contactNextPage() {
+  if (contactPage.value < contactTotalPages.value) contactPage.value++
+}
 </script>

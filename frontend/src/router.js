@@ -161,6 +161,16 @@ router.beforeEach(async (to, from, next) => {
     const hash = '#' + activeTab
     next({ ...to, hash })
   } else {
+    // Lock views for Leads and Notes - redirect non-list viewTypes to list
+    const lockedRoutes = ['Leads', 'Notes', 'Deals', 'Tasks', 'Contacts', 'Call Logs']
+    if (lockedRoutes.includes(to.name)) {
+      const viewType = to.params.viewType
+      const hasViewQuery = to.query.view
+      if ((viewType && viewType !== 'list') || hasViewQuery) {
+        next({ name: to.name, params: {}, query: {} })
+        return
+      }
+    }
     next()
   }
 })

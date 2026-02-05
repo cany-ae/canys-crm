@@ -6,7 +6,7 @@
     </Layout>
     <Dialogs />
     <!-- KI-Assistent Sidebar -->
-    <AISidebar v-if="session().isLoggedIn" />
+    <!-- AI Button ist jetzt in der Sidebar -->
   </FrappeUIProvider>
 </template>
 
@@ -16,7 +16,7 @@ import { Dialogs } from '@/utils/dialogs'
 import { sessionStore as session } from '@/stores/session'
 import { FrappeUIProvider, setConfig } from 'frappe-ui'
 import { computed, defineAsyncComponent } from 'vue'
-import AISidebar from '@/components/AISidebar.vue'
+// AISidebar moved to AppSidebar
 
 const MobileLayout = defineAsyncComponent(
   () => import('./components/Layouts/MobileLayout.vue'),

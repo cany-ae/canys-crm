@@ -62,10 +62,10 @@
 						<FormControl v-if="!isLocal && sourceDoc && sourceDoc.last_synced_at"
 							:modelValue="formatDate(sourceDoc.last_synced_at)" disabled type="datetime" :label="__('Last Synced At')" />
 
-						<Link v-if="!isLocal" label="Facebook Page" v-model="syncSource.facebook_page"
+						<Link v-if="!isLocal" :label="__('Facebook Page')" v-model="syncSource.facebook_page"
 							doctype="Facebook Page" />
 
-						<Link v-if="!isLocal && syncSource.facebook_page" label="Lead Form"
+						<Link v-if="!isLocal && syncSource.facebook_page" :label="__('Lead Form')"
 							v-model="syncSource.facebook_lead_form" doctype="Facebook Lead Form" :filters="{
 								'page': syncSource.facebook_page
 							}" />

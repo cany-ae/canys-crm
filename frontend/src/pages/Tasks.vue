@@ -24,7 +24,9 @@
     v-model:updatedPageCount="updatedPageCount"
     doctype="CRM Task"
     :options="{
-      allowedViews: ['list', 'kanban'],
+      allowedViews: ['list'],
+      lockView: true,
+      hideColumnsButton: true,
     }"
   />
   <KanbanView
@@ -169,8 +171,7 @@
     @columnWidthUpdated="() => triggerResize++"
     @updatePageCount="(count) => (updatedPageCount = count)"
     @showTask="showTask"
-    @applyFilter="(data) => viewControls.applyFilter(data)"
-    @applyLikeFilter="(data) => viewControls.applyLikeFilter(data)"
+
     @likeDoc="(data) => viewControls.likeDoc(data)"
     @selectionsChanged="
       (selections) => viewControls.updateSelections(selections)

@@ -480,9 +480,9 @@ def get_average_time_to_close_a_lead(from_date, to_date, user=""):
 		"title": _("Avg. time to close a lead"),
 		"tooltip": _("Average time taken from lead creation to deal closure"),
 		"value": current_avg_lead,
-		"suffix": " days",
+		"suffix": " " + _("days"),
 		"delta": delta_lead,
-		"deltaSuffix": " days",
+		"deltaSuffix": " " + _("days"),
 		"negativeIsBetter": True,
 	}
 
@@ -533,9 +533,9 @@ def get_average_time_to_close_a_deal(from_date, to_date, user=""):
 		"title": _("Avg. time to close a deal"),
 		"tooltip": _("Average time taken from deal creation to deal closure"),
 		"value": current_avg_deal,
-		"suffix": " days",
+		"suffix": " " + _("days"),
 		"delta": delta_deal,
-		"deltaSuffix": " days",
+		"deltaSuffix": " " + _("days"),
 		"negativeIsBetter": True,
 	}
 
@@ -697,8 +697,8 @@ def get_forecasted_revenue(from_date="", to_date="", user=""):
 			"title": _("Revenue") + f" ({get_base_currency_symbol()})",
 		},
 		"series": [
-			{"name": "forecasted", "type": "line", "showDataPoints": True},
-			{"name": "actual", "type": "line", "showDataPoints": True},
+			{"name": _("Forecasted"), "type": "line", "showDataPoints": True},
+			{"name": _("Actual"), "type": "line", "showDataPoints": True},
 		],
 	}
 

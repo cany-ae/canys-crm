@@ -132,7 +132,7 @@ const activityFilter = defineModel('activityFilter')
 
 const filterLabels = {
   all: 'Alle',
-  status_change: 'Status Updates',
+  status_change: __('Status Updates'),
   calls: 'Anrufe',
   communication: 'E-Mails',
   angebot: 'Angebote',

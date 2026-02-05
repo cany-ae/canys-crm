@@ -34,7 +34,7 @@
               class="truncate text-base flex gap-2 w-full"
             >
               <span class="max-w-[90%] truncate">
-                {{ label }}
+                {{ __(label) }}
               </span>
               <FeatherIcon
                 name="external-link"

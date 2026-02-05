@@ -22,6 +22,7 @@
       ref="calendar"
       :config="{
         defaultMode: 'Week',
+        timeFormat: '24h',
         isEditMode: true,
         eventIcons: {},
         allowCustomClickEvents: true,

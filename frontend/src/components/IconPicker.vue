@@ -37,12 +37,12 @@
             <div class="flex-1">
               <FormControl
                 type="text"
-                placeholder="Search by keyword"
+                :placeholder="__('Search by keyword')"
                 v-model="search"
                 :debounce="300"
               />
             </div>
-            <Button @click="setRandom">Random</Button>
+            <Button @click="setRandom">{{ __('Random') }}</Button>
           </div>
           <div class="w-96"></div>
           <div class="px-3" v-for="(emojis, group) in emojiGroups" :key="group">

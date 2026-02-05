@@ -208,6 +208,8 @@ const contact = ref({
   mobile_no: '',
 })
 
+const router = useRouter()
+
 const lookupResult = ref({ type: 'unknown' })
 const lastLookedUpNumber = ref('')
 
@@ -241,9 +243,9 @@ function autoNavigate(data) {
   if (data.type === 'lead' && data.name) {
     if (route.name === 'Lead' && route.params.leadId === data.name) return
     router.push({ name: 'Lead', params: { leadId: data.name } })
-  } else if (data.type === 'contact' && data.deal) {
-    if (route.name === 'Deal' && route.params.dealId === data.deal) return
-    router.push({ name: 'Deal', params: { dealId: data.deal } })
+  } else if (data.type === 'contact' && data.name) {
+    if (route.name === 'Contact' && route.params.contactId === data.name) return
+    router.push({ name: 'Contact', params: { contactId: data.name } })
   }
 }
 

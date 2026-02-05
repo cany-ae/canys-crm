@@ -4336,7 +4336,7 @@ msgstr "Anmerkung"
 #: frontend/src/pages/Deal.vue:575 frontend/src/pages/Lead.vue:422
 #: frontend/src/pages/MobileDeal.vue:461 frontend/src/pages/MobileLead.vue:367
 msgid "Notes"
-msgstr "Anmerkungen"
+msgstr "Notizen"
 
 #: frontend/src/pages/Notes.vue:23
 msgid "Notes View"

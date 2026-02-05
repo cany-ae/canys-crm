@@ -201,11 +201,11 @@
             @click="openDealOrLead"
           />
           <Button
-            v-else-if="lookupResult.type === 'contact' && lookupResult.deal"
+            v-else-if="lookupResult.type === 'contact' && lookupResult.name"
             class="bg-surface-gray-6 text-ink-white hover:bg-surface-gray-5"
             size="md"
             :iconRight="ArrowUpRightIcon"
-            :label="__('Deal')"
+            :label="__('Kontakt')"
             @click="openDealOrLead"
           />
           <Button
@@ -291,6 +291,8 @@ const contact = ref({
   mobile_no: '',
 })
 
+const router = useRouter()
+
 const lookupResult = ref({ type: 'unknown' })
 const lastLookedUpNumber = ref('')
 
@@ -321,14 +323,9 @@ function autoNavigate(data) {
     // Don't navigate if already on this lead
     if (route.name === 'Lead' && route.params.leadId === data.name) return
     router.push({ name: 'Lead', params: { leadId: data.name } })
-  } else if (data.type === 'contact') {
-    if (data.deal) {
-      if (route.name === 'Deal' && route.params.dealId === data.deal) return
-      router.push({ name: 'Deal', params: { dealId: data.deal } })
-    } else if (data.name) {
-      // Navigate to contact (if CRM has a contact page)
-      // For now, don't navigate for contacts without deals
-    }
+  } else if (data.type === 'contact' && data.name) {
+    if (route.name === 'Contact' && route.params.contactId === data.name) return
+    router.push({ name: 'Contact', params: { contactId: data.name } })
   }
   // type === 'unknown': no navigation
 }
@@ -482,14 +479,12 @@ onBeforeUnmount(() => {
   $socket.off('exotel_call')
 })
 
-const router = useRouter()
-
 function openDealOrLead() {
   const data = lookupResult.value
   if (data.type === 'lead' && data.name) {
     router.push({ name: 'Lead', params: { leadId: data.name } })
-  } else if (data.type === 'contact' && data.deal) {
-    router.push({ name: 'Deal', params: { dealId: data.deal } })
+  } else if (data.type === 'contact' && data.name) {
+    router.push({ name: 'Contact', params: { contactId: data.name } })
   } else if (data.type === 'unknown') {
     // Create new lead with pre-filled phone
     router.push({ name: 'Lead', query: { mobile_no: phoneNumber.value } })

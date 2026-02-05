@@ -379,13 +379,16 @@ def get_data(
 		if doctype == 'Contact' and 'custom_contact_type' not in rows:
 			rows.append('custom_contact_type')
 
+		# Contact: alle laden weil Frontend clientseitig nach Kunden/Intern filtert
+		_page_length = 0 if doctype in ('Contact', 'CRM Lead') else page_length
+
 		data = (
 			frappe.get_list(
 				doctype,
 				fields=rows,
 				filters=filters,
 				order_by=order_by,
-				page_length=page_length,
+				page_length=_page_length,
 			)
 			or []
 		)

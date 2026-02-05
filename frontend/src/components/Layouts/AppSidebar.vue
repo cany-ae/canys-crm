@@ -71,7 +71,7 @@
         </Section>
       </div>
     </div>
-    <div class="m-2 flex flex-col gap-1">
+    <div class="m-2 flex flex-col gap-0.5">
       <div class="flex flex-col gap-2 mb-1">
         <SignupBanner
           v-if="isDemoSite"
@@ -84,36 +84,29 @@
           :afterUpgrade="() => capture('upgrade_plan_from_trial_banner')"
         />
       </div>
-      <SidebarLink
-        v-if="isOnboardingStepsCompleted"
-        :label="__('Help')"
-        :isCollapsed="isSidebarCollapsed"
-        @click="
-          () => {
-            showHelpModal = minimize ? true : !showHelpModal
-            minimize = !showHelpModal
-          }
-        "
-      >
-        <template #icon>
-          <HelpIcon class="h-4 w-4" />
-        </template>
-      </SidebarLink>
-      <SidebarLink
-        :label="isSidebarCollapsed ? __('Expand') : __('Collapse')"
-        :isCollapsed="isSidebarCollapsed"
-        @click="isSidebarCollapsed = !isSidebarCollapsed"
-        class=""
-      >
-        <template #icon>
-          <span class="grid h-4 w-4 flex-shrink-0 place-items-center">
-            <CollapseSidebar
-              class="h-4 w-4 text-ink-gray-7 duration-300 ease-in-out"
-              :class="{ '[transform:rotateY(180deg)]': isSidebarCollapsed }"
-            />
-          </span>
-        </template>
-      </SidebarLink>
+      <div class="flex items-center" :class="isSidebarCollapsed ? 'flex-col gap-1' : 'gap-1'">
+        <button
+          v-if="isOnboardingStepsCompleted"
+          @click="() => { showHelpModal = minimize ? true : !showHelpModal; minimize = !showHelpModal; }"
+          class="flex items-center justify-center rounded-md text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-7 transition-colors"
+          :class="isSidebarCollapsed ? 'h-7 w-7' : 'h-7 w-7'"
+          :title="__('Hilfe')"
+        >
+          <HelpIcon class="h-3.5 w-3.5" />
+        </button>
+        <button
+          @click="isSidebarCollapsed = !isSidebarCollapsed"
+          class="flex items-center justify-center rounded-md text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-7 transition-colors"
+          :class="isSidebarCollapsed ? 'h-7 w-7' : 'h-7 w-7'"
+          :title="isSidebarCollapsed ? __('Ausklappen') : __('Einklappen')"
+        >
+          <CollapseSidebar
+            class="h-3.5 w-3.5 text-ink-gray-5 duration-300 ease-in-out"
+            :class="{ '[transform:rotateY(180deg)]': isSidebarCollapsed }"
+          />
+        </button>
+        <AISidebar :inSidebar="true" :isCollapsed="isSidebarCollapsed" />
+      </div>
     </div>
     <Notifications />
     <Settings />
@@ -160,6 +153,7 @@ import CollapseSidebar from '@/components/Icons/CollapseSidebar.vue'
 import NotificationsIcon from '@/components/Icons/NotificationsIcon.vue'
 import HelpIcon from '@/components/Icons/HelpIcon.vue'
 import SidebarLink from '@/components/SidebarLink.vue'
+import AISidebar from '@/components/AISidebar.vue'
 import Notifications from '@/components/Notifications.vue'
 import Settings from '@/components/Settings/Settings.vue'
 import { viewsStore } from '@/stores/views'
@@ -212,12 +206,7 @@ const links = [
     to: 'Deals',
   },
   {
-    label: 'Aufgaben',
-    icon: TaskIcon,
-    to: 'Tasks',
-  },
-  {
-    label: 'Hinweise',
+    label: 'Notizen',
     icon: NoteIcon,
     to: 'Notes',
   },
@@ -252,21 +241,9 @@ const allViews = computed(() => {
       }),
     },
   ]
-  if (getPublicViews().length) {
-    _views.push({
-      name: __('Public views'),
-      opened: true,
-      views: parseView(getPublicViews()),
-    })
-  }
 
-  if (getPinnedViews().length) {
-    _views.push({
-      name: __('Pinned views'),
-      opened: true,
-      views: parseView(getPinnedViews()),
-    })
-  }
+
+
   return _views
 })
 

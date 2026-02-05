@@ -120,7 +120,7 @@
                 })
             "
           >
-            {{ label }}
+            {{ __(label) }}
           </div>
         </template>
       </ListRowItem>
@@ -135,16 +135,32 @@
       </template>
     </ListSelectBanner>
   </ListView>
-  <ListFooter
-    v-if="pageLengthCount"
-    class="border-t px-3 py-2 sm:px-5"
-    v-model="pageLengthCount"
-    :options="{
-      rowCount: options.rowCount,
-      totalCount: options.totalCount,
-    }"
-    @loadMore="emit('loadMore')"
-  />
+  <div class="flex items-center justify-between border-t px-5 py-2">
+    <span class="text-sm text-ink-gray-5">
+      {{ paginationStart }}–{{ paginationEnd }} {{ __('von') }} {{ totalItems }}
+    </span>
+    <div class="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        :disabled="currentPage <= 1"
+        @click="emit('prevPage')"
+      >
+        <FeatherIcon name="chevron-left" class="h-4 w-4" />
+      </Button>
+      <span class="text-sm text-ink-gray-5 px-2">
+        {{ __('Seite') }} {{ currentPage }} {{ __('von') }} {{ totalPages }}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        :disabled="currentPage >= totalPages"
+        @click="emit('nextPage')"
+      >
+        <FeatherIcon name="chevron-right" class="h-4 w-4" />
+      </Button>
+    </div>
+  </div>
   <ListBulkActions
     ref="listBulkActionsRef"
     v-model="list"
@@ -166,7 +182,6 @@ import {
   ListHeaderItem,
   ListSelectBanner,
   ListRowItem,
-  ListFooter,
   Tooltip,
   Dropdown,
 } from 'frappe-ui'
@@ -203,6 +218,8 @@ const emit = defineEmits([
   'applyLikeFilter',
   'likeDoc',
   'selectionsChanged',
+  'prevPage',
+  'nextPage',
 ])
 
 const route = useRoute()
@@ -222,6 +239,22 @@ function isLiked(item) {
     return likedByMe.includes(user)
   }
 }
+
+const PAGE_SIZE = 50
+
+const totalItems = computed(() => props.options.totalCount || props.rows?.length || 0)
+
+const currentPage = computed(() => props.options.currentPage || 1)
+
+const totalPages = computed(() => props.options.totalPages || Math.max(1, Math.ceil(totalItems.value / PAGE_SIZE)))
+
+const paginationStart = computed(() => {
+  return totalItems.value ? ((currentPage.value - 1) * PAGE_SIZE) + 1 : 0
+})
+
+const paginationEnd = computed(() => {
+  return Math.min(currentPage.value * PAGE_SIZE, totalItems.value)
+})
 
 watch(pageLengthCount, (val, old_value) => {
   if (val === old_value) return

@@ -107,7 +107,7 @@
                 })
             "
           >
-            {{ label }}
+            {{ __(label) }}
           </div>
         </template>
       </ListRowItem>

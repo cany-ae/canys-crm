@@ -9,6 +9,16 @@
         :actions="leadsListView.customListActions"
       />
       <Button
+        v-if="isGeschaeftsfuehrer"
+        variant="subtle"
+        :label="__('Leads importieren')"
+        @click="showImportModal = true"
+      >
+        <template #prefix>
+          <FeatherIcon name="upload" class="h-4 w-4" />
+        </template>
+      </Button>
+      <Button
         variant="solid"
         :label="__('Create')"
         iconLeft="plus"
@@ -25,8 +35,9 @@
     doctype="CRM Lead"
     :filters="computedFilters"
     :options="{
-      allowedViews: ['list', 'group_by', 'kanban'],
+      allowedViews: ['list'],
       hideColumnsButton: true,
+      lockView: true,
     }"
   />
   <div v-if="route.params.viewType !== 'kanban'" class="flex items-center gap-3 sm:px-5 px-3 py-2">
@@ -43,7 +54,7 @@
         {{ liste }}
       </button>
     </div>
-    <div v-if="selectedLeadList" class="flex items-center gap-0.5 ml-2 border-l pl-3 border-outline-gray-2">
+    <div class="flex items-center gap-0.5 ml-2 border-l pl-3 border-outline-gray-2">
       <button
         class="px-3 py-1 text-xs font-medium rounded-md transition-all duration-150"
         :class="listScope === 'mine'
@@ -64,7 +75,8 @@
       </button>
     </div>
     <div class="text-xs text-ink-gray-4 ml-auto">
-      <span v-if="!selectedLeadList">{{ __('Meine Leads') }}</span>
+      <span v-if="!selectedLeadList && listScope === 'mine'">{{ __('Meine Leads') }}</span>
+      <span v-else-if="!selectedLeadList">{{ __('Alle Leads') }}</span>
       <span v-else-if="listScope === 'mine'">{{ selectedLeadList }} · {{ __('Meine') }}</span>
       <span v-else>{{ selectedLeadList }} · {{ __('Alle') }}</span>
     </div>
@@ -275,19 +287,20 @@
     v-else-if="leads.data && rows.length"
     v-model="leads.data.page_length_count"
     v-model:list="leads"
-    :rows="rows"
+    :rows="paginatedRows"
     :columns="leads.data.columns"
     :options="{
       showTooltip: false,
       resizeColumn: false,
-      rowCount: leads.data.row_count,
-      totalCount: leads.data.total_count,
+      rowCount: paginatedRows.length,
+      totalCount: rows.length,
+      currentPage: leadPage,
+      totalPages: leadTotalPages,
     }"
     @loadMore="() => loadMore++"
     @columnWidthUpdated="() => triggerResize++"
     @updatePageCount="(count) => (updatedPageCount = count)"
-    @applyFilter="(data) => viewControls.applyFilter(data)"
-    @applyLikeFilter="(data) => viewControls.applyLikeFilter(data)"
+
     @likeDoc="(data) => viewControls.likeDoc(data)"
     @selectionsChanged="
       (selections) => viewControls.updateSelections(selections)
@@ -295,6 +308,8 @@
     @quickCall="handleQuickCall"
     @quickMail="handleQuickMail"
     @quickNote="handleQuickNote"
+    @prevPage="handlePrevPage"
+    @nextPage="handleNextPage"
   />
   <div v-else-if="leads.data" class="flex h-full items-center justify-center">
     <div
@@ -328,6 +343,11 @@
     doctype="CRM Lead"
     :doc="docname"
   />
+  <LeadImportModal
+    v-if="showImportModal"
+    v-model="showImportModal"
+    @imported="onImportComplete"
+  />
 </template>
 
 <script setup>
@@ -347,6 +367,7 @@ import KanbanView from '@/components/Kanban/KanbanView.vue'
 import LeadModal from '@/components/Modals/LeadModal.vue'
 import NoteModal from '@/components/Modals/NoteModal.vue'
 import TaskModal from '@/components/Modals/TaskModal.vue'
+import LeadImportModal from '@/components/Modals/LeadImportModal.vue'
 import ViewControls from '@/components/ViewControls.vue'
 import { sessionStore } from '@/stores/session'
 import { getMeta } from '@/stores/meta'
@@ -362,13 +383,27 @@ import { ref, computed, reactive, h, watch, nextTick } from 'vue'
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('CRM Lead')
 const { makeCall } = globalStore()
-const { getUser } = usersStore()
+const { getUser, isAdmin } = usersStore()
+const isGeschaeftsfuehrer = computed(() => isAdmin())
 const { getLeadStatus } = statusesStore()
 
 const route = useRoute()
 const router = useRouter()
 
+const showImportModal = ref(false)
+
+function onImportComplete() {
+  if (viewControls.value) {
+    viewControls.value.reload()
+  }
+}
+
+
+
+
 const { user } = sessionStore()
+
+
 
 const leadsListView = ref(null)
 const showLeadModal = ref(false)
@@ -379,8 +414,9 @@ const defaults = reactive({})
 const leads = ref({})
 const loadMore = ref(1)
 const triggerResize = ref(1)
-const updatedPageCount = ref(20)
+const updatedPageCount = ref(999)
 const viewControls = ref(null)
+const leadPage = ref(1)
 
 // Lead List A-E filtering
 const leadLists = ['Liste A', 'Liste B', 'Liste C', 'Liste D', 'Liste E']
@@ -390,10 +426,10 @@ const listScope = ref('mine')
 function toggleLeadList(liste) {
   if (selectedLeadList.value === liste) {
     selectedLeadList.value = null
-    listScope.value = 'mine'
+    // scope beibehalten
   } else {
     selectedLeadList.value = liste
-    listScope.value = 'mine'
+    // scope beibehalten
   }
 }
 
@@ -406,8 +442,10 @@ const computedFilters = computed(() => {
       filters._assign = ['LIKE', '%' + user + '%']
     }
   } else {
-    // Default: show only my leads
-    filters._assign = ['LIKE', '%' + user + '%']
+    // Default: show all leads
+    if (listScope.value === 'mine') {
+      filters._assign = ['LIKE', '%' + user + '%']
+    }
   }
 
   return filters
@@ -601,6 +639,30 @@ function parseRows(rows, columns = []) {
     return _rows
   })
 }
+
+const LEADS_PAGE_SIZE = 50
+
+const paginatedRows = computed(() => {
+  const start = (leadPage.value - 1) * LEADS_PAGE_SIZE
+  return rows.value.slice(start, start + LEADS_PAGE_SIZE)
+})
+
+const leadTotalPages = computed(() => {
+  return Math.max(1, Math.ceil(rows.value.length / LEADS_PAGE_SIZE))
+})
+
+function handlePrevPage() {
+  if (leadPage.value > 1) leadPage.value--
+}
+
+function handleNextPage() {
+  if (leadPage.value < leadTotalPages.value) leadPage.value++
+}
+
+// Reset page when filters change
+watch([selectedLeadList, listScope], () => {
+  leadPage.value = 1
+}, { flush: 'post' })
 
 function onNewClick(column) {
   let column_field = leads.value.params.column_field

@@ -7,7 +7,7 @@
       <Badge
         v-if="document.isDirty"
         class="ml-3"
-        :label="'Not Saved'"
+        :label="__('Not Saved')"
         theme="orange"
       />
     </div>
@@ -19,7 +19,7 @@
         @click="showDataFieldsModal = true"
       />
       <Button
-        label="Save"
+        :label="__('Save')"
         :disabled="!document.isDirty"
         variant="solid"
         :loading="document.save.loading"

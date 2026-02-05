@@ -544,6 +544,7 @@ async function exportRows() {
 
 let standardViews = []
 let allowedViews = props.options.allowedViews || ['list']
+const lockView = props.options.lockView || false
 
 if (allowedViews.includes('list')) {
   standardViews.push({
@@ -591,6 +592,8 @@ function getIcon(icon, type) {
 }
 
 const viewsDropdownOptions = computed(() => {
+  if (lockView) return []
+
   let _views = [
     {
       group: __('Standard Views'),
@@ -1268,6 +1271,7 @@ defineExpose({
   currentView,
   updateSelections,
   reload,
+  lockView,
 })
 
 // Watchers

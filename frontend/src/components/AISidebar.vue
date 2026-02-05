@@ -1,7 +1,21 @@
 <template>
-  <!-- Futuristischer AI Button -->
+  <!-- AI Button - Sidebar Mode (klein, in Sidebar-Footer) -->
   <button 
-    v-if="!isOpen" 
+    v-if="!isOpen && inSidebar" 
+    @click="openSidebar" 
+    class="ai-sidebar-btn flex items-center justify-center rounded-md hover:bg-surface-gray-2 transition-colors"
+    :class="isCollapsed ? 'h-7 w-7' : 'h-7 w-7'"
+    title="KI-Assistent"
+  >
+    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;">
+      <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+      <circle cx="7.5" cy="14.5" r="1.5" fill="currentColor"/>
+      <circle cx="16.5" cy="14.5" r="1.5" fill="currentColor"/>
+    </svg>
+  </button>
+  <!-- AI Button - Standalone (fixed, unten rechts) - Fallback -->
+  <button 
+    v-if="!isOpen && !inSidebar" 
     @click="openSidebar" 
     class="ai-fab"
     title="KI-Assistent öffnen"
@@ -58,6 +72,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+
+const props = defineProps({
+  inSidebar: { type: Boolean, default: false },
+  isCollapsed: { type: Boolean, default: false },
+})
 
 const openWebUIUrl = 'https://chat.eco.canys.de'
 const isOpen = ref(false)

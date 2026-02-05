@@ -9,6 +9,10 @@ import translationPlugin from './translation'
 import { posthogPlugin } from './telemetry'
 import App from './App.vue'
 
+import { dayjs } from 'frappe-ui'
+import 'dayjs/esm/locale/de'
+dayjs.locale('de')
+
 import {
   FrappeUI,
   Button,
