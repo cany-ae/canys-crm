@@ -41,18 +41,18 @@
           color="green"
         />
         <KpiCard
-          :label="__('Ø Zeit bis Abschluss')"
-          :value="formatDays(data?.deals?.avg_time_to_close)"
+          :label="__('Ø Erster Kontakt → Deal')"
+          :value="formatDays(data?.deals?.avg_first_contact_to_deal)"
           icon="clock"
           color="orange"
-          :subtitle="__('Nur abgeschlossene Deals')"
+          :subtitle="__('Ab erstem Kontaktversuch')"
         />
         <KpiCard
           :label="__('Ø Lead → Deal')"
           :value="formatDays(data?.process?.avg_lead_to_deal)"
           icon="arrow-right"
           color="purple"
-          :subtitle="__('Von Lead-Erstellung bis Deal')"
+          :subtitle="__('Von Lead-Eingang bis Deal')"
         />
       </div>
 

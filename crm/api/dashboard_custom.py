@@ -33,7 +33,7 @@ def get_dashboard_data(period="month", user=""):
 	# --- DEALS ---
 	deals_total = _get_deals_total(deal_conds, params)
 	deals_by_period = _get_deals_by_period(period, deal_conds, params)
-	avg_time_to_close = _get_avg_time_to_close(deal_conds, params)
+	avg_first_contact_to_deal = _get_avg_first_contact_to_deal(deal_conds, params)
 
 	# --- PROCESS ---
 	avg_lead_to_deal = _get_avg_lead_to_deal(deal_conds, params)
@@ -47,7 +47,7 @@ def get_dashboard_data(period="month", user=""):
 		"deals": {
 			"total": deals_total,
 			"by_period": deals_by_period,
-			"avg_time_to_close": avg_time_to_close,
+			"avg_first_contact_to_deal": avg_first_contact_to_deal,
 		},
 		"process": {
 			"avg_lead_to_deal": avg_lead_to_deal,
@@ -136,17 +136,25 @@ def _get_deals_by_period(period, conds, params):
 	return result or []
 
 
-def _get_avg_time_to_close(conds, params):
+def _get_avg_first_contact_to_deal(conds, params):
 	"""
-	Average days from deal creation to closed_date for won deals.
+	Average days from first contact attempt (first status change away from
+	'Nicht kontaktiert') to deal creation.
 	"""
 	result = frappe.db.sql(
 		f"""
-		SELECT AVG(DATEDIFF(d.closed_date, d.creation)) AS avg_days
+		SELECT AVG(DATEDIFF(d.creation, fc.first_contact_date)) AS avg_days
 		FROM `tabCRM Deal` d
-		JOIN `tabCRM Deal Status` s ON d.status = s.name
-		WHERE s.type = 'Won'
-			AND d.closed_date IS NOT NULL
+		JOIN `tabCRM Lead` l ON d.lead = l.name
+		JOIN (
+			SELECT parent, MIN(to_date) AS first_contact_date
+			FROM `tabCRM Status Change Log`
+			WHERE parenttype = 'CRM Lead'
+				AND `from` IN ('Nicht kontaktiert', 'New')
+				AND `to` NOT IN ('Nicht kontaktiert', 'New')
+			GROUP BY parent
+		) fc ON fc.parent = l.name
+		WHERE d.lead IS NOT NULL AND d.lead != ''
 			{conds}
 		""",
 		params,
