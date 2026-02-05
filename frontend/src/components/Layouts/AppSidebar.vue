@@ -211,6 +211,11 @@ const links = [
     to: 'Notes',
   },
   {
+    label: 'Aufgaben',
+    icon: TaskIcon,
+    to: 'Tasks',
+  },
+  {
     label: 'Kalender',
     icon: CalendarIcon,
     to: 'Calendar',
