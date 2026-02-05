@@ -203,3 +203,30 @@ def _period_sql(period, date_field):
 		label_expr = group_expr
 
 	return group_expr, label_expr
+
+
+@frappe.whitelist()
+def get_sales_users():
+	"""
+	Returns list of users who own leads or deals.
+	Only available for Sales Manager / System Manager.
+	"""
+	roles = frappe.get_roles(frappe.session.user)
+	is_manager = "Sales Manager" in roles or "System Manager" in roles
+
+	if not is_manager:
+		return []
+
+	users = frappe.db.sql("""
+		SELECT DISTINCT u.name AS email, u.full_name
+		FROM tabUser u
+		WHERE u.enabled = 1
+			AND u.name != 'Administrator'
+			AND u.name != 'Guest'
+			AND (
+				EXISTS (SELECT 1 FROM `tabCRM Lead` l WHERE l.lead_owner = u.name)
+				OR EXISTS (SELECT 1 FROM `tabCRM Deal` d WHERE d.deal_owner = u.name)
+			)
+		ORDER BY u.full_name
+	""", as_dict=True)
+	return users
