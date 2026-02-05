@@ -77,7 +77,6 @@
 import EditIcon from '@/components/Icons/EditIcon.vue'
 import FieldLayout from '@/components/FieldLayout/FieldLayout.vue'
 import { usersStore } from '@/stores/users'
-import { statusesStore } from '@/stores/statuses'
 import { isMobileView } from '@/composables/settings'
 import { showQuickEntryModal, quickEntryProps } from '@/composables/modals'
 import { useDocument } from '@/data/document'
@@ -91,7 +90,6 @@ const props = defineProps({
 })
 
 const { getUser, isManager } = usersStore()
-const { getDealStatus, statusOptions } = statusesStore()
 
 const show = defineModel()
 const router = useRouter()
@@ -152,8 +150,7 @@ const tabs = createResource({
           column.fields.forEach((field) => {
             if (field.fieldname == 'status') {
               field.fieldtype = 'Select'
-              field.options = dealStatuses.value
-              field.prefix = getDealStatus(deal.doc.status).color
+              field.hidden = true
             }
 
             if (field.fieldtype === 'Table') {
@@ -248,8 +245,8 @@ onMounted(() => {
   if (!deal.doc.deal_owner) {
     deal.doc.deal_owner = getUser().name
   }
-  if (!deal.doc.status && dealStatuses.value[0].value) {
-    deal.doc.status = dealStatuses.value[0].value
+  if (!deal.doc.status) {
+    deal.doc.status = 'Gewonnen'
   }
 })
 </script>

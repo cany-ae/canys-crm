@@ -144,14 +144,15 @@
    "options": "Phone"
   },
   {
-   "default": "Qualifizierung",
+   "default": "Gewonnen",
    "fieldname": "status",
    "fieldtype": "Link",
-   "in_list_view": 1,
+   "in_list_view": 0,
    "label": "Status",
    "options": "CRM Deal Status",
    "reqd": 1,
-   "search_index": 1
+   "search_index": 1,
+   "hidden": 1
   },
   {
    "fieldname": "contacts",
@@ -413,7 +414,7 @@
   },
   {
    "default": "1",
-   "description": "The rate used to convert the deal\u2019s currency to your crm's base currency (set in CRM Settings). It is set once when the currency is first added and doesn't change automatically.",
+   "description": "The rate used to convert the deal’s currency to your crm's base currency (set in CRM Settings). It is set once when the currency is first added and doesn't change automatically.",
    "fieldname": "exchange_rate",
    "fieldtype": "Float",
    "label": "Exchange Rate"

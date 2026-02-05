@@ -94,7 +94,6 @@ import Link from '@/components/Controls/Link.vue'
 import { useDocument } from '@/data/document'
 import { usersStore } from '@/stores/users'
 import { sessionStore } from '@/stores/session'
-import { statusesStore } from '@/stores/statuses'
 import { showQuickEntryModal, quickEntryProps } from '@/composables/modals'
 import { isMobileView } from '@/composables/settings'
 import { capture } from '@/telemetry'
@@ -114,7 +113,6 @@ const show = defineModel()
 
 const router = useRouter()
 
-const { statusOptions, getDealStatus } = statusesStore()
 const { isManager } = usersStore()
 const { user } = sessionStore()
 const { updateOnboardingStep } = useOnboarding('frappecrm')
@@ -190,13 +188,10 @@ async function convertToDeal() {
   }
 }
 
-const dealStatuses = computed(() => {
-  let statuses = statusOptions('deal')
-  if (!deal.doc?.status) {
-    deal.doc.status = statuses[0].value
-  }
-  return statuses
-})
+// Deal ist immer Gewonnen - keine Status-Auswahl noetig
+if (!deal.doc?.status) {
+  deal.doc.status = 'Gewonnen'
+}
 
 const dealTabs = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_fields_layout',
@@ -211,9 +206,7 @@ const dealTabs = createResource({
           column.fields?.forEach((field) => {
             hasFields = true
             if (field.fieldname == 'status') {
-              field.fieldtype = 'Select'
-              field.options = dealStatuses.value
-              field.prefix = getDealStatus(deal.doc.status).color
+              field.hidden = true
             }
 
             if (field.fieldtype === 'Table') {

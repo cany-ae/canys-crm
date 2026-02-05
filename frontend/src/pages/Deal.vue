@@ -17,23 +17,7 @@
         :actions="document.actions"
       />
       <AssignTo v-model="assignees.data" doctype="CRM Deal" :docname="dealId" />
-      <Dropdown
-        v-if="doc && document.statuses"
-        :options="statuses"
-        placement="right"
-      >
-        <template #default="{ open }">
-          <Button
-            v-if="doc.status"
-            :label="doc.status"
-            :iconRight="open ? 'chevron-up' : 'chevron-down'"
-          >
-            <template #prefix>
-              <IndicatorIcon :class="getDealStatus(doc.status).color" />
-            </template>
-          </Button>
-        </template>
-      </Dropdown>
+
     </template>
   </LayoutHeader>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
@@ -345,7 +329,6 @@ import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
-import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import LinkIcon from '@/components/Icons/LinkIcon.vue'
 import ArrowUpRightIcon from '@/components/Icons/ArrowUpRightIcon.vue'
 import SuccessIcon from '@/components/Icons/SuccessIcon.vue'
@@ -353,7 +336,6 @@ import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import Activities from '@/components/Activities/Activities.vue'
 import OrganizationModal from '@/components/Modals/OrganizationModal.vue'
-import LostReasonModal from '@/components/Modals/LostReasonModal.vue'
 import AssignTo from '@/components/AssignTo.vue'
 import FilesUploader from '@/components/FilesUploader/FilesUploader.vue'
 import ContactModal from '@/components/Modals/ContactModal.vue'
@@ -366,7 +348,6 @@ import { openWebsite, setupCustomizations, copyToClipboard } from '@/utils'
 import { getView } from '@/utils/view'
 import { getSettings } from '@/stores/settings'
 import { globalStore } from '@/stores/global'
-import { statusesStore } from '@/stores/statuses'
 import { getMeta } from '@/stores/meta'
 import { useDocument } from '@/data/document'
 import { whatsappEnabled, callEnabled } from '@/composables/settings'
@@ -396,7 +377,7 @@ import { useActiveTabManager } from '@/composables/useActiveTabManager'
 
 const { brand } = getSettings()
 const { $dialog, $socket, makeCall } = globalStore()
-const { statusOptions, getDealStatus } = statusesStore()
+// Status-Pipeline entfernt - Deals sind immer 'Gewonnen'
 const { doctypeMeta } = getMeta('CRM Deal')
 
 const { updateOnboardingStep, isOnboardingStepsCompleted } =
@@ -453,7 +434,6 @@ watch(
         call,
       })
       document._actions = s.actions || []
-      document._statuses = s.statuses || []
     }
   },
   { once: true },
@@ -520,13 +500,6 @@ const breadcrumbs = computed(() => {
 const title = computed(() => {
   let t = doctypeMeta['CRM Deal']?.title_field || 'name'
   return doc.value?.[t] || props.dealId
-})
-
-const statuses = computed(() => {
-  let customStatuses = document.statuses?.length
-    ? document.statuses
-    : document._statuses || []
-  return statusOptions('deal', customStatuses, triggerStatusChange)
 })
 
 usePageMeta(() => {
@@ -717,16 +690,7 @@ function triggerCall() {
   makeCall(mobile_no)
 }
 
-async function triggerStatusChange(value) {
-  await triggerOnChange('status', value)
-  setLostReason()
-}
-
 function updateField(name, value) {
-  if (name == 'status' && !isOnboardingStepsCompleted.value) {
-    updateOnboardingStep('change_deal_status')
-  }
-
   value = Array.isArray(name) ? '' : value
   let oldValues = Array.isArray(name) ? {} : doc.value[name]
 
@@ -763,32 +727,10 @@ function openEmailBox() {
   nextTick(() => (activities.value.emailBox.show = true))
 }
 
-const showLostReasonModal = ref(false)
-
-function setLostReason() {
-  if (
-    getDealStatus(document.doc.status).type !== 'Lost' ||
-    (document.doc.lost_reason && document.doc.lost_reason !== 'Other') ||
-    (document.doc.lost_reason === 'Other' && document.doc.lost_notes)
-  ) {
-    document.save.submit()
-    return
-  }
-
-  showLostReasonModal.value = true
-}
-
 function beforeStatusChange(data) {
-  if (
-    data?.hasOwnProperty('status') &&
-    getDealStatus(data.status).type == 'Lost'
-  ) {
-    setLostReason()
-  } else {
-    document.save.submit(null, {
-      onSuccess: () => reloadAssignees(data),
-    })
-  }
+  document.save.submit(null, {
+    onSuccess: () => reloadAssignees(data),
+  })
 }
 
 function reloadAssignees(data) {

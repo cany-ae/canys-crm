@@ -10,7 +10,6 @@ from crm.fcrm.doctype.crm_service_level_agreement.utils import get_sla
 from crm.fcrm.doctype.crm_status_change_log.crm_status_change_log import add_status_change_log
 from crm.fcrm.doctype.fcrm_settings.fcrm_settings import get_exchange_rate
 
-
 class CRMDeal(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
@@ -83,12 +82,9 @@ class CRMDeal(Document):
 			self._check_assignment_policy(self.deal_owner)
 			self.share_with_agent(self.deal_owner)
 			self.assign_agent(self.deal_owner)
-		if self.has_value_changed("status"):
-			add_status_change_log(self)
-			if frappe.db.get_value("CRM Deal Status", self.status, "type") == "Won":
-				self.closed_date = frappe.utils.nowdate()
+		if not self.closed_date:
+			self.closed_date = frappe.utils.nowdate()
 		self.validate_forecasting_fields()
-		self.validate_lost_reason()
 		self.update_exchange_rate()
 
 	def after_insert(self):
@@ -207,20 +203,6 @@ class CRMDeal(Document):
 		if sla:
 			sla.apply(self)
 
-	def update_closed_date(self):
-		"""
-		Update the closed date based on the "Won" status.
-		"""
-		if self.status == "Won" and not self.closed_date:
-			self.closed_date = frappe.utils.nowdate()
-
-	def update_default_probability(self):
-		"""
-		Update the default probability based on the status.
-		"""
-		if not self.probability or self.probability == 0:
-			self.probability = frappe.db.get_value("CRM Deal Status", self.status, "probability") or 0
-
 	def update_expected_deal_value(self):
 		"""
 		Update the expected deal value based on the net total or total.
@@ -233,24 +215,12 @@ class CRMDeal(Document):
 			self.expected_deal_value = self.net_total or self.total
 
 	def validate_forecasting_fields(self):
-		self.update_closed_date()
-		self.update_default_probability()
 		self.update_expected_deal_value()
 		if frappe.db.get_single_value("FCRM Settings", "enable_forecasting"):
 			if not self.expected_deal_value or self.expected_deal_value == 0:
 				frappe.throw(_("Expected Deal Value is required."), frappe.MandatoryError)
 			if not self.expected_closure_date:
 				frappe.throw(_("Expected Closure Date is required."), frappe.MandatoryError)
-
-	def validate_lost_reason(self):
-		"""
-		Validate the lost reason if the status is set to "Lost".
-		"""
-		if self.status and frappe.get_cached_value("CRM Deal Status", self.status, "type") == "Lost":
-			if not self.lost_reason:
-				frappe.throw(_("Please specify a reason for losing the deal."), frappe.ValidationError)
-			elif self.lost_reason == "Other" and not self.lost_notes:
-				frappe.throw(_("Please specify the reason for losing the deal."), frappe.ValidationError)
 
 	def update_exchange_rate(self):
 		if self.has_value_changed("currency") or not self.exchange_rate:
@@ -278,13 +248,7 @@ class CRMDeal(Document):
 				"align": "right",
 				"width": "9rem",
 			},
-			{
-				"label": "Status",
-				"type": "Select",
-				"key": "status",
-				"width": "10rem",
-			},
-			{
+				{
 				"label": "Email",
 				"type": "Data",
 				"key": "email",
@@ -313,7 +277,6 @@ class CRMDeal(Document):
 			"name",
 			"organization",
 			"annual_revenue",
-			"status",
 			"email",
 			"currency",
 			"mobile_no",
@@ -335,7 +298,6 @@ class CRMDeal(Document):
 			"kanban_fields": '["annual_revenue", "email", "mobile_no", "_assign", "modified"]',
 		}
 
-
 @frappe.whitelist()
 def add_contact(deal, contact):
 	if not frappe.has_permission("CRM Deal", "write", deal):
@@ -345,7 +307,6 @@ def add_contact(deal, contact):
 	deal.append("contacts", {"contact": contact})
 	deal.save()
 	return True
-
 
 @frappe.whitelist()
 def remove_contact(deal, contact):
@@ -357,7 +318,6 @@ def remove_contact(deal, contact):
 	deal.save()
 	return True
 
-
 @frappe.whitelist()
 def set_primary_contact(deal, contact):
 	if not frappe.has_permission("CRM Deal", "write", deal):
@@ -367,7 +327,6 @@ def set_primary_contact(deal, contact):
 	deal.set_primary_contact(contact)
 	deal.save()
 	return True
-
 
 def create_organization(doc):
 	if not doc.get("organization_name"):
@@ -392,7 +351,6 @@ def create_organization(doc):
 	organization.insert(ignore_permissions=True)
 	return organization.name
 
-
 def contact_exists(doc):
 	email_exist = frappe.db.exists("Contact Email", {"email_id": doc.get("email")})
 	mobile_exist = frappe.db.exists("Contact Phone", {"phone": doc.get("mobile_no")})
@@ -404,7 +362,6 @@ def contact_exists(doc):
 		return frappe.db.get_value(doctype, name, "parent")
 
 	return False
-
 
 def create_contact(doc):
 	existing_contact = contact_exists(doc)
@@ -431,7 +388,6 @@ def create_contact(doc):
 	contact.reload()  # load changes by hooks on contact
 
 	return contact.name
-
 
 @frappe.whitelist()
 def create_deal(args):
