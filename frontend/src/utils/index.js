@@ -196,6 +196,21 @@ export function prettyDate(date, mini = false) {
   }
 }
 
+
+const TASK_STATUS_DE = {
+  'Backlog': 'Backlog',
+  'Todo': 'Zu erledigen',
+  'In Progress': 'In Bearbeitung',
+  'Done': 'Erledigt',
+  'Canceled': 'Abgebrochen',
+}
+
+const TASK_PRIORITY_DE = {
+  'Low': 'Niedrig',
+  'Medium': 'Mittel',
+  'High': 'Hoch',
+}
+
 export function taskStatusOptions(action, data) {
   let options = ['Backlog', 'Todo', 'In Progress', 'Done', 'Canceled']
   let statusMeta = getMeta('CRM Task')
@@ -209,7 +224,7 @@ export function taskStatusOptions(action, data) {
   return options.map((status) => {
     return {
       icon: () => h(TaskStatusIcon, { status }),
-      label: __(status),
+      label: TASK_STATUS_DE[status] || __(status),
       onClick: () => action && action(status, data),
     }
   })
@@ -228,7 +243,7 @@ export function taskPriorityOptions(action, data) {
 
   return options.map((priority) => {
     return {
-      label: __(priority),
+      label: TASK_PRIORITY_DE[priority] || __(priority),
       icon: () => h(TaskPriorityIcon, { priority }),
       onClick: () => action && action(priority, data),
     }

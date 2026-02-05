@@ -3,15 +3,15 @@
     <template #body-title>
       <div class="flex items-center gap-3">
         <h3 class="text-2xl font-semibold leading-6 text-ink-gray-9">
-          {{ editMode ? __('Edit Task') : __('Create Task') }}
+          {{ editMode ? __('Aufgabe bearbeiten') : __('Neue Aufgabe') }}
         </h3>
         <Button
           v-if="task?.reference_docname"
           size="sm"
           :label="
             task.reference_doctype == 'CRM Deal'
-              ? __('Open Deal')
-              : __('Open Lead')
+              ? __('Deal öffnen')
+              : __('Lead öffnen')
           "
           :iconRight="ArrowUpRightIcon"
           @click="redirect()"
@@ -22,18 +22,18 @@
       <div class="flex flex-col gap-4">
         <div>
           <div class="mb-1.5 text-xs text-ink-gray-5">
-            {{ __('Title') }}
+            {{ __('Titel') }}
           </div>
           <TextInput
             ref="title"
             v-model="_task.title"
-            :placeholder="__('Call with John Doe')"
+            :placeholder="__('Anruf mit Herrn Müller')"
             required
           />
         </div>
         <div>
           <div class="mb-1.5 text-xs text-ink-gray-5">
-            {{ __('Description') }}
+            {{ __('Beschreibung') }}
           </div>
           <TextEditor
             variant="outline"
@@ -43,13 +43,13 @@
             :content="_task.description"
             @change="(val) => (_task.description = val)"
             :placeholder="
-              __('Took a call with John Doe and discussed the new project.')
+              __('Telefonat mit Herrn Müller zum neuen Projekt geführt.')
             "
           />
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <Dropdown :options="taskStatusOptions(updateTaskStatus)">
-            <Button :label="_task.status">
+            <Button :label="STATUS_DE[_task.status] || _task.status">
               <template #prefix>
                 <TaskStatusIcon :status="_task.status" />
               </template>
@@ -85,7 +85,7 @@
             />
           </div>
           <Dropdown :options="taskPriorityOptions(updateTaskPriority)">
-            <Button :label="_task.priority">
+            <Button :label="PRIORITY_DE[_task.priority] || _task.priority">
               <template #prefix>
                 <TaskPriorityIcon :priority="_task.priority" />
               </template>
@@ -98,7 +98,7 @@
     <template #actions>
       <div class="flex justify-end">
         <Button
-          :label="editMode ? __('Update') : __('Create')"
+          :label="editMode ? __('Speichern') : __('Erstellen')"
           variant="solid"
           @click="updateTask"
         />
@@ -114,6 +114,9 @@ import ArrowUpRightIcon from '@/components/Icons/ArrowUpRightIcon.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import AssignUserSelect from '@/components/Controls/AssignUserSelect.vue'
 import { taskStatusOptions, taskPriorityOptions, getFormat } from '@/utils'
+
+const STATUS_DE = { 'Backlog': 'Backlog', 'Todo': 'Zu erledigen', 'In Progress': 'In Bearbeitung', 'Done': 'Erledigt', 'Canceled': 'Abgebrochen' }
+const PRIORITY_DE = { 'High': 'Hoch', 'Medium': 'Mittel', 'Low': 'Niedrig' }
 import { usersStore } from '@/stores/users'
 import { capture } from '@/telemetry'
 import { TextEditor, Dropdown, Tooltip, call, DateTimePicker } from 'frappe-ui'
@@ -205,7 +208,7 @@ async function updateTask() {
       {
         onError: (err) => {
           if (err.error.exc_type == 'MandatoryError') {
-            error.value = 'Title is mandatory'
+            error.value = 'Titel ist erforderlich'
           }
         },
       },
