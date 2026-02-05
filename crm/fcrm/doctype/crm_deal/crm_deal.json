@@ -144,7 +144,7 @@
    "options": "Phone"
   },
   {
-   "default": "Qualification",
+   "default": "Qualifizierung",
    "fieldname": "status",
    "fieldtype": "Link",
    "in_list_view": 1,
