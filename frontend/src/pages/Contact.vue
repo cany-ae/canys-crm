@@ -127,7 +127,7 @@
         />
       </div>
     </Resizer>
-    <div class="flex flex-1 flex-col overflow-y-auto">
+    <div v-if="contact.doc.custom_contact_type !== 'Intern'" class="flex flex-1 flex-col overflow-y-auto">
       <!-- Historie Header -->
       <div class="flex items-center gap-2 border-b px-5 py-3">
         <svg class="h-5 w-5 text-ink-gray-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -195,6 +195,32 @@
         </div>
       </div>
     </div>
+    <!-- Interne Kontakte: Nur Deals anzeigen -->
+    <div v-else class="flex flex-1 flex-col overflow-y-auto">
+      <div class="flex items-center gap-2 border-b px-5 py-3">
+        <DealsIcon class="h-5 w-5 text-ink-gray-5" />
+        <span class="text-lg font-semibold text-ink-gray-9">Deals</span>
+        <Badge v-if="rows.length" variant="solid" theme="gray" size="sm">
+          {{ rows.length }}
+        </Badge>
+      </div>
+      <DealsListView
+        v-if="rows.length"
+        class="mt-4 px-5"
+        :rows="rows"
+        :columns="columns"
+        :options="{ selectable: false, showTooltip: false }"
+      />
+      <div
+        v-else
+        class="grid flex-1 place-items-center text-xl font-medium text-ink-gray-4"
+      >
+        <div class="flex flex-col items-center justify-center space-y-3">
+          <DealsIcon class="!h-10 !w-10" />
+          <div>Keine Deals vorhanden</div>
+        </div>
+      </div>
+    </div>
   </div>
   <ErrorPage
     v-else-if="errorTitle"
@@ -240,6 +266,7 @@ import { statusesStore } from '@/stores/statuses'
 import { showAddressModal, addressProps } from '@/composables/modals'
 import { callEnabled } from '@/composables/settings'
 import {
+  Badge,
   Breadcrumbs,
   Avatar,
   FileUploader,
