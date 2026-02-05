@@ -127,49 +127,74 @@
         />
       </div>
     </Resizer>
-    <Tabs
-      as="div"
-      v-model="tabIndex"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tablist']]:px-5 [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
-      <template #tab-item="{ tab, selected }">
-        <button
-          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:text-ink-gray-9"
-          :class="{ 'text-ink-gray-9': selected }"
-        >
-          <component v-if="tab.icon" :is="tab.icon" class="h-5" />
-          {{ __(tab.label) }}
-          <Badge
-            class="group-hover:bg-surface-gray-7"
-            :class="[selected ? 'bg-surface-gray-7' : 'bg-gray-600']"
-            variant="solid"
-            theme="gray"
-            size="sm"
+    <div class="flex flex-1 flex-col overflow-y-auto">
+      <!-- Historie Header -->
+      <div class="flex items-center gap-2 border-b px-5 py-3">
+        <svg class="h-5 w-5 text-ink-gray-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="text-lg font-semibold text-ink-gray-9">Historie</span>
+      </div>
+
+      <!-- Summary -->
+      <div class="px-5 py-4">
+        <ContactHistory :contactId="props.contactId" />
+      </div>
+
+      <!-- Leads Section -->
+      <div v-if="historyData.data?.leads?.length" class="border-t px-5 py-4">
+        <div class="mb-3 flex items-center gap-2">
+          <LeadsIcon class="h-4 w-4 text-ink-gray-5" />
+          <span class="text-sm font-semibold text-ink-gray-8">Leads</span>
+        </div>
+        <div class="flex flex-col gap-2">
+          <router-link
+            v-for="lead in historyData.data.leads"
+            :key="lead.name"
+            :to="{ name: 'Lead', params: { leadId: lead.name } }"
+            class="flex items-center justify-between rounded-lg border border-outline-gray-modals px-3 py-2 transition-colors hover:bg-surface-gray-2"
           >
-            {{ tab.count }}
-          </Badge>
-        </button>
-      </template>
-      <template #tab-panel="{ tab }">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-sm font-medium text-ink-gray-9">{{ lead.lead_name || lead.name }}</span>
+              <span class="text-xs text-ink-gray-5">{{ lead.email }} &middot; {{ formatDateShort(lead.creation) }}</span>
+            </div>
+            <span
+              class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium"
+              :class="getLeadBadgeClass(lead.status)"
+            >
+              <span class="inline-block h-1.5 w-1.5 rounded-full" :class="getLeadDotClass(lead.status)"></span>
+              {{ lead.status }}
+            </span>
+          </router-link>
+        </div>
+      </div>
+
+      <!-- Deals Section -->
+      <div v-if="rows.length" class="border-t px-5 py-4">
+        <div class="mb-3 flex items-center gap-2">
+          <DealsIcon class="h-4 w-4 text-ink-gray-5" />
+          <span class="text-sm font-semibold text-ink-gray-8">Deals</span>
+        </div>
         <DealsListView
-          v-if="tab.label === 'Deals' && rows.length"
-          class="mt-4"
           :rows="rows"
           :columns="columns"
           :options="{ selectable: false, showTooltip: false }"
         />
-        <div
-          v-if="!rows.length"
-          class="grid flex-1 place-items-center text-xl font-medium text-ink-gray-4"
-        >
-          <div class="flex flex-col items-center justify-center space-y-3">
-            <component :is="tab.icon" class="!h-10 !w-10" />
-            <div>{{ __('No {0} Found', [__(tab.label)]) }}</div>
-          </div>
+      </div>
+
+      <!-- Empty State -->
+      <div
+        v-if="!historyData.loading && !historyData.data?.leads?.length && !rows.length"
+        class="grid flex-1 place-items-center text-xl font-medium text-ink-gray-4"
+      >
+        <div class="flex flex-col items-center justify-center space-y-3">
+          <svg class="h-10 w-10 text-ink-gray-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>Keine Historie vorhanden</div>
         </div>
-      </template>
-    </Tabs>
+      </div>
+    </div>
   </div>
   <ErrorPage
     v-else-if="errorTitle"
@@ -190,10 +215,12 @@ import ErrorPage from '@/components/ErrorPage.vue'
 import Resizer from '@/components/Resizer.vue'
 import Icon from '@/components/Icon.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
+import ContactHistory from '@/components/ContactHistory.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
+import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import {
@@ -216,7 +243,6 @@ import {
   Breadcrumbs,
   Avatar,
   FileUploader,
-  Tabs,
   call,
   createResource,
   usePageMeta,
@@ -306,14 +332,7 @@ function changeContactImage(file) {
   })
 }
 
-const tabIndex = ref(0)
-const tabs = [
-  {
-    label: 'Deals',
-    icon: h(DealsIcon, { class: 'h-4 w-4' }),
-    count: computed(() => deals.data?.length),
-  },
-]
+
 
 const deals = createResource({
   url: 'crm.api.contact.get_linked_deals',
@@ -321,6 +340,35 @@ const deals = createResource({
   params: { contact: props.contactId },
   auto: true,
 })
+
+const historyData = createResource({
+  url: 'crm.api.contact.get_contact_history',
+  cache: ['contactHistory', props.contactId],
+  params: { contact: props.contactId },
+  auto: true,
+})
+
+// Lead status badge helpers
+const leadBadgeClasses = {
+  'Nicht kontaktiert': { badge: 'bg-gray-100 text-gray-700', dot: 'bg-gray-500' },
+  'Kontaktiert': { badge: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
+  'Kontaktiert aber nicht erreicht': { badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
+  'Rueckruf geplant': { badge: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' },
+  'Rückruf geplant': { badge: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' },
+  'Termin vereinbart': { badge: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
+  'Kein Interesse': { badge: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
+}
+function getLeadBadgeClass(status) {
+  return leadBadgeClasses[status]?.badge || 'bg-gray-100 text-gray-700'
+}
+function getLeadDotClass(status) {
+  return leadBadgeClasses[status]?.dot || 'bg-gray-500'
+}
+function formatDateShort(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
 
 const rows = computed(() => {
   if (!deals.data || deals.data == []) return []

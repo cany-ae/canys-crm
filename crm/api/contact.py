@@ -144,3 +144,104 @@ def search_emails(txt: str):
 	)
 
 	return results
+
+
+@frappe.whitelist()
+def get_contact_history(contact):
+	"""Get aggregated contact history across all linked Leads and Deals.
+
+	Returns leads, deals, and a summary with counts, status breakdowns,
+	total revenue, first lead date, and last activity date.
+	"""
+	if not frappe.has_permission("Contact", "read", contact):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	# 1. Find all linked Leads via Dynamic Link
+	lead_links = frappe.get_all(
+		"Dynamic Link",
+		filters={
+			"parenttype": "Contact",
+			"parent": contact,
+			"link_doctype": "CRM Lead",
+		},
+		fields=["link_name"],
+	)
+
+	leads = []
+	for link in lead_links:
+		try:
+			lead = frappe.get_cached_doc("CRM Lead", link.link_name)
+			leads.append({
+				"name": lead.name,
+				"status": lead.status,
+				"lead_name": lead.lead_name,
+				"email": lead.email,
+				"creation": lead.creation,
+				"modified": lead.modified,
+			})
+		except frappe.DoesNotExistError:
+			continue
+
+	# 2. Find all linked Deals via CRM Contacts child table
+	deal_links = frappe.get_all(
+		"CRM Contacts",
+		filters={
+			"contact": contact,
+			"parenttype": "CRM Deal",
+		},
+		fields=["parent"],
+		distinct=True,
+	)
+
+	deals = []
+	for d in deal_links:
+		try:
+			deal = frappe.get_cached_doc("CRM Deal", d.parent)
+			deals.append({
+				"name": deal.name,
+				"status": deal.status,
+				"organization": deal.organization,
+				"annual_revenue": deal.annual_revenue or 0,
+				"lead": deal.lead,
+				"creation": deal.creation,
+				"modified": deal.modified,
+			})
+		except frappe.DoesNotExistError:
+			continue
+
+	# 3. Build aggregation summary
+	leads_by_status = {}
+	for lead in leads:
+		s = lead.get("status") or "Unknown"
+		leads_by_status[s] = leads_by_status.get(s, 0) + 1
+
+	deals_by_status = {}
+	deals_total_revenue = 0.0
+	for deal in deals:
+		s = deal.get("status") or "Unknown"
+		deals_by_status[s] = deals_by_status.get(s, 0) + 1
+		deals_total_revenue += float(deal.get("annual_revenue") or 0)
+
+	# Determine first_lead_date and last_activity_date
+	all_creation_dates = [l["creation"] for l in leads if l.get("creation")]
+	all_modified_dates = (
+		[l["modified"] for l in leads if l.get("modified")]
+		+ [d["modified"] for d in deals if d.get("modified")]
+	)
+
+	first_lead_date = min(all_creation_dates) if all_creation_dates else None
+	last_activity_date = max(all_modified_dates) if all_modified_dates else None
+
+	return {
+		"leads": leads,
+		"deals": deals,
+		"summary": {
+			"leads_total": len(leads),
+			"leads_by_status": leads_by_status,
+			"deals_total": len(deals),
+			"deals_by_status": deals_by_status,
+			"deals_total_revenue": deals_total_revenue,
+			"first_lead_date": first_lead_date,
+			"last_activity_date": last_activity_date,
+		},
+	}
