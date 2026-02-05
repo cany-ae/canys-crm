@@ -126,7 +126,7 @@ const props = defineProps({
   },
   placeholder: {
     type: String,
-    default: 'Add attendee',
+    default: 'Teilnehmer hinzufügen',
   },
   inputClass: {
     type: String,

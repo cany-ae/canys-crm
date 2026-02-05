@@ -28,6 +28,7 @@
         allowCustomClickEvents: true,
         enableShortcuts: false,
         noBorder: true,
+        weekends: ['saturday', 'sunday'],
       }"
       :events="events.data"
       @create="(event) => createEvent(event)"

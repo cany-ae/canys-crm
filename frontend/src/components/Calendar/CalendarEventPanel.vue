@@ -205,8 +205,8 @@
             :class="['[&_input]:w-[216px]']"
             variant="outline"
             :value="_event.fromDate"
-            :format="'MMM D, YYYY'"
-            :placeholder="__('May 1, 2025')"
+            :format="'D. MMM YYYY'"
+            :placeholder="__('1. Mai 2025')"
             :clearable="false"
             @update:modelValue="(date) => updateDate(date, true)"
           >
@@ -230,16 +230,18 @@
             v-if="!_event.isFullDay"
             class="max-w-[105px]"
             variant="outline"
+            :use12Hour="false"
             :modelValue="_event.fromTime"
-            :placeholder="__('Start Time')"
+            :placeholder="__('Startzeit')"
             @update:modelValue="(time) => updateTime(time, true)"
           />
           <TimePicker
             class="max-w-[105px]"
             variant="outline"
+            :use12Hour="false"
             :modelValue="_event.toTime"
             :options="toOptions"
-            :placeholder="__('End Time')"
+            :placeholder="__('Endzeit')"
             placement="bottom-end"
             @update:modelValue="(time) => updateTime(time)"
           />
