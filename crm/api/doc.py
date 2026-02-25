@@ -379,6 +379,19 @@ def get_data(
 		if doctype == 'Contact' and 'custom_contact_type' not in rows:
 			rows.append('custom_contact_type')
 
+		# CRM Lead: Termin- und Steuerungsfelder immer laden (werden vom Frontend benoetigt,
+		# aber CRM View Settings enthalten sie oft nicht)
+		if doctype == 'CRM Lead':
+			_required_lead_fields = [
+				'custom_termin_datum', 'custom_termin_status', 'custom_termin_typ',
+				'custom_termin_berater', 'custom_leadtyp', 'custom_liste',
+				'custom_leadquelle', 'custom_lead_potenzial', 'custom_naechster_kontakt',
+				'custom_zustaendige_rolle',
+			]
+			for _rf in _required_lead_fields:
+				if _rf not in rows:
+					rows.append(_rf)
+
 		# Contact: alle laden weil Frontend clientseitig nach Kunden/Intern filtert
 		_page_length = 0 if doctype in ('Contact', 'CRM Lead') else page_length
 
