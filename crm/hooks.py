@@ -119,13 +119,13 @@ before_uninstall = "crm.uninstall.before_uninstall"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# "Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# "Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"CRM Lead": "crm.fcrm.doctype.crm_lead.crm_lead.get_permission_query_conditions",
+}
+
+has_permission = {
+	"CRM Lead": "crm.fcrm.doctype.crm_lead.crm_lead.has_lead_permission",
+}
 
 # DocType Class
 # ---------------
@@ -156,6 +156,10 @@ doc_events = {
 		"validate": ["crm.api.whatsapp.validate"],
 		"on_update": ["crm.api.whatsapp.on_update"],
 	},
+	"Event": {
+		"after_insert": ["crm.fcrm.doctype.crm_lead.crm_lead.sync_event_to_lead"],
+		"on_update": ["crm.fcrm.doctype.crm_lead.crm_lead.sync_event_to_lead"],
+	},
 	"CRM Deal": {
 		"on_update": [
 			"crm.fcrm.doctype.erpnext_crm_settings.erpnext_crm_settings.create_customer_in_erpnext"
@@ -171,6 +175,9 @@ doc_events = {
 # ---------------
 
 scheduler_events = {
+	"hourly": [
+		"crm.fcrm.doctype.crm_lead.crm_lead.process_overdue_followups"
+	],
 	"daily_long": [
 		"crm.lead_syncing.background_sync.sync_leads_from_sources_daily"
 	],
@@ -188,7 +195,11 @@ scheduler_events = {
 			"crm.lead_syncing.background_sync.sync_leads_from_sources_10_minutes"
 		],
         "*/15 * * * *": [
-			"crm.lead_syncing.background_sync.sync_leads_from_sources_15_minutes"
+			"crm.lead_syncing.background_sync.sync_leads_from_sources_15_minutes",
+			"crm.fcrm.doctype.crm_lead.crm_lead.process_termin_reminders"
+		],
+        "*/30 * * * *": [
+			"crm.fcrm.doctype.crm_lead.crm_lead.process_crm_warnings"
 		],
 	}
 }

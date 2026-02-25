@@ -40,21 +40,8 @@
       lockView: true,
     }"
   />
-  <div v-if="route.params.viewType !== 'kanban'" class="flex items-center gap-3 sm:px-5 px-3 py-2">
-    <div class="flex items-center gap-1.5">
-      <button
-        v-for="liste in leadLists"
-        :key="liste"
-        class="px-3 py-1 text-xs font-semibold rounded-md border transition-all duration-150"
-        :class="selectedLeadList === liste
-          ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100'
-          : 'bg-transparent text-ink-gray-5 border-outline-gray-2 hover:border-outline-gray-3 hover:text-ink-gray-7'"
-        @click="toggleLeadList(liste)"
-      >
-        {{ liste }}
-      </button>
-    </div>
-    <div class="flex items-center gap-0.5 ml-2 border-l pl-3 border-outline-gray-2">
+  <div v-if="route.params.viewType !== 'kanban'" class="flex items-center gap-2 sm:px-5 px-3 py-2 border-b border-outline-gray-1">
+    <div class="flex items-center gap-0.5">
       <button
         class="px-3 py-1 text-xs font-medium rounded-md transition-all duration-150"
         :class="listScope === 'mine'
@@ -74,11 +61,20 @@
         {{ __('Alle') }}
       </button>
     </div>
-    <div class="text-xs text-ink-gray-4 ml-auto">
-      <span v-if="!selectedLeadList && listScope === 'mine'">{{ __('Meine Leads') }}</span>
-      <span v-else-if="!selectedLeadList">{{ __('Alle Leads') }}</span>
-      <span v-else-if="listScope === 'mine'">{{ selectedLeadList }} · {{ __('Meine') }}</span>
-      <span v-else>{{ selectedLeadList }} · {{ __('Alle') }}</span>
+    <div v-if="selectedLeadList" class="flex items-center gap-1.5 text-xs text-ink-gray-5">
+      <span class="inline-block h-2 w-2 rounded-full" :style="{ backgroundColor: getPhaseHex(selectedLeadList) }"></span>
+      <span>{{ selectedLeadList }}</span>
+      <button @click="clearPhaseFilter" class="ml-1 text-ink-gray-4 hover:text-ink-gray-7">✕</button>
+    </div>
+    <div v-else-if="route.query.overdue === '1'" class="flex items-center gap-1.5 text-xs text-red-600">
+      <FeatherIcon name="alert-circle" class="h-3 w-3" />
+      <span>Überfällige Follow-ups</span>
+      <button @click="clearPhaseFilter" class="ml-1 text-red-400 hover:text-red-700">✕</button>
+    </div>
+    <div v-else-if="selectedSpecialist" class="flex items-center gap-1.5 text-xs text-purple-600">
+      <FeatherIcon name="users" class="h-3 w-3" />
+      <span>Spezialisten: {{ specialistFilterLabel }}</span>
+      <button @click="clearPhaseFilter" class="ml-1 text-purple-400 hover:text-purple-700">✕</button>
     </div>
   </div>
   <KanbanView
@@ -376,7 +372,7 @@ import { usersStore } from '@/stores/users'
 import { statusesStore } from '@/stores/statuses'
 import { callEnabled } from '@/composables/settings'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
-import { Avatar, Tooltip, Dropdown, toast } from 'frappe-ui'
+import { Avatar, FeatherIcon, Tooltip, Dropdown, toast } from 'frappe-ui'
 import { useRoute, useRouter } from 'vue-router'
 import { ref, computed, reactive, h, watch, nextTick } from 'vue'
 
@@ -418,33 +414,86 @@ const updatedPageCount = ref(999)
 const viewControls = ref(null)
 const leadPage = ref(1)
 
-// Lead List A-E filtering
-const leadLists = ['Liste A', 'Liste B', 'Liste C', 'Liste D', 'Liste E']
-const selectedLeadList = ref(null)
+// Lead Pipeline Phase filtering (10-90)
+const leadPhases = [
+  { value: '10 - Neu ohne Termin', short: '10', color: 'gray', hex: '#6B7280' },
+  { value: '20 - Termin gebucht', short: '20', color: 'blue', hex: '#3B82F6' },
+  { value: '30 - Reaktivierung', short: '30', color: 'amber', hex: '#F59E0B' },
+  { value: '50 - Closer-Termin', short: '50', color: 'purple', hex: '#8B5CF6' },
+  { value: '70 - Follow-up', short: '70', color: 'orange', hex: '#F97316' },
+  { value: '80 - Abschluss gewonnen', short: '80', color: 'green', hex: '#10B981' },
+  { value: '90 - Abschluss verloren', short: '90', color: 'red', hex: '#EF4444' },
+]
+const selectedLeadList = computed(() => {
+  if (route.query.overdue === '1') return null
+  if (route.query.specialist) return null
+  return route.query.phase || null
+})
+
+// Specialist queue filtering
+const selectedSpecialist = computed(() => {
+  return route.query.specialist || null
+})
+
+const SPECIALIST_LABELS = {
+  'offen': 'Offen',
+  'in_bearbeitung': 'In Bearbeitung',
+  'qualifiziert': 'Qualifiziert',
+  'mine': 'Meine Leads',
+}
+
+const specialistFilterLabel = computed(() => {
+  return SPECIALIST_LABELS[selectedSpecialist.value] || selectedSpecialist.value
+})
 const listScope = ref('mine')
 
-function toggleLeadList(liste) {
-  if (selectedLeadList.value === liste) {
-    selectedLeadList.value = null
-    // scope beibehalten
-  } else {
-    selectedLeadList.value = liste
-    // scope beibehalten
-  }
+function clearPhaseFilter() {
+  router.push({ name: 'Leads', query: {} })
+}
+
+
+
+function getPhaseHex(value) {
+  const phase = leadPhases.find(p => p.value === value)
+  return phase ? phase.hex : '#6B7280'
 }
 
 const computedFilters = computed(() => {
   let filters = { converted: 0 }
 
-  if (selectedLeadList.value) {
+  if (selectedSpecialist.value) {
+    // Specialist queue filters
+    filters.custom_an_spezialist_weitergeleitet = 1
+    const specFilter = selectedSpecialist.value
+    if (specFilter === 'offen') {
+      filters.custom_spezialist_status = 'Offen'
+    } else if (specFilter === 'in_bearbeitung') {
+      filters.custom_spezialist_status = 'In Bearbeitung'
+    } else if (specFilter === 'qualifiziert') {
+      filters.custom_spezialist_status = 'Qualifiziert'
+    } else if (specFilter === 'mine') {
+      filters.custom_spezialist_user = user
+      filters.custom_spezialist_status = ['IN', ['Offen', 'In Bearbeitung']]
+    }
+    // "Meine" scope for specialist = only leads where I am the specialist
+    if (listScope.value === 'mine' && specFilter !== 'mine') {
+      filters.custom_spezialist_user = user
+    }
+  } else if (route.query.overdue === '1') {
+    filters.custom_naechster_kontakt = ['<', new Date().toISOString().split('T')[0]]
+    filters.custom_liste = ['NOT IN', ['80 - Abschluss gewonnen', '90 - Abschluss verloren']]
+    if (listScope.value === 'mine') {
+      filters.lead_owner = user
+    }
+  } else if (selectedLeadList.value) {
     filters.custom_liste = selectedLeadList.value
     if (listScope.value === 'mine') {
-      filters._assign = ['LIKE', '%' + user + '%']
+      filters.lead_owner = user
     }
   } else {
     // Default: show all leads
     if (listScope.value === 'mine') {
-      filters._assign = ['LIKE', '%' + user + '%']
+      filters.lead_owner = user
     }
   }
 
@@ -452,7 +501,7 @@ const computedFilters = computed(() => {
 })
 
 // Watch for filter changes and reload
-watch([selectedLeadList, listScope], () => {
+watch([() => route.query.phase, () => route.query.overdue, () => route.query.specialist, listScope], () => {
   nextTick(() => {
     if (viewControls.value) {
       viewControls.value.reload()
@@ -578,6 +627,18 @@ function parseRows(rows, columns = []) {
           label: lead.status,
           color: getLeadStatus(lead.status)?.color,
         }
+      } else if (row == 'custom_liste') {
+        const listePhase = leadPhases.find(p => p.value === lead.custom_liste)
+        _rows[row] = {
+          label: lead.custom_liste || '',
+          phase_short: listePhase ? listePhase.short : '',
+          phase_color: listePhase ? listePhase.color : 'gray',
+          phase_hex: listePhase ? listePhase.hex : '#6B7280',
+        }
+      } else if (row == 'custom_leadtyp') {
+        _rows[row] = {
+          label: lead.custom_leadtyp || '',
+        }
       } else if (row == 'sla_status') {
         let value = lead.sla_status
         let tooltipText = value
@@ -660,7 +721,7 @@ function handleNextPage() {
 }
 
 // Reset page when filters change
-watch([selectedLeadList, listScope], () => {
+watch([() => route.query.phase, () => route.query.overdue, () => route.query.specialist, listScope], () => {
   leadPage.value = 1
 }, { flush: 'post' })
 
