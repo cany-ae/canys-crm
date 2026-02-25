@@ -483,17 +483,17 @@ const computedFilters = computed(() => {
     filters.custom_naechster_kontakt = ['<', new Date().toISOString().split('T')[0]]
     filters.custom_liste = ['NOT IN', ['80 - Abschluss gewonnen', '90 - Abschluss verloren']]
     if (listScope.value === 'mine') {
-      filters.lead_owner = user
+      filters._assign = ['LIKE', '%' + user + '%']
     }
   } else if (selectedLeadList.value) {
     filters.custom_liste = selectedLeadList.value
     if (listScope.value === 'mine') {
-      filters.lead_owner = user
+      filters._assign = ['LIKE', '%' + user + '%']
     }
   } else {
     // Default: show all leads
     if (listScope.value === 'mine') {
-      filters.lead_owner = user
+      filters._assign = ['LIKE', '%' + user + '%']
     }
   }
 
