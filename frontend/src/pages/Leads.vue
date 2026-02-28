@@ -371,6 +371,7 @@ import { globalStore } from '@/stores/global'
 import { usersStore } from '@/stores/users'
 import { statusesStore } from '@/stores/statuses'
 import { callEnabled } from '@/composables/settings'
+import { usePipelinePhases } from '@/composables/usePipelinePhases'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
 import { Avatar, FeatherIcon, Tooltip, Dropdown, toast } from 'frappe-ui'
 import { useRoute, useRouter } from 'vue-router'
@@ -385,6 +386,7 @@ const { getLeadStatus } = statusesStore()
 
 const route = useRoute()
 const router = useRouter()
+const { leadsPagePhases, getPhaseHex, getPhaseColor } = usePipelinePhases()
 
 const showImportModal = ref(false)
 
@@ -414,16 +416,8 @@ const updatedPageCount = ref(999)
 const viewControls = ref(null)
 const leadPage = ref(1)
 
-// Lead Pipeline Phase filtering (10-90)
-const leadPhases = [
-  { value: '10 - Neu ohne Termin', label: 'Neu ohne Termin', short: '10', color: 'gray', hex: '#6B7280' },
-  { value: '20 - Termin gebucht', label: 'Termin gebucht', short: '20', color: 'blue', hex: '#3B82F6' },
-  { value: '30 - Reaktivierung', label: 'Reaktivierung', short: '30', color: 'amber', hex: '#F59E0B' },
-  { value: '50 - Closer-Termin', label: 'Closer-Termin', short: '50', color: 'purple', hex: '#8B5CF6' },
-  { value: '70 - Follow-up', label: 'Follow-up', short: '70', color: 'orange', hex: '#F97316' },
-  { value: '80 - Abschluss gewonnen', label: 'Abschluss gewonnen', short: '80', color: 'green', hex: '#10B981' },
-  { value: '90 - Abschluss verloren', label: 'Abschluss verloren', short: '90', color: 'red', hex: '#EF4444' },
-]
+// Lead Pipeline Phase filtering (10-90) - loaded from backend via composable
+const leadPhases = leadsPagePhases
 function formatTerminDate(dt) {
   if (!dt) return ''
   const d = new Date(dt)
@@ -492,10 +486,7 @@ function clearPhaseFilter() {
 
 
 
-function getPhaseHex(value) {
-  const phase = leadPhases.find(p => p.value === value)
-  return phase ? phase.hex : '#6B7280'
-}
+// getPhaseHex now provided directly by usePipelinePhases composable
 
 const computedFilters = computed(() => {
   let filters = { converted: 0 }
@@ -662,14 +653,13 @@ function parseRows(rows, columns = []) {
       } else if (row === 'website') {
         _rows[row] = website(lead.website)
       } else if (row == 'custom_liste') {
-        const listePhase = leadPhases.find(p => p.value === lead.custom_liste)
-        // Display only the name without number and dash (e.g. "Neu ohne Termin" instead of "10 - Neu ohne Termin")
-        const displayLabel = listePhase ? listePhase.label : (lead.custom_liste ? lead.custom_liste.replace(/^\d+\s*-\s*/, '') : '')
+        // Phase data resolved via composable (no hardcoded colors)
+        const displayLabel = lead.custom_liste ? lead.custom_liste.replace(/^\d+\s*-\s*/, '') : ''
         _rows[row] = {
           label: displayLabel,
-          phase_short: listePhase ? listePhase.short : '',
-          phase_color: listePhase ? listePhase.color : 'gray',
-          phase_hex: listePhase ? listePhase.hex : '#6B7280',
+          phase_short: lead.custom_liste ? lead.custom_liste.split(' ')[0] : '',
+          phase_color: getPhaseColor(lead.custom_liste),
+          phase_hex: getPhaseHex(lead.custom_liste),
         }
       } else if (row == 'custom_leadtyp') {
         _rows[row] = {

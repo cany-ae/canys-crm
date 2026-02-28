@@ -245,6 +245,7 @@ import {
 import { usersStore } from '@/stores/users'
 import { sessionStore } from '@/stores/session'
 import { showSettings, activeSettingsPage } from '@/composables/settings'
+import { usePipelinePhases } from '@/composables/usePipelinePhases'
 import { showChangePasswordModal } from '@/composables/modals'
 import { Badge, FeatherIcon, call } from 'frappe-ui'
 import {
@@ -264,6 +265,7 @@ const { getPinnedViews, getPublicViews } = viewsStore()
 const { toggle: toggleNotificationPanel } = notificationsStore()
 
 const isSidebarCollapsed = useStorage('isSidebarCollapsed', false)
+const { sidebarPhases } = usePipelinePhases()
 
 
 const isFCSite = ref(window.is_fc_site)
@@ -323,15 +325,8 @@ const currentPhaseFilter = computed(() => {
   return route.query?.phase || ''
 })
 
-const leadPhases = [
-  { value: '10 - Neu ohne Termin', short: '10 Neu', hex: '#6B7280', badgeClass: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-  { value: '20 - Termin gebucht', short: '20 Termin', hex: '#3B82F6', badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
-  { value: '30 - Reaktivierung', short: '30 Reaktiv.', hex: '#F59E0B', badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' },
-  { value: '50 - Closer-Termin', short: '50 Closer', hex: '#8B5CF6', badgeClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
-  { value: '70 - Follow-up', short: '70 Follow-up', hex: '#F97316', badgeClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' },
-  { value: '80 - Abschluss gewonnen', short: '80 Gewonnen', hex: '#10B981', badgeClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
-  { value: '90 - Abschluss verloren', short: '90 Verloren', hex: '#EF4444', badgeClass: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
-]
+// leadPhases loaded from backend via composable
+const leadPhases = sidebarPhases
 
 function toggleLeadQueue() {
   leadQueueOpen.value = !leadQueueOpen.value

@@ -334,6 +334,7 @@ import {
   Tooltip,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
+import { usePipelinePhases } from '@/composables/usePipelinePhases'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -373,6 +374,7 @@ const emit = defineEmits([
 ])
 
 const route = useRoute()
+const { getListeBadgeClass: _getListeBadgeClass } = usePipelinePhases()
 
 const pageLengthCount = defineModel()
 
@@ -448,18 +450,9 @@ function formatTerminZeit(zeit) {
   return hh + ':' + mm
 }
 
-const LISTE_BADGE_CLASSES = {
-  gray: 'bg-gray-100 text-gray-700',
-  blue: 'bg-blue-100 text-blue-700',
-  amber: 'bg-amber-100 text-amber-700',
-  purple: 'bg-purple-100 text-purple-700',
-  orange: 'bg-orange-100 text-orange-700',
-  green: 'bg-green-100 text-green-700',
-  red: 'bg-red-100 text-red-700',
-}
-
+// Badge classes loaded from composable
 function getListeBadgeClass(color) {
-  return LISTE_BADGE_CLASSES[color] || LISTE_BADGE_CLASSES.gray
+  return _getListeBadgeClass(color)
 }
 
 

@@ -851,6 +851,7 @@ import { globalStore } from '@/stores/global'
 import { getMeta } from '@/stores/meta'
 import { useDocument } from '@/data/document'
 import { whatsappEnabled, callEnabled } from '@/composables/settings'
+import { usePipelinePhases } from '@/composables/usePipelinePhases'
 import { showEventModal, activeEvent, lockedParticipantEmails } from '@/composables/event'
 import {
   createResource,
@@ -876,6 +877,7 @@ const { doctypeMeta } = getMeta('CRM Lead')
 
 const route = useRoute()
 const router = useRouter()
+const { getPhaseColor, getPhaseHex, getPhaseClass } = usePipelinePhases()
 
 const props = defineProps({
   leadId: {
@@ -969,36 +971,13 @@ const title = computed(() => {
 
 
 
-// Pipeline Phase (Liste) color mapping
-const listePhaseConfig = {
-  '10 - Neu ohne Termin': { color: 'gray', hex: '#6B7280' },
-  '20 - Termin gebucht': { color: 'blue', hex: '#3B82F6' },
-  '30 - Reaktivierung': { color: 'amber', hex: '#F59E0B' },
-  '50 - Closer-Termin': { color: 'purple', hex: '#8B5CF6' },
-  '70 - Follow-up': { color: 'orange', hex: '#F97316' },
-  '80 - Abschluss gewonnen': { color: 'green', hex: '#10B981' },
-  '90 - Abschluss verloren': { color: 'red', hex: '#EF4444' },
-}
-
-const listePhaseClassMap = {
-  gray: 'bg-gray-100 text-gray-800',
-  blue: 'bg-blue-100 text-blue-800',
-  amber: 'bg-amber-100 text-amber-800',
-  purple: 'bg-purple-100 text-purple-800',
-  orange: 'bg-orange-100 text-orange-800',
-  green: 'bg-green-100 text-green-800',
-  red: 'bg-red-100 text-red-800',
-}
-
+// Pipeline Phase (Liste) - loaded from backend via composable
 const listePhaseClass = computed(() => {
-  const phase = listePhaseConfig[doc.value.custom_liste]
-  if (!phase) return listePhaseClassMap.gray
-  return listePhaseClassMap[phase.color] || listePhaseClassMap.gray
+  return getPhaseClass(doc.value.custom_liste)
 })
 
 const listePhaseHex = computed(() => {
-  const phase = listePhaseConfig[doc.value.custom_liste]
-  return phase ? phase.hex : '#6B7280'
+  return getPhaseHex(doc.value.custom_liste)
 })
 
 const lastStatusChange = computed(() => {
