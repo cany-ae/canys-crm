@@ -3751,6 +3751,7 @@ def create_lead_from_webhook(**kwargs):
         "marktwert": "custom_wert_gutachten",
         "marktwert (€)": "custom_wert_gutachten",
         "wert": "custom_wert_gutachten",
+        "wert_gutachten": "custom_wert_gutachten",
         "baujahr": "custom_baujahr",
         "kennzeichen": "custom_kennzeichen",
         "alltagsfahrzeug": "custom_ot_alltagsfahrzeug",
