@@ -1,0 +1,91 @@
+{
+  "name": "CRM Badge",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "naming_rule": "Expression",
+  "autoname": "format:BADGE-{badge_id}-{user}",
+  "creation": "2026-02-12 10:00:00",
+  "modified": "2026-02-12 10:00:00",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "custom": 0,
+  "is_submittable": 0,
+  "istable": 0,
+  "is_virtual": 0,
+  "allow_rename": 0,
+  "search_fields": "user,badge_id,badge_name",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "share": 1
+    },
+    {
+      "role": "CRM Vertrieb",
+      "read": 1,
+      "write": 0,
+      "create": 0,
+      "delete": 0,
+      "report": 1
+    }
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "fieldtype": "Link",
+      "label": "User",
+      "options": "User",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "badge_id",
+      "fieldtype": "Data",
+      "label": "Badge ID",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Unique badge identifier (e.g. first_close, streak_5)"
+    },
+    {
+      "fieldname": "badge_name",
+      "fieldtype": "Data",
+      "label": "Badge Name",
+      "reqd": 1,
+      "in_list_view": 1,
+      "description": "Display name (e.g. Erster Abschluss)"
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "badge_icon",
+      "fieldtype": "Data",
+      "label": "Badge Icon",
+      "description": "Emoji or icon identifier"
+    },
+    {
+      "fieldname": "badge_description",
+      "fieldtype": "Small Text",
+      "label": "Badge Description"
+    },
+    {
+      "fieldname": "awarded_at",
+      "fieldtype": "Datetime",
+      "label": "Awarded At",
+      "in_list_view": 1
+    }
+  ],
+  "links": [],
+  "actions": []
+}

@@ -155,16 +155,33 @@
             class="flex items-center justify-between rounded-lg border border-outline-gray-modals px-3 py-2 transition-colors hover:bg-surface-gray-2"
           >
             <div class="flex flex-col gap-0.5">
-              <span class="text-sm font-medium text-ink-gray-9">{{ lead.lead_name || lead.name }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-ink-gray-9">{{ lead.lead_name || lead.name }}</span>
+                <span
+                  v-if="lead.custom_leadtyp"
+                  class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-violet-100 text-violet-700"
+                >
+                  {{ lead.custom_leadtyp }}
+                </span>
+              </div>
               <span class="text-xs text-ink-gray-5">{{ lead.email }} &middot; {{ formatDateShort(lead.creation) }}</span>
             </div>
-            <span
-              class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium"
-              :class="getLeadBadgeClass(lead.status)"
-            >
-              <span class="inline-block h-1.5 w-1.5 rounded-full" :class="getLeadDotClass(lead.status)"></span>
-              {{ lead.status }}
-            </span>
+            <div class="flex flex-col items-end gap-1">
+              <span
+                v-if="lead.custom_liste"
+                class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium"
+                :class="getListeBadgeClass(lead.custom_liste)"
+              >
+                {{ lead.custom_liste }}
+              </span>
+              <span
+                class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium"
+                :class="getLeadBadgeClass(lead.status)"
+              >
+                <span class="inline-block h-1.5 w-1.5 rounded-full" :class="getLeadDotClass(lead.status)"></span>
+                {{ lead.status }}
+              </span>
+            </div>
           </router-link>
         </div>
       </div>
@@ -380,7 +397,7 @@ const leadBadgeClasses = {
   'Nicht kontaktiert': { badge: 'bg-gray-100 text-gray-700', dot: 'bg-gray-500' },
   'Kontaktiert': { badge: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
   'Kontaktiert aber nicht erreicht': { badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
-  'Rueckruf geplant': { badge: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' },
+  'Rückruf geplant': { badge: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' },
   'Rückruf geplant': { badge: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' },
   'Termin vereinbart': { badge: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
   'Kein Interesse': { badge: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
@@ -395,6 +412,20 @@ function formatDateShort(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+// Liste/Phase badge styling
+const listeBadgeClasses = {
+  '10 - Neu ohne Termin': 'bg-blue-100 text-blue-800',
+  '20 - Termin gebucht': 'bg-cyan-100 text-cyan-800',
+  '30 - Reaktivierung': 'bg-amber-100 text-amber-800',
+  '50 - Closer-Termin': 'bg-indigo-100 text-indigo-800',
+  '70 - Follow-up': 'bg-orange-100 text-orange-800',
+  '80 - Abschluss gewonnen': 'bg-green-100 text-green-800',
+  '90 - Abschluss verloren': 'bg-red-100 text-red-800',
+}
+function getListeBadgeClass(liste) {
+  return listeBadgeClasses[liste] || 'bg-gray-100 text-gray-700'
 }
 
 const rows = computed(() => {

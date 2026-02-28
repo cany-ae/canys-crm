@@ -69,7 +69,7 @@
       <div class="flex w-full flex-row-reverse gap-2">
         <Button
           variant="solid"
-          :label="__('Status aendern')"
+          :label="__('Status ändern')"
           :disabled="!selectedStatus || selectedStatus === currentStatus"
           @click="handleStatusChange"
         />

@@ -141,7 +141,7 @@ const leadStatusColorMap = {
   'Nicht kontaktiert': 'gray',
   'Kontaktiert': 'blue',
   'Kontaktiert aber nicht erreicht': 'orange',
-  'Rueckruf geplant': 'yellow',
+  'Rückruf geplant': 'yellow',
   'R\u00fcckruf geplant': 'yellow',
   'Termin vereinbart': 'green',
   'Kein Interesse': 'red',
@@ -210,7 +210,7 @@ function truncateStatus(status) {
     'Kontaktiert aber nicht erreicht': 'Nicht erreicht',
     'Nicht kontaktiert': 'Nicht kontaktiert',
     'Rückruf geplant': 'Rückruf',
-    'R\u00fcckruf geplant': 'Rueckruf',
+    'R\u00fcckruf geplant': 'Rückruf',
     'Termin vereinbart': 'Termin',
   }
   return shortNames[status] || status

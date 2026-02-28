@@ -1,4 +1,19 @@
 <template>
+  <div v-if="events.length">
+    <div v-if="doctype === 'CRM Lead'" class="px-3 sm:px-10 pt-3 pb-2">
+      <Button
+        variant="solid"
+        theme="blue"
+        size="sm"
+        @click="openTerminVorschlaege"
+      >
+        <template #prefix>
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+        </template>
+        {{ __('Termin mit Vorschlägen') }}
+      </Button>
+    </div>
+  </div>
   <div v-if="events.length" v-for="(event, i) in events" :key="event.name">
     <div
       class="activity grid grid-cols-[30px_minmax(auto,_1fr)] gap-4 px-3 sm:px-10"
@@ -76,15 +91,28 @@
   >
     <CalendarIcon class="h-10 w-10" />
     <span>{{ __('No Events Scheduled') }}</span>
-    <Button :label="__('Schedule an Event')" @click="showEvent()" />
+    <div class="flex flex-col gap-2 items-center">
+      <Button
+        v-if="doctype === 'CRM Lead'"
+        variant="solid"
+        theme="blue"
+        @click="openTerminVorschlaege"
+      >
+        <template #prefix>
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+        </template>
+        {{ __('Termin mit Vorschlägen buchen') }}
+      </Button>
+      <Button :label="__('Freier Termin planen')" variant="subtle" @click="showEvent()" v-if="doctype !== 'CRM Lead'" />
+    </div>
   </div>
 </template>
 <script setup>
 import CalendarIcon from '@/components/Icons/CalendarIcon.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
-import { useEvent, showEventModal, activeEvent } from '@/composables/event'
+import { useEvent, showEventModal, activeEvent, lockedParticipantEmails } from '@/composables/event'
 import { formatDate, timeAgo } from '@/utils'
-import { Tooltip, Avatar } from 'frappe-ui'
+import { Tooltip, Avatar, Button, call } from 'frappe-ui'
 
 const props = defineProps({
   doctype: {
@@ -97,7 +125,48 @@ const props = defineProps({
   },
 })
 
-function showEvent(e = {}) {
+async function showEvent(e = {}) {
+  // Auto-add lead/deal contact as participant when creating a new event
+  // and lock them as non-removable
+  if (!e.name && props.doctype && props.docname) {
+    try {
+      const data = await call('frappe.client.get_value', {
+        doctype: props.doctype,
+        filters: { name: props.docname },
+        fieldname: ['email', 'first_name', 'last_name'],
+      })
+      if (data?.email) {
+        // Find the Contact record for this email (required by Event Participants)
+        try {
+          const contact = await call('frappe.client.get_value', {
+            doctype: 'Contact',
+            filters: { email_id: data.email },
+            fieldname: ['name'],
+          })
+          if (contact?.name) {
+            e.event_participants = [
+              {
+                email: data.email,
+                reference_doctype: 'Contact',
+                reference_docname: contact.name,
+              },
+            ]
+            // Mark this email as locked (non-removable)
+            lockedParticipantEmails.value = [data.email]
+          }
+        } catch (contactErr) {
+          // No Contact found - skip auto-participant
+        }
+      }
+    } catch (err) {
+      // Silently continue - participant can be added manually
+    }
+  }
+  // When editing an existing event, clear locked participants.
+  // When creating new (no name) and contact lookup failed/skipped, also clear.
+  if (e.name || !lockedParticipantEmails.value?.length) {
+    lockedParticipantEmails.value = []
+  }
   showEventModal.value = true
   activeEvent.value = e
 }
@@ -106,4 +175,11 @@ const { events, startEndTime, startDate } = useEvent(
   props.doctype,
   props.docname,
 )
+
+function openTerminVorschlaege() {
+  // Dispatch custom event that Lead.vue listens for
+  window.dispatchEvent(new CustomEvent('open-termin-vorschlaege', {
+    detail: { doctype: props.doctype, docname: props.docname }
+  }))
+}
 </script>

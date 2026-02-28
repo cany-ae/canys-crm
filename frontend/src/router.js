@@ -90,6 +90,16 @@ const routes = [
     component: () => import('@/pages/Calendar.vue'),
   },
   {
+    path: "/gamification",
+    name: "Gamification",
+    redirect: { name: "Dashboard", query: { tab: "meintag" } },
+  },
+  {
+    path: "/praemien",
+    name: "Praemien",
+    redirect: { name: "Dashboard", query: { tab: "praemien" } },
+  },
+  {
     path: '/welcome',
     name: 'Welcome',
     component: () => import('@/pages/Welcome.vue'),

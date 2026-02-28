@@ -1,0 +1,79 @@
+{
+  "name": "CRM Cross Sell Regel",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "document_type": "Setup",
+  "istable": 1,
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "leadtyp",
+    "prioritaet",
+    "thema",
+    "column_break_1",
+    "ziel_spezialist",
+    "aktiv"
+  ],
+  "fields": [
+    {
+      "fieldname": "leadtyp",
+      "fieldtype": "Select",
+      "label": "Leadtyp",
+      "options": "Pferd\nHund\nKatze\nOldtimer\nGeldanlage / Vallue\nKinderpolice\nManagerProtect\nJuraTax\nLOL (Loss of Licence)\nBU (meine-1750)\nbAV\nPilotNow\nKV Mensch Voll\nKV Mensch Zusatz\nSonstiges",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 2,
+      "description": "Für welchen Leadtyp gilt diese Cross-Sell-Regel?"
+    },
+    {
+      "fieldname": "prioritaet",
+      "fieldtype": "Select",
+      "label": "Priorität",
+      "options": "\n1\n2\n3",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 1,
+      "description": "Priorität 1 = höchste (Muss angesprochen werden)"
+    },
+    {
+      "fieldname": "thema",
+      "fieldtype": "Data",
+      "label": "Cross-Sell-Thema",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 3,
+      "description": "z.B. 'KV Mensch / Geldanlage', 'Sachversicherungen'"
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "ziel_spezialist",
+      "fieldtype": "Link",
+      "label": "Ziel-Spezialist",
+      "options": "User",
+      "in_list_view": 1,
+      "columns": 2,
+      "description": "Optional: Spezialist für dieses Thema"
+    },
+    {
+      "fieldname": "aktiv",
+      "fieldtype": "Check",
+      "label": "Aktiv",
+      "default": "1",
+      "in_list_view": 1,
+      "columns": 1,
+      "description": "Deaktivierte Regeln werden ignoriert"
+    }
+  ],
+  "naming_rule": "Autoincrement",
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 0,
+  "creation": "2026-02-27 10:00:00",
+  "modified": "2026-02-27 10:00:00",
+  "modified_by": "Administrator",
+  "owner": "Administrator"
+}

@@ -2,7 +2,7 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 
-export function useActiveTabManager(tabs, storageKey) {
+export function useActiveTabManager(tabs, storageKey, defaultTabName) {
   const activeTab = useStorage(storageKey, 'activity')
   const route = useRoute()
   const router = useRouter()
@@ -47,6 +47,11 @@ export function useActiveTabManager(tabs, storageKey) {
         return index
       }
       return 0
+    }
+
+    // If a defaultTabName is specified, use it instead of localStorage
+    if (defaultTabName) {
+      return getTabIndex(defaultTabName.toLowerCase())
     }
 
     let lastVisitedTab = activeTab.value

@@ -22,6 +22,17 @@ class CRMTask(Document):
 			self.unassign_from_previous_user(self.get_doc_before_save().assigned_to)
 			self.assign_to()
 
+		# Auto-set completed_at when status changes to Done or Canceled
+		if self.has_value_changed("status"):
+			if self.status in ("Done", "Canceled"):
+				if not self.completed_at:
+					self.completed_at = frappe.utils.now()
+					self.completed_by = frappe.session.user
+			else:
+				# Reopened task - clear completion fields
+				self.completed_at = None
+				self.completed_by = None
+
 	def _check_assignment_policy(self):
 		"""Enforce role-based assignment policy before assigning."""
 		if not self.assigned_to:
@@ -41,12 +52,11 @@ class CRMTask(Document):
 				"description": self.title or self.description,
 			})
 
-
 	@staticmethod
 	def default_list_data():
 		columns = [
 			{
-				'label': 'Title',
+				'label': 'Titel',
 				'type': 'Data',
 				'key': 'title',
 				'width': '16rem',
@@ -58,25 +68,25 @@ class CRMTask(Document):
 				'width': '8rem',
 			},
 			{
-				'label': 'Priority',
+				'label': 'Priorität',
 				'type': 'Select',
 				'key': 'priority',
 				'width': '8rem',
 			},
 			{
-				'label': 'Due Date',
+				'label': 'Fällig',
 				'type': 'Date',
 				'key': 'due_date',
 				'width': '8rem',
 			},
 			{
-				'label': 'Assigned To',
+				'label': 'Zugewiesen an',
 				'type': 'Link',
 				'key': 'assigned_to',
 				'width': '10rem',
 			},
 			{
-				'label': 'Last Modified',
+				'label': 'Zuletzt bearbeitet',
 				'type': 'Datetime',
 				'key': 'modified',
 				'width': '8rem',
@@ -94,6 +104,8 @@ class CRMTask(Document):
 			"reference_doctype",
 			"reference_docname",
 			"modified",
+			"completed_at",
+			"completed_by",
 		]
 		return {'columns': columns, 'rows': rows}
 

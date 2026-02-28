@@ -384,7 +384,7 @@ const tabs = computed(() => {
   return tabOptions.filter((tab) => (tab.condition ? tab.condition() : true))
 })
 
-const { tabIndex } = useActiveTabManager(tabs, 'lastLeadTab')
+const { tabIndex } = useActiveTabManager(tabs, 'lastLeadTab', 'activity')
 
 const sections = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections',

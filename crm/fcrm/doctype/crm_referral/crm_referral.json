@@ -1,0 +1,232 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "autoname": "CRM-REF-.#####",
+ "creation": "2026-02-12 10:00:00.000000",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "lead_section",
+  "origin_lead",
+  "lead_name_display",
+  "column_break_lead",
+  "created_from",
+  "target_topic",
+  "referral_section",
+  "referrer_user",
+  "column_break_referral",
+  "target_specialist",
+  "status_section",
+  "referral_status",
+  "column_break_status",
+  "qualified_date",
+  "qualified_by",
+  "premium_section",
+  "premium_amount",
+  "column_break_premium",
+  "premium_status",
+  "cross_sell_section",
+  "cross_sell_prio",
+  "column_break_cross_sell",
+  "cross_sell_produkt",
+  "notes_section",
+  "notiz"
+ ],
+ "fields": [
+  {
+   "fieldname": "lead_section",
+   "fieldtype": "Section Break",
+   "label": "Lead-Information"
+  },
+  {
+   "fieldname": "origin_lead",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ursprungs-Lead",
+   "options": "CRM Lead",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "origin_lead.lead_name",
+   "fieldname": "lead_name_display",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Lead Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_lead",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Spezialist-Weiterleitung",
+   "fieldname": "created_from",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Erstellt aus",
+   "options": "\nCross-Sell\nManuell\nSpezialist-Weiterleitung"
+  },
+  {
+   "fieldname": "target_topic",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ziel-Thema / Produktlinie"
+  },
+  {
+   "fieldname": "referral_section",
+   "fieldtype": "Section Break",
+   "label": "Weiterleitung"
+  },
+  {
+   "fieldname": "referrer_user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Weitergeleitet von",
+   "options": "User",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_referral",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "target_specialist",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ziel-Spezialist",
+   "options": "User",
+   "search_index": 1
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Erstellt",
+   "fieldname": "referral_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Referral-Status",
+   "options": "Erstellt\nKontaktiert\nQualifiziert\nNicht qualifiziert\nAusgezahlt",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.referral_status == 'Qualifiziert' || doc.referral_status == 'Ausgezahlt'",
+   "fieldname": "qualified_date",
+   "fieldtype": "Date",
+   "label": "Qualifiziert am"
+  },
+  {
+   "depends_on": "eval:doc.referral_status == 'Qualifiziert' || doc.referral_status == 'Ausgezahlt'",
+   "fieldname": "qualified_by",
+   "fieldtype": "Link",
+   "label": "Qualifiziert von",
+   "options": "User"
+  },
+  {
+   "fieldname": "premium_section",
+   "fieldtype": "Section Break",
+   "label": "Prämie"
+  },
+  {
+   "fieldname": "premium_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Prämienbetrag"
+  },
+  {
+   "fieldname": "column_break_premium",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Offen",
+   "fieldname": "premium_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Prämien-Status",
+   "options": "Offen\nBerechnet\nAusgezahlt"
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval:doc.created_from == 'Cross-Sell'",
+   "fieldname": "cross_sell_section",
+   "fieldtype": "Section Break",
+   "label": "Cross-Sell Details"
+  },
+  {
+   "fieldname": "cross_sell_prio",
+   "fieldtype": "Select",
+   "label": "Cross-Sell Prioritaet",
+   "options": "\n1\n2\n3"
+  },
+  {
+   "fieldname": "column_break_cross_sell",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cross_sell_produkt",
+   "fieldtype": "Data",
+   "label": "Cross-Sell Produkt"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notizen"
+  },
+  {
+   "fieldname": "notiz",
+   "fieldtype": "Small Text",
+   "label": "Notiz"
+  }
+ ],
+ "links": [],
+ "modified": "2026-02-12 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Referral",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "CRM Vertrieb",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "lead_name_display",
+ "track_changes": 1
+}

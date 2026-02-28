@@ -87,6 +87,15 @@ let isActive = computed(() => {
   if (route.query.view) {
     return route.query.view == props.to?.query?.view
   }
+  // For object-style routes with query params (e.g. Dashboard tabs)
+  if (typeof props.to === 'object' && props.to.name) {
+    if (route.name !== props.to.name) return false
+    // If the link specifies query.tab, match it against the current route
+    if (props.to.query?.tab) {
+      return route.query.tab === props.to.query.tab
+    }
+    return true
+  }
   return route.name === props.to
 })
 </script>

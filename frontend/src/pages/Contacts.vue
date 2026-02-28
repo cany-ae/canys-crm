@@ -189,8 +189,8 @@ const rows = computed(() => {
 
       if (row == 'full_name') {
         _rows[row] = {
-          label: contact.full_name,
-          image_label: contact.full_name,
+          label: contact.full_name || contact.email_id || contact.name,
+          image_label: contact.full_name || contact.email_id || contact.name,
           image: contact.image,
         }
       } else if (row == 'company_name') {
@@ -212,7 +212,7 @@ const rows = computed(() => {
 // Force-Reload beim Navigieren zurueck zur Liste.
 // frappe-ui createResource gibt bei gleichem Cache-Key das gecachte
 // Resource-Objekt mit alten Daten zurueck (ohne auto-reload).
-// Wir setzen fetched=false damit der naechste reload() nicht uebersprungen
+// Wir setzen fetched=false damit der nächste reload() nicht übersprungen
 // wird, und erzwingen dann einen frischen Server-Fetch.
 onMounted(() => {
   nextTick(() => {

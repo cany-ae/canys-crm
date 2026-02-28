@@ -1,0 +1,181 @@
+{
+  "name": "CRM Relationship",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "document_type": "Document",
+  "engine": "InnoDB",
+  "naming_rule": "Expression (old style)",
+  "autoname": "CRM-REL-.#####",
+  "title_field": "contact_name",
+  "search_fields": "contact_email,contact_name,primary_advisor",
+  "sort_field": "start_date",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "field_order": [
+    "section_main",
+    "contact_email",
+    "contact_name",
+    "column_break_1",
+    "primary_advisor",
+    "status",
+    "section_details",
+    "start_date",
+    "origin_lead",
+    "column_break_2",
+    "lead_typ",
+    "notiz"
+  ],
+  "fields": [
+    {
+      "fieldname": "section_main",
+      "fieldtype": "Section Break",
+      "label": "Beziehung"
+    },
+    {
+      "fieldname": "contact_email",
+      "fieldtype": "Data",
+      "label": "Kontakt E-Mail",
+      "options": "Email",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "columns": 3,
+      "description": "E-Mail-Adresse des Kunden/Kontakts"
+    },
+    {
+      "fieldname": "contact_name",
+      "fieldtype": "Data",
+      "label": "Kontaktname",
+      "in_list_view": 1,
+      "columns": 3,
+      "description": "Name des Kunden"
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "primary_advisor",
+      "fieldtype": "Link",
+      "label": "Primaerberater",
+      "options": "User",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "columns": 3,
+      "description": "Der zustaendige Primaerberater"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Aktiv\nInaktiv",
+      "default": "Aktiv",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "columns": 1,
+      "description": "Aktiv = laufende Beratungsbeziehung"
+    },
+    {
+      "fieldname": "section_details",
+      "fieldtype": "Section Break",
+      "label": "Details"
+    },
+    {
+      "fieldname": "start_date",
+      "fieldtype": "Date",
+      "label": "Beginn",
+      "default": "Today",
+      "in_list_view": 1,
+      "description": "Beginn der Beratungsbeziehung"
+    },
+    {
+      "fieldname": "origin_lead",
+      "fieldtype": "Link",
+      "label": "Ursprungs-Lead",
+      "options": "CRM Lead",
+      "description": "Der Lead, der zum Abschluss fuehrte"
+    },
+    {
+      "fieldname": "column_break_2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "lead_typ",
+      "fieldtype": "Data",
+      "label": "Leadtyp",
+      "description": "Leadtyp des Abschluss-Leads"
+    },
+    {
+      "fieldname": "notiz",
+      "fieldtype": "Small Text",
+      "label": "Notiz",
+      "description": "Freitext-Notiz zur Beziehung"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "CRM Vertrieb",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "export": 1,
+      "report": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1
+    },
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "export": 1,
+      "report": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1
+    },
+    {
+      "role": "Sales User",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "export": 1,
+      "report": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1
+    },
+    {
+      "role": "Sales Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "export": 1,
+      "report": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1
+    }
+  ],
+  "links": [],
+  "actions": [],
+  "custom": 0,
+  "is_submittable": 0,
+  "istable": 0,
+  "quick_entry": 0,
+  "editable_grid": 1,
+  "show_name_in_global_search": 1,
+  "show_title_field_in_link": 1,
+  "creation": "2026-02-12 10:00:00.000000",
+  "modified": "2026-02-12 10:00:00.000000",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "docstatus": 0,
+  "idx": 0
+}

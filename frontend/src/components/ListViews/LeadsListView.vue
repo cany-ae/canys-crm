@@ -58,6 +58,15 @@
           "
         />
       </div>
+      <div v-else-if="column.key === 'custom_termin_datum'" class="truncate text-base">
+        <span v-if="item.label" class="inline-flex items-center gap-1 text-xs">
+          <svg class="h-3.5 w-3.5 text-ink-gray-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span>{{ item.label }}</span>
+        </span>
+        <span v-else class="text-xs text-ink-gray-4">–</span>
+      </div>
       <ListRowItem v-else :item="item" :align="column.align">
         <template #prefix>
           <div v-if="column.key === 'status'" class="flex items-center">
@@ -68,7 +77,8 @@
               <span class="inline-block h-1.5 w-1.5 rounded-full" :class="getStatusDotClass(item)"></span>
             </span>
           </div>
-          <div v-else-if="column.key === 'lead_name'">
+
+          <div v-else-if="column.key === 'lead_name'" class="relative">
             <Avatar
               v-if="item.label"
               class="flex items-center"
@@ -76,6 +86,13 @@
               :label="item.image_label"
               size="sm"
             />
+            <span
+              v-if="isOverdue(row)"
+              class="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 ring-2 ring-white"
+              :title="__('Überfällig')"
+            >
+              <span class="text-[6px] font-bold text-white leading-none">!</span>
+            </span>
           </div>
           <div v-else-if="column.key === 'lead_owner'">
             <Avatar
@@ -132,6 +149,53 @@
             >
               <HeartIcon class="h-4 w-4" />
             </Button>
+          </div>
+          <div
+            v-else-if="column.key === 'lead_name'"
+            class="truncate text-base"
+          >
+            <span class="inline-flex items-center gap-1.5">
+              <span class="truncate">{{ item.label }}</span>
+              <Tooltip v-if="isOverdue(row)" :text="__('Überfälliger Follow-up')">
+                <span class="inline-flex items-center gap-0.5 rounded px-1 py-px text-[10px] font-semibold leading-tight bg-red-100 text-red-700 whitespace-nowrap flex-shrink-0">
+                  <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M12 2l10 18H2L12 2z" />
+                  </svg>
+                  Überfällig
+                </span>
+              </Tooltip>
+            </span>
+          </div>
+          <div
+            v-else-if="column.key === 'custom_liste' && item.phase_color"
+            class="truncate text-base"
+            @click="
+              (event) =>
+                emit('applyFilter', {
+                  event,
+                  idx,
+                  column,
+                  item,
+                  firstColumn: columns[0],
+                })
+            "
+          >
+            <span
+              class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
+              :class="getListeBadgeClass(item.phase_color)"
+            >
+              {{ item.label }}
+            </span>
+          </div>
+          <div
+            v-else-if="column.key === 'custom_leadtyp' && item.label"
+            class="truncate text-base"
+          >
+            <span
+              class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-surface-gray-2 text-ink-gray-7"
+            >
+              {{ item.label }}
+            </span>
           </div>
           <div
             v-else-if="column.key === 'sla_status'"
@@ -248,6 +312,14 @@
     </div>
   </div>
   <ListBulkActions ref="listBulkActionsRef" v-model="list" doctype="CRM Lead" />
+  <Teleport to="body">
+    <LeadHoverPopup
+      v-if="hoveredLead"
+      :lead-name="hoveredLead"
+      :x="hoverPos.x"
+      :y="hoverPos.y"
+    />
+  </Teleport>
 </template>
 
 <script setup>
@@ -259,6 +331,7 @@ import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
+import LeadHoverPopup from '@/components/LeadHoverPopup.vue'
 import {
   Avatar,
   Button,
@@ -271,7 +344,7 @@ import {
   Tooltip,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 
 const props = defineProps({
@@ -360,6 +433,44 @@ watch(pageLengthCount, (val, old_value) => {
 
 const listBulkActionsRef = ref(null)
 
+// Hover popup state
+const hoveredLead = ref(null)
+const hoverPos = ref({ x: 0, y: 0 })
+const hoverTimer = ref(null)
+
+function onRowMouseLeave() {
+  if (hoverTimer.value) {
+    clearTimeout(hoverTimer.value)
+    hoverTimer.value = null
+  }
+  hoveredLead.value = null
+}
+
+function formatTerminZeit(zeit) {
+  if (!zeit || zeit === 'None' || zeit === 'null') return ''
+  // zeit can be "HH:MM:SS" or "HH:MM" or timedelta string
+  const str = String(zeit).trim()
+  // Extract HH:MM from various formats
+  const match = str.match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return ''
+  const hh = match[1].padStart(2, '0')
+  const mm = match[2]
+  return hh + ':' + mm
+}
+
+const LISTE_BADGE_CLASSES = {
+  gray: 'bg-gray-100 text-gray-700',
+  blue: 'bg-blue-100 text-blue-700',
+  amber: 'bg-amber-100 text-amber-700',
+  purple: 'bg-purple-100 text-purple-700',
+  orange: 'bg-orange-100 text-orange-700',
+  green: 'bg-green-100 text-green-700',
+  red: 'bg-red-100 text-red-700',
+}
+
+function getListeBadgeClass(color) {
+  return LISTE_BADGE_CLASSES[color] || LISTE_BADGE_CLASSES.gray
+}
 
 const STATUS_COLOR_MAP = {
   'Nicht kontaktiert': 'gray',
@@ -367,7 +478,7 @@ const STATUS_COLOR_MAP = {
   'Kontaktiert aber nicht erreicht': 'orange',
   'Nicht erreicht': 'orange',
   'Rückruf geplant': 'yellow',
-  'Rueckruf geplant': 'yellow',
+  'Rückruf geplant': 'yellow',
   'Termin vereinbart': 'green',
   'Kein Interesse': 'red',
 }
@@ -401,6 +512,85 @@ function getStatusDotClass(item) {
     red: 'bg-red-500',
   }
   return map[color] || map.gray
+}
+
+// Overdue detection: check if custom_naechster_kontakt is in the past
+// and lead is not in closed phases (80/90)
+function isOverdue(row) {
+  const nk = row.custom_naechster_kontakt
+  if (!nk || nk === 'None' || nk === 'null') return false
+  // Exclude closed phases (80 = Abschluss gewonnen, 90 = Abschluss verloren)
+  const liste = row.custom_liste
+  if (liste && typeof liste === 'object') {
+    const phase = liste.phase_short
+    if (phase === '80' || phase === '90') return false
+  }
+  // nk is raw ISO-ish value from API e.g. "2026-02-25" or "2026-02-25 00:00:00"
+  const nkDate = new Date(nk)
+  if (isNaN(nkDate.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return nkDate < today
+}
+
+// Hover delegation via document-level event bubbling
+onMounted(() => {
+  document.addEventListener('mouseover', handleHoverDelegate)
+  document.addEventListener('mouseout', handleHoverOutDelegate)
+  document.addEventListener('click', handleClickDismissPopup, true)
+})
+
+onBeforeUnmount(() => {
+  if (hoverTimer.value) clearTimeout(hoverTimer.value)
+  document.removeEventListener('mouseover', handleHoverDelegate)
+  document.removeEventListener('mouseout', handleHoverOutDelegate)
+  document.removeEventListener('click', handleClickDismissPopup, true)
+})
+
+function handleClickDismissPopup() {
+  // Instantly hide popup on any click so it never blocks navigation
+  if (hoverTimer.value) {
+    clearTimeout(hoverTimer.value)
+    hoverTimer.value = null
+  }
+  hoveredLead.value = null
+}
+
+function handleHoverDelegate(event) {
+  // frappe-ui ListRow renders as <a> (router-link) with href containing /leads/CRM-LEAD-XXXXX
+  const link = event.target.closest('a[href]')
+  if (!link) return
+
+  const href = link.getAttribute('href') || ''
+  // Match /leads/CRM-LEAD-XXXXX pattern
+  const match = href.match(/\/leads\/(CRM-LEAD-[^?/]+)/)
+  if (!match) return
+
+  const leadName = decodeURIComponent(match[1])
+
+  // Update position on every mouseover
+  hoverPos.value = { x: event.clientX, y: event.clientY }
+
+  // If same lead, just update position
+  if (hoveredLead.value === leadName) return
+
+  // Debounce new lead
+  if (hoverTimer.value) clearTimeout(hoverTimer.value)
+  hoverTimer.value = setTimeout(() => {
+    hoveredLead.value = leadName
+    hoverPos.value = { x: event.clientX, y: event.clientY }
+  }, 300)
+}
+
+function handleHoverOutDelegate(event) {
+  const link = event.target.closest('a[href]')
+  if (!link) return
+
+  // Check if we're moving to a child element (still in the same row link)
+  const related = event.relatedTarget
+  if (related && link.contains(related)) return
+
+  onRowMouseLeave()
 }
 
 defineExpose({

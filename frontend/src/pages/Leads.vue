@@ -284,7 +284,7 @@
     v-model="leads.data.page_length_count"
     v-model:list="leads"
     :rows="paginatedRows"
-    :columns="leads.data.columns"
+    :columns="scopedColumns"
     :options="{
       showTooltip: false,
       resizeColumn: false,
@@ -416,14 +416,30 @@ const leadPage = ref(1)
 
 // Lead Pipeline Phase filtering (10-90)
 const leadPhases = [
-  { value: '10 - Neu ohne Termin', short: '10', color: 'gray', hex: '#6B7280' },
-  { value: '20 - Termin gebucht', short: '20', color: 'blue', hex: '#3B82F6' },
-  { value: '30 - Reaktivierung', short: '30', color: 'amber', hex: '#F59E0B' },
-  { value: '50 - Closer-Termin', short: '50', color: 'purple', hex: '#8B5CF6' },
-  { value: '70 - Follow-up', short: '70', color: 'orange', hex: '#F97316' },
-  { value: '80 - Abschluss gewonnen', short: '80', color: 'green', hex: '#10B981' },
-  { value: '90 - Abschluss verloren', short: '90', color: 'red', hex: '#EF4444' },
+  { value: '10 - Neu ohne Termin', label: 'Neu ohne Termin', short: '10', color: 'gray', hex: '#6B7280' },
+  { value: '20 - Termin gebucht', label: 'Termin gebucht', short: '20', color: 'blue', hex: '#3B82F6' },
+  { value: '30 - Reaktivierung', label: 'Reaktivierung', short: '30', color: 'amber', hex: '#F59E0B' },
+  { value: '50 - Closer-Termin', label: 'Closer-Termin', short: '50', color: 'purple', hex: '#8B5CF6' },
+  { value: '70 - Follow-up', label: 'Follow-up', short: '70', color: 'orange', hex: '#F97316' },
+  { value: '80 - Abschluss gewonnen', label: 'Abschluss gewonnen', short: '80', color: 'green', hex: '#10B981' },
+  { value: '90 - Abschluss verloren', label: 'Abschluss verloren', short: '90', color: 'red', hex: '#EF4444' },
 ]
+function formatTerminDate(dt) {
+  if (!dt) return ''
+  const d = new Date(dt)
+  if (isNaN(d.getTime())) return dt
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = String(d.getFullYear()).slice(-2)
+  const hours = d.getHours()
+  const minutes = d.getMinutes()
+  // Only show time if it's not midnight (00:00)
+  if (hours === 0 && minutes === 0) {
+    return day + '.' + month + '.' + year
+  }
+  return day + '.' + month + '.' + year + ' ' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0')
+}
+
 const selectedLeadList = computed(() => {
   if (route.query.overdue === '1') return null
   if (route.query.specialist) return null
@@ -445,7 +461,23 @@ const SPECIALIST_LABELS = {
 const specialistFilterLabel = computed(() => {
   return SPECIALIST_LABELS[selectedSpecialist.value] || selectedSpecialist.value
 })
-const listScope = ref('mine')
+const listScope = ref(isAdmin() ? 'all' : 'mine')
+
+const scopedColumns = computed(() => {
+  if (!leads.value?.data?.columns) return []
+  // Status-Spalte immer ausblenden
+  const cols = leads.value.data.columns.filter(col => col.key !== 'status')
+  if (listScope.value === 'mine') {
+    // Replace _assign column with custom_termin_datum for "Meine" tab
+    return cols.map(col => {
+      if (col.key === '_assign') {
+        return { label: 'Termin', type: 'Datetime', key: 'custom_termin_datum', width: col.width || '10rem' }
+      }
+      return col
+    })
+  }
+  return cols
+})
 
 function clearPhaseFilter() {
   router.push({ name: 'Leads', query: {} })
@@ -622,15 +654,12 @@ function parseRows(rows, columns = []) {
         _rows[row] = lead.organization
       } else if (row === 'website') {
         _rows[row] = website(lead.website)
-      } else if (row == 'status') {
-        _rows[row] = {
-          label: lead.status,
-          color: getLeadStatus(lead.status)?.color,
-        }
       } else if (row == 'custom_liste') {
         const listePhase = leadPhases.find(p => p.value === lead.custom_liste)
+        // Display only the name without number and dash (e.g. "Neu ohne Termin" instead of "10 - Neu ohne Termin")
+        const displayLabel = listePhase ? listePhase.label : (lead.custom_liste ? lead.custom_liste.replace(/^\d+\s*-\s*/, '') : '')
         _rows[row] = {
-          label: lead.custom_liste || '',
+          label: displayLabel,
           phase_short: listePhase ? listePhase.short : '',
           phase_color: listePhase ? listePhase.color : 'gray',
           phase_hex: listePhase ? listePhase.hex : '#6B7280',
@@ -638,6 +667,20 @@ function parseRows(rows, columns = []) {
       } else if (row == 'custom_leadtyp') {
         _rows[row] = {
           label: lead.custom_leadtyp || '',
+        }
+      } else if (row == 'custom_termin_datum') {
+        let terminLabel = lead.custom_termin_datum ? formatTerminDate(lead.custom_termin_datum) : ''
+        // Append time from custom_termin_zeit_von if available
+        if (terminLabel && lead.custom_termin_zeit_von) {
+          const zeitStr = String(lead.custom_termin_zeit_von).trim()
+          const zeitMatch = zeitStr.match(/^(\d{1,2}):(\d{2})/)
+          if (zeitMatch) {
+            terminLabel += ' · ' + zeitMatch[1].padStart(2, '0') + ':' + zeitMatch[2]
+          }
+        }
+        _rows[row] = {
+          label: terminLabel,
+          raw: lead.custom_termin_datum || '',
         }
       } else if (row == 'sla_status') {
         let value = lead.sla_status

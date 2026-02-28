@@ -1,0 +1,115 @@
+{
+  "name": "CRM Pipeline Phase",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "document_type": "Setup",
+  "istable": 1,
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "phase_code",
+    "phase_value",
+    "label",
+    "column_break_1",
+    "color",
+    "hex_color",
+    "sort_order",
+    "section_break_2",
+    "is_default",
+    "role_owner",
+    "column_break_3",
+    "allowed_transitions"
+  ],
+  "fields": [
+    {
+      "fieldname": "phase_code",
+      "fieldtype": "Data",
+      "label": "Code",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 1,
+      "description": "Numerischer Code (z.B. 10, 20, 30)"
+    },
+    {
+      "fieldname": "phase_value",
+      "fieldtype": "Data",
+      "label": "Wert (custom_liste)",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 3,
+      "description": "Voller Wert wie in custom_liste gespeichert"
+    },
+    {
+      "fieldname": "label",
+      "fieldtype": "Data",
+      "label": "Anzeige-Label",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 2,
+      "description": "Kurzes Label für Sidebar und Badges"
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "color",
+      "fieldtype": "Select",
+      "label": "Farbe",
+      "options": "\ngray\nblue\namber\npurple\norange\ngreen\nred",
+      "in_list_view": 1,
+      "columns": 1
+    },
+    {
+      "fieldname": "hex_color",
+      "fieldtype": "Data",
+      "label": "Hex-Farbe",
+      "description": "z.B. #6B7280"
+    },
+    {
+      "fieldname": "sort_order",
+      "fieldtype": "Int",
+      "label": "Sortierung",
+      "in_list_view": 1,
+      "columns": 1,
+      "default": "0"
+    },
+    {
+      "fieldname": "section_break_2",
+      "fieldtype": "Section Break",
+      "label": "Konfiguration"
+    },
+    {
+      "fieldname": "is_default",
+      "fieldtype": "Check",
+      "label": "Standard für neue Leads",
+      "default": "0",
+      "description": "Nur eine Phase als Standard markieren"
+    },
+    {
+      "fieldname": "role_owner",
+      "fieldtype": "Data",
+      "label": "Zuständige Rolle",
+      "description": "Setter / Opener / Closer / System"
+    },
+    {
+      "fieldname": "column_break_3",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "allowed_transitions",
+      "fieldtype": "Small Text",
+      "label": "Erlaubte Übergänge",
+      "description": "JSON-Array der erlaubten Ziel-Phasen (phase_value). z.B. [\"20 - Termin gebucht\", \"90 - Abschluss verloren\"]"
+    }
+  ],
+  "naming_rule": "Autoincrement",
+  "permissions": [],
+  "sort_field": "sort_order",
+  "sort_order": "ASC",
+  "track_changes": 0,
+  "creation": "2026-02-08 14:00:00",
+  "modified": "2026-02-08 14:00:00",
+  "modified_by": "Administrator",
+  "owner": "Administrator"
+}

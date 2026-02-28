@@ -1,0 +1,71 @@
+{
+  "name": "CRM Closer Skill",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "document_type": "Setup",
+  "istable": 1,
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "user",
+    "leadtyp",
+    "column_break_1",
+    "skill_level",
+    "active"
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "fieldtype": "Link",
+      "label": "Closer (User)",
+      "options": "User",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 3,
+      "description": "Benutzer, der als Closer agiert"
+    },
+    {
+      "fieldname": "leadtyp",
+      "fieldtype": "Select",
+      "label": "Leadtyp",
+      "options": "\nPferd\nHund\nKatze\nOldtimer\nGeldanlage / Vallue\nKinderpolice\nManagerProtect\nJuraTax\nLOL (Loss of Licence)\nBU (meine-1750)\nbAV\nPilotNow\nKV Mensch Voll\nKV Mensch Zusatz\nSonstiges",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 3,
+      "description": "Leadtyp, fuer den der Closer qualifiziert ist"
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "skill_level",
+      "fieldtype": "Select",
+      "label": "Skill-Level",
+      "options": "\nBasis\nFortgeschritten\nExperte",
+      "default": "Basis",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 2,
+      "description": "Experte > Fortgeschritten > Basis"
+    },
+    {
+      "fieldname": "active",
+      "fieldtype": "Check",
+      "label": "Aktiv",
+      "default": "1",
+      "in_list_view": 1,
+      "columns": 1,
+      "description": "Deaktivieren um Closer temporaer aus dem Routing zu nehmen"
+    }
+  ],
+  "naming_rule": "Autoincrement",
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 0,
+  "creation": "2026-02-08 18:00:00",
+  "modified": "2026-02-08 18:00:00",
+  "modified_by": "Administrator",
+  "owner": "Administrator"
+}

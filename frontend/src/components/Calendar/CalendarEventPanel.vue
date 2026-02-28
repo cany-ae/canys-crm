@@ -247,6 +247,8 @@
           />
         </div>
       </div>
+      <!-- Manual link selection only shown when editing/viewing existing events -->
+      <template v-if="mode !== 'new'">
       <div class="mx-4.5 my-2.5 border-t border-outline-gray-1" />
       <div
         class="flex items-center justify-between px-4.5 py-[7px] text-ink-gray-7"
@@ -302,6 +304,7 @@
           />
         </div>
       </div>
+      </template>
       <div class="mx-4.5 my-2.5 border-t border-outline-gray-1" />
       <Attendee
         class="px-4.5 py-[7px]"
@@ -385,6 +388,7 @@ import {
   CalendarColorMap as colorMap,
   CalendarActiveEvent as activeEvent,
   createDocumentResource,
+  call,
 } from 'frappe-ui'
 import ShortcutTooltip from '@/components/ShortcutTooltip.vue'
 import { ref, computed, watch, h, inject } from 'vue'
@@ -422,10 +426,69 @@ const peoples = computed({
     return _event.value.event_participants || []
   },
   set(list) {
+    const oldEmails = new Set((_event.value.event_participants || []).map(p => p.email))
     _event.value.event_participants = normalizeParticipants(list)
     sync()
+    // Detect newly added participants and check for leads
+    const newParticipants = (list || []).filter(p => p.email && !oldEmails.has(p.email))
+    for (const p of newParticipants) {
+      checkParticipantLeads(p.email)
+    }
   },
 })
+
+const leadSelectionDialog = ref(null)
+
+async function checkParticipantLeads(email) {
+  // Only auto-link if no reference is set yet
+  if (_event.value.referenceDoctype && _event.value.referenceDocname) return
+  try {
+    const leads = await call(
+      'crm.fcrm.doctype.crm_lead.crm_lead.get_leads_for_contact',
+      { email }
+    )
+    if (!leads || !leads.length) return
+    if (leads.length === 1) {
+      // Auto-link the single lead
+      _event.value.referenceDoctype = 'CRM Lead'
+      _event.value.referenceDocname = leads[0].name
+      sync()
+    } else {
+      // Multiple leads - show selection dialog
+      showLeadSelectionDialog(leads, email)
+    }
+  } catch (err) {
+    console.error('Failed to check leads for participant:', err)
+  }
+}
+
+function showLeadSelectionDialog(leads, email) {
+  const actions = leads.map(l => {
+    const parts = [
+      l.custom_leadtyp || 'Kein Leadtyp',
+      l.custom_produktlinie,
+      l.custom_liste,
+      l.creation ? l.creation.substring(0, 10) : '',
+    ].filter(Boolean)
+    const label = parts.join(' · ') || l.name
+    return {
+      label: label,
+      variant: 'outline',
+      onClick: (close) => {
+        _event.value.referenceDoctype = 'CRM Lead'
+        _event.value.referenceDocname = l.name
+        sync()
+        close()
+      },
+    }
+  })
+
+  $dialog({
+    title: __('Lead auswählen'),
+    message: __('Der Kontakt {0} hat mehrere offene Leads:', [email]),
+    actions: actions,
+  })
+}
 
 const title = computed(() => {
   if (props.mode === 'details') return __('Event details')
@@ -563,6 +626,9 @@ function saveEvent() {
   oldEvent.value = { ..._event.value }
   sync()
   emit('save', _event.value)
+  // Note: on_event_created_for_lead is called by Calendar.vue createEvent()
+  // after the event is actually inserted into the database. Do NOT call it here
+  // as the event does not exist yet and it would result in a duplicate call.
 }
 
 function editDetails() {

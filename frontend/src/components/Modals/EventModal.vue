@@ -123,6 +123,8 @@
             <Attendee
               v-model="peoples"
               :validate="validateEmail"
+              :lockedEmails="props.lockedParticipantEmails"
+              :readOnly="props.lockedParticipantEmails.length > 0"
               :error-message="
                 (value) => __('{0} is an invalid email address', [value])
               "
@@ -181,6 +183,7 @@ import {
   TimePicker,
   dayjs,
   Dropdown,
+call,
 } from 'frappe-ui'
 import { globalStore } from '@/stores/global'
 import { validateEmail } from '@/utils'
@@ -206,6 +209,10 @@ const props = defineProps({
   docname: {
     type: String,
     default: '',
+  },
+  lockedParticipantEmails: {
+    type: Array,
+    default: () => [],
   },
 })
 
@@ -250,9 +257,74 @@ const peoples = computed({
     return _event.value.event_participants || []
   },
   set(list) {
-    _event.value.event_participants = normalizeParticipants(list)
+    const oldEmails = new Set(
+      (_event.value.event_participants || []).map((p) => p.email),
+    )
+    const normalized = normalizeParticipants(list)
+    _event.value.event_participants = normalized
+
+    // Check newly added participants for lead auto-linking
+    for (const p of normalized) {
+      if (p.email && !oldEmails.has(p.email)) {
+        checkParticipantLeads(p.email)
+      }
+    }
   },
 })
+
+async function checkParticipantLeads(email) {
+  // Skip if reference is already set (e.g. opened from Lead detail page)
+  if (
+    (_event.value.referenceDoctype && _event.value.referenceDocname) ||
+    (props.doctype && props.docname)
+  ) {
+    return
+  }
+  try {
+    const leads = await call(
+      'crm.fcrm.doctype.crm_lead.crm_lead.get_leads_for_contact',
+      { email },
+    )
+    if (!leads || !leads.length) return
+    if (leads.length === 1) {
+      // Single lead: auto-link silently
+      _event.value.referenceDoctype = 'CRM Lead'
+      _event.value.referenceDocname = leads[0].name
+    } else {
+      // Multiple leads: show selection dialog
+      showLeadSelectionDialog(leads, email)
+    }
+  } catch (err) {
+    console.error('Failed to check leads for participant:', err)
+  }
+}
+
+function showLeadSelectionDialog(leads, email) {
+  const actions = leads.map((lead) => {
+    const parts = [
+      lead.custom_leadtyp || 'Kein Leadtyp',
+      lead.custom_produktlinie,
+      lead.custom_liste,
+      lead.creation ? lead.creation.substring(0, 10) : '',
+    ].filter(Boolean)
+    const label = parts.join(' · ') || lead.name
+    return {
+      label: label,
+      variant: 'subtle',
+      onClick: (close) => {
+        _event.value.referenceDoctype = 'CRM Lead'
+        _event.value.referenceDocname = lead.name
+        close()
+      },
+    }
+  })
+
+  $dialog({
+    title: __('Lead zuordnen'),
+    message: __('Der Kontakt {0} hat mehrere offene Leads. Bitte wählen:', [email]),
+    actions: actions,
+  })
+}
 
 onMounted(() => {
   if (props.event) {
@@ -350,13 +422,28 @@ function createEvent() {
       all_day: _event.value.isFullDay || false,
       event_type: _event.value.eventType,
       color: _event.value.color,
-      reference_doctype: props.doctype,
-      reference_docname: props.docname,
+      reference_doctype: props.doctype || _event.value.referenceDoctype || '',
+      reference_docname: props.docname || _event.value.referenceDocname || '',
       event_participants: _event.value.event_participants,
     },
     {
       onSuccess: async () => {
         await eventsResource.reload()
+        // Trigger list change if this event is linked to a CRM Lead
+        const refDoctype = props.doctype || _event.value.referenceDoctype
+        const refDocname = props.docname || _event.value.referenceDocname
+        if (refDoctype === 'CRM Lead' && refDocname) {
+          try {
+            await call('crm.fcrm.doctype.crm_lead.crm_lead.on_event_created_for_lead', {
+              lead_name: refDocname,
+              event_date: _event.value.fromDate,
+              event_time: _event.value.fromTime,
+              event_name: _event.value.title,
+            })
+          } catch (err) {
+            console.error('Failed to trigger list change:', err)
+          }
+        }
         show.value = false
       },
     },
@@ -379,8 +466,8 @@ function updateEvent() {
       all_day: _event.value.isFullDay,
       event_type: _event.value.eventType,
       color: _event.value.color,
-      reference_doctype: props.doctype,
-      reference_docname: props.docname,
+      reference_doctype: props.doctype || _event.value.referenceDoctype || '',
+      reference_docname: props.docname || _event.value.referenceDocname || '',
       event_participants: _event.value.event_participants,
     },
     {

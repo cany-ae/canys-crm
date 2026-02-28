@@ -6,6 +6,7 @@ import { allTimeSlots } from '@/components/Calendar/utils'
 
 export const showEventModal = ref(false)
 export const activeEvent = ref(null)
+export const lockedParticipantEmails = ref([])
 
 export function useEvent(doctype, docname) {
   const { getUser } = usersStore()

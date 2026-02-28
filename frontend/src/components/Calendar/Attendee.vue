@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Combobox Input -->
-    <div class="flex items-center w-full text-ink-gray-8 [&>div]:w-full">
+    <div v-if="!props.readOnly" class="flex items-center w-full text-ink-gray-8 [&>div]:w-full">
       <ComboboxRoot
         :model-value="tempSelection"
         :open="showOptions"
@@ -84,9 +84,15 @@
         </template>
         <template #suffix>
           <FeatherIcon
+            v-if="!props.lockedEmails.includes(att.email)"
             class="h-3.5"
             name="x"
             @click.stop="removeValue(att.email)"
+          />
+          <FeatherIcon
+            v-else
+            class="h-3.5 text-ink-gray-3"
+            name="lock"
           />
         </template>
       </Button>
@@ -143,6 +149,14 @@ const props = defineProps({
   existingEmails: {
     type: Array,
     default: () => [],
+  },
+  lockedEmails: {
+    type: Array,
+    default: () => [],
+  },
+  readOnly: {
+    type: Boolean,
+    default: false,
   },
 })
 
@@ -323,6 +337,7 @@ const addValue = (option) => {
 }
 
 const removeValue = (email) => {
+  if (props.lockedEmails.includes(email)) return
   values.value = (values.value || []).filter((a) => a.email !== email)
 }
 
@@ -332,3 +347,4 @@ function setFocus() {
 
 defineExpose({ setFocus })
 </script>
+

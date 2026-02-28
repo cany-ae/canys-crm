@@ -24,7 +24,7 @@
               {{ __('CSV-Datei hierher ziehen') }}
             </p>
             <p class="text-sm text-ink-gray-4 mb-3">
-              {{ __('oder klicken zum Auswaehlen') }}
+              {{ __('oder klicken zum Auswählen') }}
             </p>
             <p class="text-xs text-ink-gray-4">
               {{ __('Unterstuetzte Formate: .csv') }}
@@ -213,7 +213,7 @@
           <Button
             v-if="step === 'results'"
             variant="solid"
-            :label="__('Schliessen')"
+            :label="__('Schließen')"
             @click="closeAndRefresh"
           />
           <Button
@@ -406,7 +406,7 @@ function processFile(file) {
   errorMsg.value = null
 
   if (!file.name.endsWith('.csv')) {
-    errorMsg.value = 'Bitte eine CSV-Datei auswaehlen (.csv)'
+    errorMsg.value = 'Bitte eine CSV-Datei auswählen (.csv)'
     return
   }
 
@@ -487,7 +487,7 @@ function closeAndRefresh() {
 
 function downloadTemplate() {
   const headers = ['Vorname', 'Nachname', 'E-Mail', 'Mobilfunknummer', 'Organisation', 'Status', 'Liste']
-  const example = ['Max', 'Mustermann', 'max@beispiel.de', '+49 170 1234567', 'Musterfirma GmbH', '', 'Liste A']
+  const example = ['Max', 'Mustermann', 'max@beispiel.de', '+49 170 1234567', 'Musterfirma GmbH', '', '10 - Neu ohne Termin']
   const csv = headers.join(';') + '\n' + example.join(';') + '\n'
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)

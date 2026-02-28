@@ -11,6 +11,7 @@ from crm.fcrm.doctype.crm_service_level_agreement.utils import get_sla
 from crm.fcrm.doctype.crm_status_change_log.crm_status_change_log import (
 	add_status_change_log,
 )
+from crm.fcrm.doctype.crm_referral.crm_referral import get_premium_amount
 
 
 
@@ -32,90 +33,31 @@ def _get_allowed_transitions():
         }
 
 
-# ── Cross-Sell Matrix (from BeeSure Masterplanung Kapitel 6) ──────────────
-# Format: leadtyp -> (prio1, prio2, prio3)
-# "(Beispielhafte Prios, die wir jederzeit ändern können müssen)" - PDF S.47
-CROSS_SELL_MATRIX = {
-    "Pferd": (
-        "PrivatSchutz / KV Mensch",
-        "Autoversicherung (Zugfahrzeug)",
-        "Geldanlage / Sparen",
-    ),
-    "Hund": (
-        "PrivatSchutz / KV Mensch",
-        "Sachversicherungen",
-        "Geldanlage / Sparen",
-    ),
-    "Katze": (
-        "PrivatSchutz / KV Mensch",
-        "Sachversicherungen",
-        "Geldanlage / Sparen",
-    ),
-    "ManagerProtect": (
-        "Firmenversicherungen / KV GF",
-        "bAV",
-        "Sachversicherungen / Tier",
-    ),
-    "bAV": (
-        "KV Mensch / Geldanlage",
-        "Baufinanzierung",
-        "Oldtimer / Spezialversicherungen",
-    ),
-    "Oldtimer": (
-        "Sachversicherungen",
-        "Geldanlage",
-        "Tierkrankenversicherung",
-    ),
-    "Kinderpolice": (
-        "KV Eltern (Mensch)",
-        "Geldanlage",
-        "Sachversicherungen",
-    ),
-    "Geldanlage / Vallue": (
-        "KV Mensch",
-        "bAV / Altersvorsorge",
-        "Sachversicherungen",
-    ),
-    "JuraTax": (
-        "Firmenversicherungen / D&O",
-        "bAV",
-        "KV Mensch",
-    ),
-    "LOL (Loss of Licence)": (
-        "BU / Berufsunfaehigkeit",
-        "KV Mensch",
-        "Geldanlage",
-    ),
-    "BU (meine-1750)": (
-        "KV Mensch",
-        "Geldanlage / Altersvorsorge",
-        "Sachversicherungen",
-    ),
-    "PilotNow": (
-        "LOL / Lizenzverlust",
-        "KV Mensch",
-        "Geldanlage",
-    ),
-    "KV Mensch Voll": (
-        "Geldanlage / Altersvorsorge",
-        "BU / Berufsunfaehigkeit",
-        "Sachversicherungen",
-    ),
-    "KV Mensch Zusatz": (
-        "KV Mensch Voll",
-        "Geldanlage",
-        "Sachversicherungen",
-    ),
-}
+# ── Cross-Sell Matrix ──────────────────────────────────────────────────────
+# Cross-Sell-Regeln werden jetzt aus dem Doctype "CRM Cross Sell Einstellungen"
+# gelesen. Konfiguration unter: /app/crm-cross-sell-einstellungen
+from crm.fcrm.doctype.crm_cross_sell_einstellungen.crm_cross_sell_einstellungen import get_cross_sell_for_leadtyp
 
 
 # Gamification points
-def _try_award_points(user, action_type):
+def _try_award_points(user, action_type, lead_name=None):
+    """Gamification: Punkte vergeben (Masterplanung 9.8).
+    Nur 4 Aktionen: erstkontakt, followup_puenktlich, termin_erschienen, weiterleitung_qualifiziert."""
     try:
-        from crm.api.gamification import award_gamification_points
-        award_gamification_points(user, action_type)
+        if action_type == 'erstkontakt':
+            from crm.api.gamification import award_erstkontakt
+            award_erstkontakt(user, lead_name)
+        elif action_type == 'followup_puenktlich':
+            from crm.api.gamification import award_followup_puenktlich
+            award_followup_puenktlich(user, lead_name)
+        elif action_type == 'termin_erschienen':
+            from crm.api.gamification import award_termin_erschienen
+            award_termin_erschienen(user, lead_name)
+        elif action_type == 'weiterleitung_qualifiziert':
+            from crm.api.gamification import award_weiterleitung_qualifiziert
+            award_weiterleitung_qualifiziert(user, lead_name)
     except Exception:
-        frappe.log_error("Gamification award failed: user={}, action={}".format(user, action_type))
+        pass
 
 class CRMLead(Document):
 	# begin: auto-generated types
@@ -222,7 +164,7 @@ class CRMLead(Document):
 			self.assign_agent(self.lead_owner)
 		self._create_initial_status_update()
 		# Gamification: award points for lead creation
-		_try_award_points(frappe.session.user, "lead_created")
+		# Gamification: Erstkontakt-Punkte werden bei erster Aktion vergeben, nicht bei Erstellung
 		self.auto_link_contact()
 
 	def auto_link_contact(self):
@@ -352,10 +294,11 @@ class CRMLead(Document):
 
 
 	def auto_populate_cross_sell(self):
-		"""Auto-populate cross-sell suggestions based on Leadtyp."""
+		"""Auto-populate cross-sell suggestions based on Leadtyp.
+		Reads rules from CRM Cross Sell Einstellungen doctype."""
 		if not self.custom_leadtyp:
 			return
-		matrix = CROSS_SELL_MATRIX.get(self.custom_leadtyp)
+		matrix = get_cross_sell_for_leadtyp(self.custom_leadtyp)
 		if not matrix:
 			return
 		prio1, prio2, prio3 = matrix
@@ -368,14 +311,18 @@ class CRMLead(Document):
 
 
 	def refresh_cross_sell_for_leadtyp(self):
-		"""Force-refresh cross-sell suggestions when Leadtyp changes."""
+		"""Force-refresh cross-sell suggestions when Leadtyp changes.
+		Reads rules from CRM Cross Sell Einstellungen doctype."""
 		if not self.custom_leadtyp:
 			self.custom_cross_sell_prio1_produkt = ""
 			self.custom_cross_sell_prio2_produkt = ""
 			self.custom_cross_sell_prio3_produkt = ""
 			return
-		matrix = CROSS_SELL_MATRIX.get(self.custom_leadtyp)
+		matrix = get_cross_sell_for_leadtyp(self.custom_leadtyp)
 		if not matrix:
+			self.custom_cross_sell_prio1_produkt = ""
+			self.custom_cross_sell_prio2_produkt = ""
+			self.custom_cross_sell_prio3_produkt = ""
 			return
 		prio1, prio2, prio3 = matrix
 		self.custom_cross_sell_prio1_produkt = prio1
@@ -881,7 +828,7 @@ def _update_latest_appointment_status(lead_name, new_status):
 
 
 def _create_appointment_from_action(lead_name, data, action_context):
-    """Create a CRM Appointment record when a termin action occurs.
+    """Create a CRM Appointment record AND a linked Frappe Event when a termin action occurs.
 
     Args:
         lead_name: CRM Lead name
@@ -899,21 +846,135 @@ def _create_appointment_from_action(lead_name, data, action_context):
         apt.quelle = action_context.get("quelle") or "Schnellaktion"
         if action_context.get("notiz") or data.get("termin_notiz"):
             apt.notiz = action_context.get("notiz") or data.get("termin_notiz")
-        # Set time fields if provided
-        if action_context.get("termin_zeit_von"):
-            apt.termin_zeit_von = action_context["termin_zeit_von"]
-        elif data.get("termin_zeit_von"):
-            apt.termin_zeit_von = data["termin_zeit_von"]
-        if action_context.get("termin_zeit_bis"):
-            apt.termin_zeit_bis = action_context["termin_zeit_bis"]
-        elif data.get("termin_zeit_bis"):
-            apt.termin_zeit_bis = data["termin_zeit_bis"]
+        # Set time fields if provided (validate format to prevent garbage microsecond values)
+        import re as _re_apt
+        def _valid_time(t):
+            if not t:
+                return None
+            t_str = str(t)
+            if _re_apt.match(r"^\d{1,2}:\d{2}(:\d{2})?$", t_str):
+                return t_str
+            return None
+
+        zeit_von = _valid_time(action_context.get("termin_zeit_von")) or _valid_time(data.get("termin_zeit_von"))
+        zeit_bis = _valid_time(action_context.get("termin_zeit_bis")) or _valid_time(data.get("termin_zeit_bis"))
+        if zeit_von:
+            apt.termin_zeit_von = zeit_von
+        if zeit_bis:
+            apt.termin_zeit_bis = zeit_bis
         apt.flags.ignore_permissions = True
         apt.flags.skip_lead_sync = True  # Caller manages lead fields
         apt.insert(ignore_permissions=True)
+
+        # ── Also create a Frappe Event linked to this CRM Lead ──────────
+        event_name = _create_event_for_appointment(lead_name, apt, action_context, data)
+        if event_name:
+            # Link the Event back to the CRM Appointment
+            frappe.db.set_value("CRM Appointment", apt.name, "event_link", event_name, update_modified=False)
+
         return apt.name
     except Exception:
         frappe.log_error("Failed to create CRM Appointment for lead {0}".format(lead_name))
+        return None
+
+
+def _create_event_for_appointment(lead_name, appointment, action_context, data):
+    """Create a Frappe Event document linked to a CRM Lead for the given appointment.
+
+    Sets frappe.flags.skip_event_to_lead_sync to prevent the sync_event_to_lead
+    hook from creating a duplicate CRM Appointment or redundantly updating the lead.
+
+    Args:
+        lead_name: CRM Lead name (e.g. CRM-LEAD-2026-00039)
+        appointment: The already-inserted CRM Appointment doc
+        action_context: dict with termin details
+        data: original action data dict
+    Returns:
+        Event name (str) on success, None on failure
+    """
+    try:
+        from datetime import datetime, timedelta
+        from frappe.utils import get_time
+
+        termin_datum = str(appointment.termin_datum)
+        zeit_von = appointment.termin_zeit_von
+        zeit_bis = appointment.termin_zeit_bis
+
+        # Build starts_on datetime
+        if zeit_von:
+            t_von = get_time(zeit_von)
+            starts_on = datetime.strptime(termin_datum, "%Y-%m-%d").replace(
+                hour=t_von.hour, minute=t_von.minute, second=t_von.second
+            )
+        else:
+            # No time provided: default to 09:00
+            starts_on = datetime.strptime(termin_datum, "%Y-%m-%d").replace(hour=9, minute=0)
+
+        # Build ends_on datetime
+        if zeit_bis:
+            t_bis = get_time(zeit_bis)
+            ends_on = datetime.strptime(termin_datum, "%Y-%m-%d").replace(
+                hour=t_bis.hour, minute=t_bis.minute, second=t_bis.second
+            )
+        else:
+            # Default: starts_on + 1 hour
+            ends_on = starts_on + timedelta(hours=1)
+
+        # Build descriptive subject
+        lead_display = lead_name
+        try:
+            lead_display = frappe.db.get_value("CRM Lead", lead_name, "lead_name") or lead_name
+        except Exception:
+            pass
+        termin_typ = appointment.typ or "Termin"
+        subject = "{0} - {1}".format(termin_typ, lead_display)
+
+        # Build description
+        berater = appointment.berater or frappe.session.user
+        desc_parts = []
+        desc_parts.append("Lead: {0}".format(lead_name))
+        desc_parts.append("Berater: {0}".format(berater))
+        desc_parts.append("Typ: {0}".format(termin_typ))
+        desc_parts.append("Quelle: {0}".format(appointment.quelle or ""))
+        if appointment.notiz:
+            desc_parts.append("Notiz: {0}".format(appointment.notiz))
+        description = "<br>".join(desc_parts)
+
+        # Set flag to prevent sync_event_to_lead from firing for this Event
+        frappe.flags.skip_event_to_lead_sync = True
+        try:
+            event = frappe.new_doc("Event")
+            event.subject = subject
+            event.starts_on = starts_on
+            event.ends_on = ends_on
+            event.event_type = "Private"
+            event.status = "Open"
+            event.reference_doctype = "CRM Lead"
+            event.reference_docname = lead_name
+            event.description = description
+
+            # Add Berater as Event Participant (if valid user)
+            if berater and frappe.db.exists("User", berater):
+                event.append("event_participants", {
+                    "reference_doctype": "User",
+                    "reference_docname": berater,
+                    "email": berater,
+                })
+
+            event.flags.ignore_permissions = True
+            event.insert(ignore_permissions=True)
+            return event.name
+        finally:
+            # Always clear the flag so subsequent Event operations are not affected
+            frappe.flags.skip_event_to_lead_sync = False
+
+    except Exception as e:
+        frappe.log_error(
+            title="Event creation from CRM Appointment failed",
+            message="Lead: {0}, Appointment: {1}, Error: {2}".format(
+                lead_name, appointment.name if appointment else "N/A", str(e)[:200]
+            )
+        )
         return None
 
 
@@ -932,6 +993,8 @@ def execute_lead_action(lead_name, action, data=None):
 		frappe.throw(_("Keine Berechtigung"), frappe.PermissionError)
 
 	lead = frappe.get_doc("CRM Lead", lead_name)
+	# Merke altes Follow-up-Datum fuer Gamification
+	lead._old_naechster_kontakt = lead.custom_naechster_kontakt
 	old_liste = lead.custom_liste or ""
 	now = frappe.utils.now_datetime()
 	today = frappe.utils.today()
@@ -951,6 +1014,18 @@ def execute_lead_action(lead_name, action, data=None):
 		termin_zeit_von = data.get("termin_zeit_von", "")
 		termin_zeit_bis = data.get("termin_zeit_bis", "")
 		from_vorschlag = data.get("from_vorschlag", False)
+		# Store time on lead for list display
+		if termin_zeit_von:
+			# Validate and normalize time format (HH:MM or HH:MM:SS)
+			import re as _re_time
+			if _re_time.match(r"^\d{1,2}:\d{2}(:\d{2})?$", str(termin_zeit_von)):
+				lead.custom_termin_zeit_von = termin_zeit_von
+			else:
+				lead.custom_termin_zeit_von = None
+		else:
+			lead.custom_termin_zeit_von = None
+		# Store lead email for appointment (for reminders)
+		termin_email = data.get("termin_email", "")
 		# Intelligent Closer routing: use provided berater, or auto-assign
 		termin_berater = data.get("termin_berater")
 		if from_vorschlag and termin_zeit_von:
@@ -993,10 +1068,15 @@ def execute_lead_action(lead_name, action, data=None):
 			"status": "Geplant",
 			"quelle": "Vorschlag" if from_vorschlag else "Schnellaktion",
 			"notiz": data.get("termin_notiz"),
-			"termin_zeit_von": termin_zeit_von,
-			"termin_zeit_bis": termin_zeit_bis,
+			"termin_zeit_von": termin_zeit_von if termin_zeit_von and _re_time.match(r"^\d{1,2}:\d{2}(:\d{2})?$", str(termin_zeit_von)) else None,
+			"termin_zeit_bis": termin_zeit_bis if termin_zeit_bis and _re_time.match(r"^\d{1,2}:\d{2}(:\d{2})?$", str(termin_zeit_bis)) else None,
+			"termin_email": termin_email,
 		}
-		deferred_points = "termin_booked"
+		# Gamification: Follow-up puenktlich erledigt ODER Erstkontakt-Reaktionszeit
+		if lead._old_naechster_kontakt:
+			deferred_points = "followup_puenktlich"
+		else:
+			deferred_points = "erstkontakt"
 
 	elif action == "followup_setzen":
 		lead.custom_naechster_kontakt = data.get("naechster_kontakt")
@@ -1010,7 +1090,9 @@ def execute_lead_action(lead_name, action, data=None):
 		lead.status = "Rückruf geplant"
 		comment_parts.append("Follow-up gesetzt: {0} ({1})".format(
 			lead.custom_naechster_kontakt, lead.custom_followup_grund))
-		deferred_points = "followup_set"
+		# Gamification: Wenn ein altes Follow-up pünktlich erledigt wurde, Punkte vergeben
+		if lead._old_naechster_kontakt:
+			deferred_points = "followup_puenktlich"
 
 	elif action == "abschluss_gewonnen":
 		lead.custom_abschluss_datum = data.get("abschluss_datum") or today
@@ -1022,7 +1104,7 @@ def execute_lead_action(lead_name, action, data=None):
 		lead.custom_letzter_kontakt = now
 		comment_parts.append("Abschluss gewonnen: {0} (Beitrag: {1})".format(
 			lead.custom_abschluss_produkt, lead.custom_abschluss_beitrag))
-		deferred_points = "abschluss_gewonnen"
+		# Gamification: Abschluss wird ueber Badges belohnt, nicht ueber Punkte
 		deferred_relationship = True
 
 	elif action == "abschluss_verloren":
@@ -1035,7 +1117,7 @@ def execute_lead_action(lead_name, action, data=None):
 		lead.status = "Kein Interesse"
 		comment_parts.append("Abschluss verloren: {0}".format(
 			lead.custom_abschluss_verloren_grund))
-		deferred_points = "abschluss_verloren"
+		# Gamification: Kein Punkteabzug fuer verlorene Abschluesse
 
 	elif action == "an_spezialist_weiterleiten":
 		lead.custom_an_spezialist_weitergeleitet = 1
@@ -1069,9 +1151,20 @@ def execute_lead_action(lead_name, action, data=None):
 				if hasattr(lead, prio_field):
 					setattr(lead, prio_field, "Weiterleitung erstellt")
 			if cross_sell_prio:
-				deferred_points = "cross_sell_angesprochen"
+				pass  # Gamification: Cross-Sell Punkte bei Qualifizierung, nicht bei Weiterleitung
 		except Exception as e:
 			frappe.log_error(f"CRM Referral creation failed: {e}", "CRM Referral Error")
+		# Notify the specialist about the new lead referral
+		spezialist_user = data.get("spezialist_user", "")
+		if spezialist_user:
+			_create_crm_notification(
+				from_user=frappe.session.user,
+				to_user=spezialist_user,
+				notification_type="Task",
+				message=f"Neuer Lead zur Qualifizierung: {lead.lead_name or lead_name} ({lead.custom_spezialist_typ})",
+				reference_doctype="CRM Lead",
+				reference_name=lead_name,
+			)
 
 	elif action == "termin_bestaetigen":
 		lead.custom_termin_status = "Bestätigt"
@@ -1092,6 +1185,7 @@ def execute_lead_action(lead_name, action, data=None):
 		comment_parts.append("Termin durchgeführt am {0}".format(lead.custom_termin_datum))
 		# Update latest CRM Appointment status
 		_update_latest_appointment_status(lead_name, "Durchgeführt")
+		deferred_points = "termin_erschienen"  # Punkte fuer durchgefuehrten Termin
 
 	elif action == "termin_noshow":
 		lead.custom_termin_status = "No-Show"
@@ -1109,8 +1203,7 @@ def execute_lead_action(lead_name, action, data=None):
 		comment_parts.append("No-Show: Termin am {0} nicht wahrgenommen".format(lead.custom_termin_datum))
 		# Update latest CRM Appointment status
 		_update_latest_appointment_status(lead_name, "No-Show")
-		# Send no-show notification to lead owner and closer
-		_handle_no_show_notification(lead_name)
+
 
 	elif action == "termin_absagen":
 		lead.custom_termin_status = "Abgesagt"
@@ -1136,6 +1229,9 @@ def execute_lead_action(lead_name, action, data=None):
 		if neues_datum:
 			lead.custom_termin_datum = neues_datum
 			lead.custom_termin_status = "Geplant"
+			# Update time on lead if provided
+			neue_zeit_von = data.get("termin_zeit_von", "")
+			lead.custom_termin_zeit_von = neue_zeit_von or None
 		lead.custom_letzter_kontakt = now
 		if data.get("termin_notiz"):
 			lead.custom_termin_notiz = data["termin_notiz"]
@@ -1157,16 +1253,13 @@ def execute_lead_action(lead_name, action, data=None):
 	elif action == "spezialist_qualifiziert":
 		lead.custom_spezialist_status = "Qualifiziert"
 		lead.custom_letzter_kontakt = now
-		# Set premium based on specialist type
-		praemien_map = {
-			"KV Mensch": 50.0,
-			"bAV": 75.0,
-			"Finanz": 40.0,
-			"Sach": 30.0,
-			"Sonstiges": 25.0,
-		}
+		# Set premium based on specialist type + mitarbeiter_kategorie (from CRM Prämien Einstellungen)
 		if not lead.custom_veredelungspraemie:
-			lead.custom_veredelungspraemie = praemien_map.get(lead.custom_spezialist_typ, 25.0)
+			ueberleiter = lead.custom_spezialist_user or frappe.session.user
+			lead.custom_veredelungspraemie = get_premium_amount(
+				lead.custom_spezialist_typ or "Sonstiges",
+				user=ueberleiter
+			)
 		lead.custom_praemie_status = "Berechnet"
 		qualif_notiz = data.get("qualif_notiz", "")
 		comment_parts.append("Spezialist: Lead qualifiziert ({0}){1}".format(
@@ -1188,7 +1281,7 @@ def execute_lead_action(lead_name, action, data=None):
 				ref.save(ignore_permissions=True)
 		except Exception as e:
 			frappe.log_error(f"CRM Referral update (qualifiziert) failed: {e}", "CRM Referral Error")
-		deferred_points = "spezialist_qualifiziert"
+		deferred_points = "weiterleitung_qualifiziert"
 
 	elif action == "spezialist_nicht_qualifiziert":
 		lead.custom_spezialist_status = "Nicht qualifiziert"
@@ -1232,7 +1325,7 @@ def execute_lead_action(lead_name, action, data=None):
 	if deferred_appointment:
 		_create_appointment_from_action(lead_name, data, deferred_appointment)
 	if deferred_points:
-		_try_award_points(frappe.session.user, deferred_points)
+		_try_award_points(frappe.session.user, deferred_points, lead_name=lead_name)
 	if deferred_relationship:
 		_create_relationship_on_close(lead)
 
@@ -1321,6 +1414,22 @@ def create_todo_for_lead(lead_name, description, due_date=None, due_time=None, p
 		"due_date": due_date,
 	}
 
+
+@frappe.whitelist()
+def get_vertriebler_list():
+    """Return list of active Vertriebler (ohne Geschaeftsfuehrer) for Berater dropdown."""
+    users = frappe.get_all(
+        "User",
+        filters={
+            "user_type": "System User",
+            "name": ["not in", ["Administrator", "Guest", "landing-page@api.local"]],
+            "role_profile_name": "Vertriebler",
+            "enabled": 1,
+        },
+        fields=["name as email", "full_name"],
+        order_by="full_name asc",
+    )
+    return [{"email": u.email, "full_name": u.full_name or u.email} for u in users]
 
 @frappe.whitelist()
 def get_next_lead(current_lead, current_phase=None, assigned_to=None):
@@ -1650,14 +1759,26 @@ def process_overdue_followups():
 
 		if not existing:
 			# Create notification
+			fu_subject = f"Follow-up überfällig: {lead.lead_name or lead.name} ({days_overdue} Tage)"
+			fu_body = f"Der Follow-up-Termin für Lead {lead.lead_name or lead.name} war am {lead.custom_naechster_kontakt}. Bitte zeitnah kontaktieren."
 			notification = frappe.new_doc("Notification Log")
 			notification.for_user = notify_user
 			notification.type = "Alert"
 			notification.document_type = "CRM Lead"
 			notification.document_name = lead.name
-			notification.subject = f"Follow-up überfällig: {lead.lead_name or lead.name} ({days_overdue} Tage)"
-			notification.email_content = f"Der Follow-up-Termin für Lead {lead.lead_name or lead.name} war am {lead.custom_naechster_kontakt}. Bitte zeitnah kontaktieren."
+			notification.subject = fu_subject
+			notification.email_content = fu_body
 			notification.insert(ignore_permissions=True)
+
+			# Also create CRM Notification for the CRM frontend bell icon
+			_create_crm_notification(
+				from_user="Administrator",
+				to_user=notify_user,
+				notification_type="Task",
+				message=f"<b>{fu_subject}</b><br>{fu_body}",
+				reference_doctype="CRM Lead",
+				reference_name=lead.name,
+			)
 			notifications_sent += 1
 
 	frappe.db.commit()
@@ -1666,12 +1787,16 @@ def process_overdue_followups():
 
 @frappe.whitelist()
 def get_active_sales_users():
-	"""Return list of active users with CRM Vertrieb role, sorted by name."""
+	"""Gibt aktive Vertriebler aus der Mitarbeiterverwaltung zurück (role_profile_name = 'Vertriebler').
+
+	Nur User die in der Mitarbeiterverwaltung als 'Vertriebler' angelegt wurden, werden für
+	die automatische Lead-Zuweisung (Round-Robin, Skill-basiert, Kapazität) berücksichtigt.
+	Andere User mit CRM-Rollen (Sales, Geschäftsführer, etc.) werden NICHT zugewiesen.
+	"""
 	users = frappe.db.sql("""
-		SELECT DISTINCT u.name, u.full_name
+		SELECT u.name, u.full_name
 		FROM `tabUser` u
-		INNER JOIN `tabHas Role` hr ON hr.parent = u.name
-		WHERE hr.role = 'CRM Vertrieb'
+		WHERE u.role_profile_name = 'Vertriebler'
 		  AND u.enabled = 1
 		  AND u.name NOT IN ('Administrator', 'Guest')
 		ORDER BY u.full_name
@@ -1984,73 +2109,6 @@ def export_praemien_csv(period="month"):
 	frappe.response["filecontent"] = output.getvalue()
 	frappe.response["type"] = "download"
 
-
-@frappe.whitelist()
-def mark_praemie_ausgezahlt(lead_name):
-	"""Mark a lead's premium as paid (Ausgezahlt).
-
-	Only accessible to System Manager role.
-	Adds a comment to the lead for audit trail.
-
-	Args:
-		lead_name: The CRM Lead name (e.g. CRM-LEAD-2026-00057)
-
-	Returns:
-		dict with status and message
-	"""
-	if "System Manager" not in frappe.get_roles():
-		frappe.throw("Keine Berechtigung", frappe.PermissionError)
-
-	if not lead_name:
-		frappe.throw("lead_name ist erforderlich")
-
-	if not frappe.db.exists("CRM Lead", lead_name):
-		frappe.throw(f"Lead {lead_name} existiert nicht", frappe.DoesNotExistError)
-
-	lead = frappe.get_doc("CRM Lead", lead_name)
-
-	current_status = lead.custom_praemie_status or "Offen"
-	if current_status == "Ausgezahlt":
-		return {
-			"status": "already_paid",
-			"message": f"Prämie für {lead_name} ist bereits als Ausgezahlt markiert.",
-		}
-
-	amount = float(lead.custom_veredelungspraemie or 0)
-	if amount <= 0:
-		frappe.throw(f"Lead {lead_name} hat keine Prämie (Betrag: {amount})")
-
-	# Update status
-	frappe.db.set_value("CRM Lead", lead_name, "custom_praemie_status", "Ausgezahlt")
-
-	# Add audit comment
-	spezialist = lead.custom_spezialist_user or "Unbekannt"
-	spezialist_name = ""
-	if spezialist and spezialist != "Unbekannt":
-		spezialist_name = frappe.db.get_value("User", spezialist, "full_name") or spezialist
-
-	comment_text = (
-		f"Prämie als <b>Ausgezahlt</b> markiert.<br>"
-		f"Betrag: <b>{amount:.2f} EUR</b><br>"
-		f"Spezialist: {spezialist_name} ({spezialist})<br>"
-		f"Durch: {frappe.session.user}"
-	)
-	frappe.get_doc({
-		"doctype": "Comment",
-		"comment_type": "Info",
-		"reference_doctype": "CRM Lead",
-		"reference_name": lead_name,
-		"content": comment_text,
-	}).insert(ignore_permissions=True)
-
-	frappe.db.commit()
-
-	return {
-		"status": "success",
-		"message": f"Prämie {amount:.2f} EUR für {lead_name} als Ausgezahlt markiert.",
-	}
-
-
 @frappe.whitelist()
 def process_termin_reminders():
 	"""Scheduled job (every 15 min): Send termin reminders.
@@ -2175,6 +2233,16 @@ def process_termin_reminders():
 				notification.subject = subject
 				notification.email_content = body
 				notification.insert(ignore_permissions=True)
+
+				# Also create CRM Notification for the CRM frontend bell icon
+				_create_crm_notification(
+					from_user="Administrator",
+					to_user=user,
+					notification_type="Task",
+					message=f"<b>{subject}</b><br>{body}",
+					reference_doctype="CRM Lead",
+					reference_name=lead.name,
+				)
 				reminders_sent += 1
 
 		except Exception as e:
@@ -2264,8 +2332,6 @@ def get_specialist_queue_counts(user=None):
 	if not user:
 		user = frappe.session.user
 
-	is_admin = "System Manager" in frappe.get_roles(user)
-
 	result = {
 		"total": 0,
 		"offen": 0,
@@ -2282,51 +2348,30 @@ def get_specialist_queue_counts(user=None):
 		"Nicht qualifiziert": "nicht_qualifiziert",
 	}
 
-	if is_admin:
-		# System Manager sees all specialist-referred leads
-		status_counts = frappe.db.sql("""
-			SELECT IFNULL(custom_spezialist_status, 'Offen') as status, COUNT(*) as cnt
-			FROM `tabCRM Lead`
-			WHERE custom_an_spezialist_weitergeleitet = 1
-			GROUP BY IFNULL(custom_spezialist_status, 'Offen')
-		""", as_dict=True)
+	# All CRM users see all specialist-referred leads (global overview)
+	status_counts = frappe.db.sql("""
+		SELECT IFNULL(custom_spezialist_status, 'Offen') as status, COUNT(*) as cnt
+		FROM `tabCRM Lead`
+		WHERE custom_an_spezialist_weitergeleitet = 1
+		GROUP BY IFNULL(custom_spezialist_status, 'Offen')
+	""", as_dict=True)
 
-		for row in status_counts:
-			key = status_map.get(row.status)
-			if key:
-				result[key] = row.cnt
+	for row in status_counts:
+		key = status_map.get(row.status)
+		if key:
+			result[key] = row.cnt
 
-		result["total"] = sum(result[k] for k in ["offen", "in_bearbeitung", "qualifiziert", "nicht_qualifiziert"])
+	result["total"] = sum(result[k] for k in ["offen", "in_bearbeitung", "qualifiziert", "nicht_qualifiziert"])
 
-		# my_specialist_leads: where current user is the specialist AND status is active
-		my_count = frappe.db.sql("""
-			SELECT COUNT(*) as cnt
-			FROM `tabCRM Lead`
-			WHERE custom_an_spezialist_weitergeleitet = 1
-			  AND custom_spezialist_user = %(user)s
-			  AND IFNULL(custom_spezialist_status, 'Offen') IN ('Offen', 'In Bearbeitung')
-		""", {"user": user}, as_dict=True)
-		result["my_specialist_leads"] = my_count[0].cnt if my_count else 0
-
-	else:
-		# Regular user: only leads where they are the assigned specialist
-		status_counts = frappe.db.sql("""
-			SELECT IFNULL(custom_spezialist_status, 'Offen') as status, COUNT(*) as cnt
-			FROM `tabCRM Lead`
-			WHERE custom_an_spezialist_weitergeleitet = 1
-			  AND custom_spezialist_user = %(user)s
-			GROUP BY IFNULL(custom_spezialist_status, 'Offen')
-		""", {"user": user}, as_dict=True)
-
-		for row in status_counts:
-			key = status_map.get(row.status)
-			if key:
-				result[key] = row.cnt
-
-		result["total"] = sum(result[k] for k in ["offen", "in_bearbeitung", "qualifiziert", "nicht_qualifiziert"])
-
-		# my_specialist_leads = active leads for this user
-		result["my_specialist_leads"] = result["offen"] + result["in_bearbeitung"]
+	# my_specialist_leads: leads where current user is the assigned specialist
+	my_count = frappe.db.sql("""
+		SELECT COUNT(*) as cnt
+		FROM `tabCRM Lead`
+		WHERE custom_an_spezialist_weitergeleitet = 1
+		  AND custom_spezialist_user = %(user)s
+		  AND IFNULL(custom_spezialist_status, 'Offen') IN ('Offen', 'In Bearbeitung')
+	""", {"user": user}, as_dict=True)
+	result["my_specialist_leads"] = my_count[0].cnt if my_count else 0
 
 	return result
 
@@ -2418,8 +2463,33 @@ def _warning_cache_check(cache_key, ttl_seconds=14400):
     return False
 
 
+def _create_crm_notification(from_user, to_user, notification_type, message, reference_doctype=None, reference_name=None):
+    """Create a CRM Notification visible in the CRM frontend bell icon.
+
+    This bridges Frappe's Notification Log to the CRM frontend notification panel.
+    The CRM frontend only displays CRM Notification docs, not Notification Log entries.
+    """
+    try:
+        doc = frappe.get_doc({
+            "doctype": "CRM Notification",
+            "from_user": from_user or "Administrator",
+            "to_user": to_user,
+            "type": notification_type,
+            "message": message,
+            "notification_text": message,
+            "notification_type_doctype": reference_doctype or "",
+            "notification_type_doc": reference_name or "",
+            "reference_doctype": reference_doctype or "",
+            "reference_name": reference_name or "",
+            "read": 0,
+        })
+        doc.insert(ignore_permissions=True)
+    except Exception as e:
+        frappe.log_error(f"CRM Notification Error: {e}")
+
+
 def _send_warning_notification(for_user, document_name, subject, body):
-    """Create a Notification Log entry and publish realtime event."""
+    """Create a Notification Log entry, CRM Notification, and publish realtime event."""
     notification = frappe.new_doc("Notification Log")
     notification.for_user = for_user
     notification.type = "Alert"
@@ -2428,6 +2498,16 @@ def _send_warning_notification(for_user, document_name, subject, body):
     notification.subject = subject
     notification.email_content = body
     notification.insert(ignore_permissions=True)
+
+    # Also create CRM Notification for the CRM frontend bell icon
+    _create_crm_notification(
+        from_user="Administrator",
+        to_user=for_user,
+        notification_type="Task",
+        message=f"<b>{subject}</b><br>{body}",
+        reference_doctype="CRM Lead",
+        reference_name=document_name if not document_name.startswith(("noshow-", "fu-stau-", "capacity-")) else None,
+    )
 
     # Push realtime notification for bell icon update
     frappe.publish_realtime(
@@ -2439,14 +2519,12 @@ def _send_warning_notification(for_user, document_name, subject, body):
 
 @frappe.whitelist()
 def process_crm_warnings():
-    """Scheduled job (every 30 min): CRM Fruehwarnsystem.
+    """Scheduled job (every 30 min): CRM Frühwarnsystem.
 
-    Checks 5 warning conditions and sends Frappe notifications:
+    Checks 3 warning conditions and sends Frappe + CRM notifications:
     A. Follow-up überfällig (per lead owner) - once/lead/day
-    B. Keine Reaktion auf neuen Lead (per lead owner) - after 2h, then every 4h
     C. No-Show Warnung (per admin) - once/day/user
     D. Follow-up Stau (per admin) - once/day/user
-    E. Kapazitaetswarnung (per admin) - once/day/user
     """
     from frappe.utils import now_datetime, date_diff, time_diff_in_hours
     import json
@@ -2487,68 +2565,6 @@ def process_crm_warnings():
                 warnings_sent += 1
     except Exception as e:
         frappe.log_error(title="CRM Warning Error: Follow-up Overdue", message=str(e))
-
-    # ── B. Keine Reaktion auf neuen Lead ──────────────────────────────────
-    try:
-        # Leads created > 2 hours ago with 0 contact attempts, not in closed phases
-        no_reaction_leads = frappe.db.sql("""
-            SELECT l.name, l.lead_name, l.lead_owner, l.creation,
-                   l.custom_kontaktversuche, l.custom_liste, l._assign
-            FROM `tabCRM Lead` l
-            WHERE TIMESTAMPDIFF(HOUR, l.creation, %(now)s) >= 2
-              AND (l.custom_kontaktversuche IS NULL OR l.custom_kontaktversuche = 0)
-              AND l.custom_liste NOT IN ('80 - Abschluss gewonnen', '90 - Abschluss verloren')
-        """, {"now": now}, as_dict=True)
-
-        for lead in no_reaction_leads:
-            notify_user = _get_lead_responsible_user(lead.name, lead.lead_owner)
-            if not notify_user:
-                continue
-
-            hours_waiting = time_diff_in_hours(now, lead.creation)
-            hours_waiting_int = int(hours_waiting)
-
-            # Frequency control: first at 2h, then every 4h
-            # Use cache with 4h TTL to avoid spam
-            cache_key = f"no_reaction:{lead.name}:{notify_user}:{today}"
-            subject_prefix = "WARNUNG: Keine Reaktion"
-
-            # Check if sent in last 4 hours via cache
-            if _warning_cache_check(cache_key, ttl_seconds=14400):
-                continue
-
-            # Also check notification log to be safe
-            if _warning_already_sent_today(notify_user, lead.name, subject_prefix):
-                # Allow re-send only if > 4h since last notification
-                last_notif = frappe.db.sql("""
-                    SELECT creation FROM `tabNotification Log`
-                    WHERE for_user = %(user)s
-                      AND document_name = %(doc)s
-                      AND subject LIKE %(prefix)s
-                    ORDER BY creation DESC LIMIT 1
-                """, {
-                    "user": notify_user,
-                    "doc": lead.name,
-                    "prefix": f"{subject_prefix}%",
-                }, as_dict=True)
-
-                if last_notif:
-                    hours_since_last = time_diff_in_hours(now, last_notif[0].creation)
-                    if hours_since_last < 4:
-                        continue
-
-            subject = f"{subject_prefix}: {lead.lead_name or lead.name} wartet seit {hours_waiting_int}h"
-            body = (
-                f"Lead <b>{lead.lead_name or lead.name}</b> wartet seit "
-                f"<b>{hours_waiting_int} Stunden</b> auf Erstkontakt.<br>"
-                f"Erstellt am: {lead.creation}<br>"
-                f"Kontaktversuche: 0<br>"
-                f"Bitte umgehend kontaktieren."
-            )
-            _send_warning_notification(notify_user, lead.name, subject, body)
-            warnings_sent += 1
-    except Exception as e:
-        frappe.log_error(title="CRM Warning Error: No Reaction", message=str(e))
 
     # ── C. No-Show Warnung (per Admin/GF) ─────────────────────────────────
     try:
@@ -2636,42 +2652,6 @@ def process_crm_warnings():
     except Exception as e:
         frappe.log_error(title="CRM Warning Error: Follow-up Stau", message=str(e))
 
-    # ── E. Kapazitaetswarnung (per Admin/GF) ──────────────────────────────
-    try:
-        if admin_users:
-            # Count open leads per user (> 25 triggers warning)
-            capacity_stats = frappe.db.sql("""
-                SELECT
-                    COALESCE(l.lead_owner, 'Unbekannt') AS owner,
-                    COUNT(*) AS open_count
-                FROM `tabCRM Lead` l
-                WHERE l.custom_liste NOT IN ('80 - Abschluss gewonnen', '90 - Abschluss verloren')
-                GROUP BY COALESCE(l.lead_owner, 'Unbekannt')
-                HAVING open_count > 25
-            """, as_dict=True)
-
-            for stat in capacity_stats:
-                if not stat.owner or stat.owner == 'Unbekannt':
-                    continue
-
-                owner_name = frappe.db.get_value("User", stat.owner, "full_name") or stat.owner
-                subject_prefix = "WARNUNG: Kapazitaet"
-                dedup_key = f"capacity-{stat.owner}"
-
-                for admin in admin_users:
-                    if not _warning_already_sent_today(admin, dedup_key, subject_prefix):
-                        subject = f"{subject_prefix}: {owner_name} hat {stat.open_count} offene Leads"
-                        body = (
-                            f"<b>Kapazitaetswarnung:</b> {owner_name} ({stat.owner}) hat "
-                            f"<b>{stat.open_count} offene Leads</b> (nicht in Abschluss-Phase).<br>"
-                            f"Schwellwert: 25 Leads<br>"
-                            f"Bitte pruefen und ggf. Leads umverteilen."
-                        )
-                        _send_warning_notification(admin, dedup_key, subject, body)
-                        warnings_sent += 1
-    except Exception as e:
-        frappe.log_error(title="CRM Warning Error: Capacity", message=str(e))
-
     frappe.db.commit()
     return f"CRM Warnings: {warnings_sent} warnings sent"
 
@@ -2757,6 +2737,11 @@ def sync_event_to_lead(doc, method):
 	"""
 	if doc.reference_doctype != "CRM Lead" or not doc.reference_docname:
 		return
+
+	# Skip if Event was created from _create_appointment_from_action
+	# to prevent duplicate CRM Appointment creation and redundant lead updates
+	if getattr(frappe.flags, "skip_event_to_lead_sync", False):
+		return
 	
 	# Run the actual sync asynchronously so it doesn't block Event creation
 	frappe.enqueue(
@@ -2831,6 +2816,11 @@ def _sync_event_to_lead_async(lead_name, event_subject, event_starts_on, event_s
 		lead.custom_termin_datum = event_date
 		lead.custom_termin_typ = termin_typ
 		lead.custom_termin_status = "Geplant"
+		# Store event time on lead for list display
+		if hasattr(event_date, 'strftime') and event_date.hour != 0:
+			lead.custom_termin_zeit_von = event_date.strftime("%H:%M:%S")
+		else:
+			lead.custom_termin_zeit_von = None
 		lead.custom_termin_berater = termin_berater
 		lead.custom_letzter_kontakt = frappe.utils.now_datetime()
 		lead.custom_letzte_kontaktart = "Termin"
@@ -2864,6 +2854,8 @@ def on_event_created_for_lead(lead_name, event_date=None, event_time=None, event
 	termin_datum = event_date or today
 	lead.custom_termin_datum = termin_datum
 	lead.custom_termin_status = "Geplant"
+	# Store event time on lead for list display
+	lead.custom_termin_zeit_von = event_time or None
 
 	# Determine termin type based on current phase
 	current_phase = lead.custom_liste or ""
@@ -2978,63 +2970,6 @@ def get_leads_for_contact(email):
 	)
 	return leads
 
-
-@frappe.whitelist()
-def get_contact_for_lead(lead_name):
-	"""Get the Contact record linked to a CRM Lead (by email)."""
-	lead = frappe.get_doc("CRM Lead", lead_name)
-	email = lead.email
-	if not email:
-		return {}
-
-	contact = frappe.db.get_value("Contact",
-		{"email_id": email},
-		["name", "first_name", "last_name", "email_id"],
-		as_dict=True
-	)
-	return contact or {}
-
-
-@frappe.whitelist()
-def get_lead_attachments(lead_name):
-	"""Get all file attachments for a CRM Lead."""
-	if not lead_name or not frappe.db.exists("CRM Lead", lead_name):
-		frappe.throw("Lead nicht gefunden")
-
-	files = frappe.get_all(
-		"File",
-		filters={
-			"attached_to_doctype": "CRM Lead",
-			"attached_to_name": lead_name,
-			"is_private": ["in", [0, 1]],
-		},
-		fields=["name", "file_name", "file_url", "file_size", "creation", "owner"],
-		order_by="creation desc",
-	)
-	return files
-
-
-@frappe.whitelist()
-def upload_lead_document(lead_name, mark_policenkontrollblatt=False):
-	"""Mark that the Policenkontrollblatt has been uploaded for a lead."""
-	if not lead_name or not frappe.db.exists("CRM Lead", lead_name):
-		frappe.throw("Lead nicht gefunden")
-
-	# Convert string 'true'/'false' from frontend
-	if isinstance(mark_policenkontrollblatt, str):
-		mark_policenkontrollblatt = mark_policenkontrollblatt.lower() in ("true", "1", "yes")
-
-	if mark_policenkontrollblatt:
-		lead = frappe.get_doc("CRM Lead", lead_name)
-		lead.custom_policenkontrollblatt_hochgeladen = 1
-		lead.save(ignore_permissions=True)
-		frappe.db.commit()
-
-	return {"success": True}
-
-
-# ── Setter-Bewertung (Closer rates Setter quality) ───────────────────────
-@frappe.whitelist()
 def rate_setter_quality(lead_name, bewertung, kommentar=None):
     """Rate the setter quality for a lead after closer appointment.
 
@@ -3083,71 +3018,6 @@ def rate_setter_quality(lead_name, bewertung, kommentar=None):
 
 
 # ── No-Show Notification Helper ──────────────────────────────────────────
-def _handle_no_show_notification(lead_name):
-    """Send notification and create follow-up activity after no-show.
-
-    Creates a Notification Log entry for the lead owner and adds
-    a comment with suggested follow-up action.
-
-    Called automatically when a termin is marked as No-Show.
-    """
-    try:
-        lead = frappe.get_doc("CRM Lead", lead_name)
-        owner = lead.lead_owner or lead.owner
-
-        lead_display = lead.lead_name or lead.first_name or lead_name
-        last_name = lead.last_name or ""
-
-        # Create notification for lead owner
-        frappe.get_doc({
-            "doctype": "Notification Log",
-            "for_user": owner,
-            "type": "Alert",
-            "document_type": "CRM Lead",
-            "document_name": lead_name,
-            "subject": f"No-Show: {lead_display} - Nachfassen erforderlich",
-            "email_content": (
-                f"Der Kunde {lead_display} {last_name} ist zum Termin nicht erschienen. "
-                f"Bitte zeitnah nachfassen."
-            )
-        }).insert(ignore_permissions=True)
-
-        # Also notify the assigned closer (termin_berater) if different from owner
-        closer = lead.custom_termin_berater
-        if closer and closer != owner:
-            frappe.get_doc({
-                "doctype": "Notification Log",
-                "for_user": closer,
-                "type": "Alert",
-                "document_type": "CRM Lead",
-                "document_name": lead_name,
-                "subject": f"No-Show: {lead_display} - Nachfassen erforderlich",
-                "email_content": (
-                    f"Der Kunde {lead_display} {last_name} ist zum Termin nicht erschienen. "
-                    f"Bitte zeitnah nachfassen."
-                )
-            }).insert(ignore_permissions=True)
-
-        # Add comment with suggested action
-        frappe.get_doc({
-            "doctype": "Comment",
-            "comment_type": "Info",
-            "reference_doctype": "CRM Lead",
-            "reference_name": lead_name,
-            "content": (
-                "No-Show: Kunde ist nicht zum Termin erschienen. "
-                "Empfehlung: Zeitnah Kontakt aufnehmen und neuen Termin vereinbaren."
-            )
-        }).insert(ignore_permissions=True)
-        frappe.db.commit()
-
-    except Exception as e:
-        frappe.log_error(
-            title="CRM No-Show Notification Error",
-            message=f"Lead: {lead_name}, Error: {str(e)[:500]}"
-        )
-
-
 @frappe.whitelist()
 def update_cross_sell_with_reason(lead_name, prio, status, grund=None):
     """Update cross-sell status with optional reason for 'bewusst nicht angesprochen'.
@@ -3262,16 +3132,17 @@ def _pick_available_berater(termin_datum, zeit_von, zeit_bis, lead_name=None, le
     if slot_end <= slot_start:
         slot_end = slot_start + 60
 
-    role_users = frappe.get_all(
-        "Has Role",
-        filters={"role": "CRM Vertrieb", "parenttype": "User"},
-        fields=["parent"],
+    vertriebler_data = frappe.get_all(
+        "User",
+        filters={
+            "user_type": "System User",
+            "name": ["not in", ["Administrator", "Guest", "landing-page@api.local"]],
+            "role_profile_name": "Vertriebler",
+            "enabled": 1,
+        },
+        fields=["name"],
     )
-    active_users = [
-        ru.parent for ru in role_users
-        if ru.parent not in ("Administrator", "Guest")
-        and frappe.db.get_value("User", ru.parent, "enabled")
-    ]
+    active_users = [u.name for u in vertriebler_data]
 
     if not active_users:
         return None
@@ -3381,20 +3252,18 @@ def get_termin_vorschlaege(duration_minutes=60, lead_name=None, termin_typ="Erst
         except Exception:
             pass
 
-    # 1. Get all active CRM Vertrieb users
-    role_users = frappe.get_all(
-        "Has Role",
-        filters={"role": "CRM Vertrieb", "parenttype": "User"},
-        fields=["parent"],
+    # 1. Get all active Vertriebler (via role_profile, not role - to get only real sales staff)
+    vertriebler_data = frappe.get_all(
+        "User",
+        filters={
+            "user_type": "System User",
+            "name": ["not in", ["Administrator", "Guest", "landing-page@api.local"]],
+            "role_profile_name": "Vertriebler",
+            "enabled": 1,
+        },
+        fields=["name"],
     )
-    active_users = []
-    for ru in role_users:
-        user_email = ru.parent
-        if user_email in ("Administrator", "Guest"):
-            continue
-        enabled = frappe.db.get_value("User", user_email, "enabled")
-        if enabled:
-            active_users.append(user_email)
+    active_users = [u.name for u in vertriebler_data]
 
     # If specific berater requested, validate and filter
     berater_full_name = None
@@ -3568,6 +3437,51 @@ def get_termin_vorschlaege(duration_minutes=60, lead_name=None, termin_typ="Erst
     return result
 
 
+
+
+@frappe.whitelist()
+def get_angebot_email_vorlage(lead_name):
+    """Return the Angebot email template with placeholders resolved."""
+    import re as _re
+
+    lead = frappe.get_doc("CRM Lead", lead_name)
+
+    try:
+        settings = frappe.get_single("CRM Angebot Vorlage")
+        betreff = settings.email_betreff or "Ihr persönliches Angebot"
+        inhalt = settings.email_inhalt or ""
+    except Exception:
+        betreff = "Ihr persönliches Angebot – {lead_name}"
+        inhalt = "<p>Sehr geehrte/r {lead_name},</p><p>anbei finden Sie Ihr persönliches Angebot.</p><p>Mit freundlichen Grüßen<br>{mitarbeiter_name}</p>"
+
+    mitarbeiter = frappe.db.get_value("User", frappe.session.user, "full_name") or frappe.session.user
+
+    lead_display = lead.lead_name or ((lead.first_name or "") + " " + (lead.last_name or "")).strip()
+
+    replacements = {
+        "{lead_name}": lead_display,
+        "{mitarbeiter_name}": mitarbeiter,
+        "{leadtyp}": lead.custom_leadtyp or "",
+        "{firma}": lead.organization or "",
+    }
+
+    for key, val in replacements.items():
+        betreff = betreff.replace(key, val.strip())
+        inhalt = inhalt.replace(key, val.strip())
+
+    # Strip HTML tags for plain text version
+    inhalt_plain = _re.sub(r'<br\s*/?>', '\n', inhalt)
+    inhalt_plain = _re.sub(r'</p>\s*<p>', '\n\n', inhalt_plain)
+    inhalt_plain = _re.sub(r'<[^>]+>', '', inhalt_plain)
+    inhalt_plain = inhalt_plain.strip()
+
+    return {
+        "betreff": betreff.strip(),
+        "inhalt_html": inhalt,
+        "inhalt_plain": inhalt_plain,
+        "empfaenger": lead.email or "",
+    }
+
 @frappe.whitelist()
 def get_lead_preview(lead_name):
     """Return key fields for a lead hover popup. Fast single-read."""
@@ -3591,6 +3505,12 @@ def get_lead_preview(lead_name):
         "custom_letzte_kontaktart", "custom_letzter_kontakt",
         "custom_tierart", "custom_tiername", "organization",
         "custom_zustaendige_rolle", "custom_kontaktversuche",
+        "custom_erreichbarkeit", "custom_followup_grund",
+        "custom_termin_datum", "custom_termin_zeit_von", "custom_termin_status",
+        "custom_termin_typ", "custom_termin_berater",
+        "custom_cross_sell_prio1_produkt", "custom_cross_sell_prio1_status",
+        "custom_cross_sell_prio2_produkt", "custom_cross_sell_prio2_status",
+        "custom_cross_sell_prio3_produkt", "custom_cross_sell_prio3_status",
     ]
     lead_data = frappe.db.get_value("CRM Lead", lead_name, fields, as_dict=True)
     if not lead_data:
@@ -3599,6 +3519,12 @@ def get_lead_preview(lead_name):
     owner_name = ""
     if lead_data.get("lead_owner"):
         owner_name = frappe.db.get_value("User", lead_data["lead_owner"], "full_name") or lead_data["lead_owner"]
+
+    # Resolve Berater full name from lead field
+    termin_berater_name = ""
+    berater_email = lead_data.get("custom_termin_berater") or ""
+    if berater_email:
+        termin_berater_name = frappe.db.get_value("User", berater_email, "full_name") or berater_email
 
     phase_label = lead_data.get("custom_liste") or ""
 
@@ -3625,6 +3551,19 @@ def get_lead_preview(lead_name):
         "organization": lead_data.get("organization") or "",
         "zustaendige_rolle": lead_data.get("custom_zustaendige_rolle") or "",
         "kontaktversuche": lead_data.get("custom_kontaktversuche") or 0,
+        "erreichbarkeit": lead_data.get("custom_erreichbarkeit") or "",
+        "followup_grund": lead_data.get("custom_followup_grund") or "",
+        "termin_datum": str(lead_data.get("custom_termin_datum") or ""),
+        "termin_zeit_von": str(lead_data.get("custom_termin_zeit_von") or ""),
+        "termin_typ": lead_data.get("custom_termin_typ") or "",
+        "termin_status": lead_data.get("custom_termin_status") or "",
+        "termin_berater": termin_berater_name,
+        "cross_sell_prio1_produkt": lead_data.get("custom_cross_sell_prio1_produkt") or "",
+        "cross_sell_prio1_status": lead_data.get("custom_cross_sell_prio1_status") or "",
+        "cross_sell_prio2_produkt": lead_data.get("custom_cross_sell_prio2_produkt") or "",
+        "cross_sell_prio2_status": lead_data.get("custom_cross_sell_prio2_status") or "",
+        "cross_sell_prio3_produkt": lead_data.get("custom_cross_sell_prio3_produkt") or "",
+        "cross_sell_prio3_status": lead_data.get("custom_cross_sell_prio3_status") or "",
     }
 
     try:
@@ -3684,6 +3623,17 @@ def create_lead_from_webhook(**kwargs):
     if not data:
         frappe.throw("Keine Daten empfangen.")
 
+    # Log incoming payload for debugging (always, so failed requests can be replayed)
+    try:
+        frappe.get_doc({
+            "doctype": "Error Log",
+            "method": "create_lead_from_webhook:payload",
+            "error": _json.dumps(data, indent=2, ensure_ascii=False, default=str)[:10000]
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        pass
+
     # --- Feld-Mapping: Masterplanung S.23-43 + allgemeine Felder ---
     FIELD_MAP = {
         # === STANDARD (alle Leadtypen) ===
@@ -3696,10 +3646,14 @@ def create_lead_from_webhook(**kwargs):
         "name": "_full_name",
         "full_name": "_full_name",
         "telefon": "mobile_no",
-        "phone": "phone",
+        "phone": "mobile_no",
         "mobile": "mobile_no",
         "mobile_no": "mobile_no",
         "handy": "mobile_no",
+        "nummer": "mobile_no",
+        "telefonnummer": "mobile_no",
+        "mobilnummer": "mobile_no",
+        "tel": "mobile_no",
         "email": "email",
         "e-mail": "email",
         "email_address": "email",
@@ -3712,6 +3666,9 @@ def create_lead_from_webhook(**kwargs):
         "erreichbarkeit": "custom_erreichbarkeit",
         "am besten telefonisch erreichbar": "custom_erreichbarkeit",
         "erreichbar": "custom_erreichbarkeit",
+        "custom erreichbarkeit": "custom_erreichbarkeit",
+        "custom_erreichbarkeit": "custom_erreichbarkeit",
+        "custom erreichbartkeit": "custom_erreichbarkeit",
 
         # === LEADTYP / PRODUKT ===
         "produkt": "custom_leadtyp",
@@ -3899,7 +3856,23 @@ def create_lead_from_webhook(**kwargs):
         "vorsorgekonzept": "custom_bav_vorsorgekonzept",
         "gewuenschtes vorsorgekonzept": "custom_bav_vorsorgekonzept",
         "bav_vorsorgekonzept": "custom_bav_vorsorgekonzept",
-        "strasse": "_strasse",
+        # bAV LP-spezifische Felder
+        "monatliches_brutto_einkommen": "custom_bav_einkommen",
+        "steuerklasse": "custom_bav_steuerklasse",
+        "kinder_lohnsteuerkarte": "custom_bav_kinder",
+        "kirchensteuer": "custom_bav_kirchensteuer",
+        "privat_krankenversichert": "custom_bav_pkv",
+        "variante_basis": "custom_bav_variante_basis",
+        "variante_komfort": "custom_bav_variante_komfort",
+        "variante_premium": "custom_bav_variante_premium",
+        "variante_individuell": "custom_bav_variante_individuell",
+        "bu_rente_1750": "custom_bav_bu_rente_1750",
+        "bu_rente_individuell": "custom_bav_bu_rente_individuell",
+        "service_ruhestandsberatung": "custom_bav_service_ruhestand",
+        "service_vorsorge_check": "custom_bav_service_vorsorge",
+        # === Allgemeine Adressfelder ===
+        "strasse": "custom_strasse",
+        "plz_ort": "custom_plz_ort",
         "adresse": "_adresse",
 
         # === Allgemein / KV Mensch ===
@@ -3929,7 +3902,15 @@ def create_lead_from_webhook(**kwargs):
     for key, value in data.items():
         if value is None or (isinstance(value, str) and not value.strip()):
             continue
-        mapped = FIELD_MAP.get(key.lower().strip())
+        k = key.lower().strip()
+        # Try mapping with original key first, then without custom_ prefix
+        mapped = FIELD_MAP.get(k)
+        if not mapped and k.startswith("custom_"):
+            mapped = FIELD_MAP.get(k[7:])  # strip "custom_" prefix
+        if not mapped and k.startswith("custom_"):
+            # Direct field name on CRM Lead (e.g. custom_dsgvo_zugestimmt)
+            if hasattr(frappe.get_meta("CRM Lead"), "has_field") and frappe.get_meta("CRM Lead").has_field(k):
+                mapped = k
         if mapped:
             lead_data[mapped] = value
         else:
@@ -3973,26 +3954,7 @@ def create_lead_from_webhook(**kwargs):
 
     # --- Normalize Select field values (short form -> full form) ---
     # Landing pages send short values, CRM expects full option labels
-    ERREICHBARKEIT_MAP = {
-        "vormittags": "Vormittags (9-12 Uhr)",
-        "mittags": "Mittags (12-15 Uhr)",
-        "nachmittags": "Nachmittags (15-18 Uhr)",
-        "abends": "Abends (ab 18 Uhr)",
-        # Also accept with time range already included
-        "vormittags (9-12 uhr)": "Vormittags (9-12 Uhr)",
-        "mittags (12-15 uhr)": "Mittags (12-15 Uhr)",
-        "nachmittags (15-18 uhr)": "Nachmittags (15-18 Uhr)",
-        "abends (ab 18 uhr)": "Abends (ab 18 Uhr)",
-        # Common LP alternatives
-        "morgens": "Vormittags (9-12 Uhr)",
-        "9-12": "Vormittags (9-12 Uhr)",
-        "12-15": "Mittags (12-15 Uhr)",
-        "15-18": "Nachmittags (15-18 Uhr)",
-        "ab 18": "Abends (ab 18 Uhr)",
-    }
-    if "custom_erreichbarkeit" in lead_data:
-        raw = str(lead_data["custom_erreichbarkeit"]).strip().lower()
-        lead_data["custom_erreichbarkeit"] = ERREICHBARKEIT_MAP.get(raw, lead_data["custom_erreichbarkeit"])
+
 
     # Normalize Alltagsfahrzeug (Ja/Nein -> 1/0 for Check field, or keep string)
     if "custom_ot_alltagsfahrzeug" in lead_data:
@@ -4014,6 +3976,101 @@ def create_lead_from_webhook(**kwargs):
                 lead_data[jn_field] = "Ja"
             elif raw in ("nein", "no", "0", "false"):
                 lead_data[jn_field] = "Nein"
+
+    # Normalize custom_leadquelle values (LP sends various spellings)
+    if "custom_leadquelle" in lead_data:
+        LEADQUELLE_MAP = {
+            "landingpage": "Landing Page",
+            "landing page": "Landing Page",
+            "landing-page": "Landing Page",
+            "lp": "Landing Page",
+            "facebook": "Facebook",
+            "instagram": "Instagram",
+            "google ads": "Google Ads",
+            "google": "Google Ads",
+            "googleads": "Google Ads",
+            "empfehlung": "Empfehlung",
+            "referral": "Empfehlung",
+            "bestandskunde": "Bestandskunde",
+            "manuell": "Manuell",
+            "manual": "Manuell",
+            "telefon": "Telefon",
+            "phone": "Telefon",
+            "messe": "Messe",
+            "partner": "Partner",
+            "sonstiges": "Sonstiges",
+            "other": "Sonstiges",
+        }
+        raw_quelle = str(lead_data["custom_leadquelle"]).strip().lower()
+        if raw_quelle in LEADQUELLE_MAP:
+            lead_data["custom_leadquelle"] = LEADQUELLE_MAP[raw_quelle]
+
+    # Normalize custom_leadtyp (LP sends various spellings)
+    if "custom_leadtyp" in lead_data:
+        LEADTYP_MAP = {
+            "pferdeversicherung": "Pferd",
+            "pferd": "Pferd",
+            "hundeversicherung": "Hund",
+            "hund": "Hund",
+            "katzenversicherung": "Katze",
+            "katze": "Katze",
+            "tierkrankenversicherung": "Pferd",
+            "oldtimer": "Oldtimer",
+            "oldtimerversicherung": "Oldtimer",
+            "geldanlage": "Geldanlage / Vallue",
+            "geldanlage / vallue": "Geldanlage / Vallue",
+            "vallue": "Geldanlage / Vallue",
+            "kinderpolice": "Kinderpolice",
+            "managerprotect": "ManagerProtect",
+            "manager protect": "ManagerProtect",
+            "d&o": "ManagerProtect",
+            "juratax": "JuraTax",
+            "jura tax": "JuraTax",
+            "lol": "LOL (Loss of Licence)",
+            "lol (loss of licence)": "LOL (Loss of Licence)",
+            "loss of licence": "LOL (Loss of Licence)",
+            "bu": "BU (meine-1750)",
+            "bu (meine-1750)": "BU (meine-1750)",
+            "berufsunfähigkeit": "BU (meine-1750)",
+            "berufsunfaehigkeit": "BU (meine-1750)",
+            "meine-1750": "BU (meine-1750)",
+            "bav": "bAV",
+            "betriebliche altersversorgung": "bAV",
+            "betriebliche altersvorsorge": "bAV",
+            "pilotnow": "PilotNow",
+            "pilot now": "PilotNow",
+            "kv mensch voll": "KV Mensch Voll",
+            "kv voll": "KV Mensch Voll",
+            "krankenversicherung voll": "KV Mensch Voll",
+            "kv mensch zusatz": "KV Mensch Zusatz",
+            "kv zusatz": "KV Mensch Zusatz",
+            "krankenversicherung zusatz": "KV Mensch Zusatz",
+            "sonstiges": "Sonstiges",
+        }
+        raw_typ = str(lead_data["custom_leadtyp"]).strip().lower()
+        if raw_typ in LEADTYP_MAP:
+            lead_data["custom_leadtyp"] = LEADTYP_MAP[raw_typ]
+
+    # Normalize custom_herkunft_typ
+    if "custom_herkunft_typ" in lead_data:
+        HERKUNFT_MAP = {
+            "organisch": "Organisch",
+            "organic": "Organisch",
+            "google": "Google Ads",
+            "google ads": "Google Ads",
+            "facebook": "Facebook Ads",
+            "facebook ads": "Facebook Ads",
+            "instagram": "Instagram Ads",
+            "instagram ads": "Instagram Ads",
+            "bezahlte kampagne": "Bezahlte Kampagne",
+            "kampagne": "Bezahlte Kampagne",
+            "empfehlung": "Empfehlung",
+            "referral": "Empfehlung",
+            "bestandskunde": "Bestandskunde",
+        }
+        raw_herkunft = str(lead_data["custom_herkunft_typ"]).strip().lower()
+        if raw_herkunft in HERKUNFT_MAP:
+            lead_data["custom_herkunft_typ"] = HERKUNFT_MAP[raw_herkunft]
 
     # Handle _full_name (split into first/last if not separately provided)
     if "_full_name" in lead_data:
@@ -4120,6 +4177,44 @@ def create_lead_from_webhook(**kwargs):
     # Skip validations for webhook leads
     lead.flags.ignore_email_validation = True
     lead.flags.ignore_assignment_policy = True
+    lead.flags.ignore_validate = True
+    lead.flags.ignore_mandatory = True
+
+    # Sanitize all email-type fields to prevent Frappe's _validate_data_fields from throwing
+    import re as _re
+    _email_re = _re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+    for df in lead.meta.fields:
+        if df.options == "Email" or df.fieldtype == "Data" and df.options == "Email":
+            val = getattr(lead, df.fieldname, None)
+            if val and not _email_re.match(str(val).strip()):
+                setattr(lead, df.fieldname, None)
+
+    # Sanitize Date fields: convert DD.MM.YYYY -> YYYY-MM-DD
+    _date_de_re = _re.compile(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$')
+    for df in lead.meta.fields:
+        if df.fieldtype in ("Date", "Datetime"):
+            val = getattr(lead, df.fieldname, None)
+            if val and isinstance(val, str):
+                val = val.strip()
+                m = _date_de_re.match(val)
+                if m:
+                    day, month, year = m.groups()
+                    try:
+                        setattr(lead, df.fieldname, "{}-{}-{}".format(year, month.zfill(2), day.zfill(2)))
+                    except Exception:
+                        setattr(lead, df.fieldname, None)
+                elif not _re.match(r'^\d{4}-\d{2}-\d{2}', val):
+                    # Not ISO format either - clear it
+                    setattr(lead, df.fieldname, None)
+
+    # Sanitize Select fields: clear invalid values instead of letting Frappe reject
+    for df in lead.meta.fields:
+        if df.fieldtype == "Select" and df.options:
+            val = getattr(lead, df.fieldname, None)
+            if val:
+                valid_options = [o.strip() for o in df.options.split(chr(10)) if o.strip()]
+                if str(val).strip() not in valid_options:
+                    setattr(lead, df.fieldname, None)
 
     # Save as Administrator to avoid permission issues
     original_user = frappe.session.user
@@ -4163,12 +4258,7 @@ def create_lead_from_webhook(**kwargs):
 
         frappe.db.commit()
 
-    # Trigger gamification if available
-    try:
-        from crm.fcrm.doctype.crm_lead.crm_lead import _award_gamification_points
-        _award_gamification_points(lead.lead_owner or frappe.session.user, "lead_created", lead.name)
-    except Exception:
-        pass
+    # Gamification: Erstkontakt-Punkte werden bei erster Aktion vergeben, nicht bei Erstellung
 
     return {
         "success": True,
@@ -4215,15 +4305,15 @@ def _auto_create_lp_field(field_key, field_value):
     if frappe.db.exists("Custom Field", {"dt": "CRM Lead", "fieldname": fieldname}):
         return None
 
-    fieldtype = "Data"
+    # Use Text/mediumtext for LP fields to avoid MariaDB row size limit (65535 bytes)
+    # varchar fields count toward row size; Text (mediumtext) does not
+    fieldtype = "Text"
     if isinstance(field_value, bool):
         fieldtype = "Check"
     elif isinstance(field_value, int):
         fieldtype = "Int"
     elif isinstance(field_value, float):
         fieldtype = "Float"
-    elif isinstance(field_value, str) and len(field_value) > 200:
-        fieldtype = "Text"
 
     label = field_key.replace("_", " ").replace("-", " ").title()
     label = "LP: " + label
@@ -4284,3 +4374,34 @@ def _notify_admins_new_lp_fields(created_fields):
     except Exception:
         pass
 
+
+@frappe.whitelist()
+def get_primary_advisor(lead_name):
+    """Return the primary advisor for a lead if an active CRM Relationship exists."""
+    if not lead_name:
+        return None
+
+    rels = frappe.get_all(
+        'CRM Relationship',
+        filters={'origin_lead': lead_name, 'status': 'Aktiv'},
+        fields=['name', 'primary_advisor', 'start_date', 'contact_name', 'lead_typ'],
+        limit=1,
+    )
+
+    if not rels:
+        return None
+
+    advisor = rels[0]
+    user_info = frappe.db.get_value(
+        'User', advisor.primary_advisor, ['full_name', 'user_image'], as_dict=True
+    )
+
+    return {
+        'name': advisor.name,
+        'advisor': advisor.primary_advisor,
+        'full_name': user_info.full_name if user_info else advisor.primary_advisor,
+        'image': user_info.user_image if user_info else None,
+        'since': str(advisor.start_date) if advisor.start_date else None,
+        'contact_name': advisor.contact_name,
+        'lead_typ': advisor.lead_typ,
+    }

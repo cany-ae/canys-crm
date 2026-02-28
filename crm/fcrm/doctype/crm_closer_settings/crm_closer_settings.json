@@ -1,0 +1,94 @@
+{
+  "name": "CRM Closer Settings",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "document_type": "Setup",
+  "issingle": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "info_section",
+    "info_html",
+    "routing_section",
+    "routing_mode",
+    "max_open_leads_per_closer",
+    "column_break_routing",
+    "fallback_to_roundrobin",
+    "skills_section",
+    "closer_skills"
+  ],
+  "fields": [
+    {
+      "fieldname": "info_section",
+      "fieldtype": "Section Break",
+      "label": "Info"
+    },
+    {
+      "fieldname": "info_html",
+      "fieldtype": "HTML",
+      "label": "Info",
+      "options": "<div class='alert alert-info'><b>CRM Closer Routing Konfiguration</b><br>Hier werden Closer-Skills und Kapazitaeten konfiguriert.<br><br><b>Routing-Modi:</b><br><ul><li><b>Skill-basiert:</b> Closers werden nach Leadtyp-Kompetenz und Kapazitaet zugewiesen</li><li><b>Round-Robin:</b> Einfache Rotation unter allen aktiven Closern</li><li><b>Kapazitaet:</b> Nur Kapazitaetspruefung, keine Skill-Praeferenz</li></ul><b>Skill-Level Prioritaet:</b> Experte &gt; Fortgeschritten &gt; Basis<br><b>Kapazitaet:</b> Offene Leads (nicht in Phase 80/90) werden gezaehlt.</div>"
+    },
+    {
+      "fieldname": "routing_section",
+      "fieldtype": "Section Break",
+      "label": "Routing-Einstellungen"
+    },
+    {
+      "fieldname": "routing_mode",
+      "fieldtype": "Select",
+      "label": "Routing-Modus",
+      "options": "\nSkill-basiert\nRound-Robin\nKapazitaet",
+      "default": "Skill-basiert",
+      "reqd": 1,
+      "description": "Wie sollen Leads an Closer verteilt werden?"
+    },
+    {
+      "fieldname": "max_open_leads_per_closer",
+      "fieldtype": "Int",
+      "label": "Max. offene Leads pro Closer",
+      "default": "20",
+      "reqd": 1,
+      "description": "Maximale Anzahl offener Leads (nicht in Phase 80/90) pro Closer. 0 = unbegrenzt."
+    },
+    {
+      "fieldname": "column_break_routing",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "fallback_to_roundrobin",
+      "fieldtype": "Check",
+      "label": "Fallback auf Round-Robin",
+      "default": "1",
+      "description": "Wenn kein passender Closer gefunden wird (kein Skill-Match oder alle voll), wird Round-Robin verwendet."
+    },
+    {
+      "fieldname": "skills_section",
+      "fieldtype": "Section Break",
+      "label": "Closer Skills & Kapazitaeten"
+    },
+    {
+      "fieldname": "closer_skills",
+      "fieldtype": "Table",
+      "label": "Closer Skills",
+      "options": "CRM Closer Skill",
+      "description": "Definiere welcher Closer fuer welchen Leadtyp qualifiziert ist."
+    }
+  ],
+  "naming_rule": "Expression (old style)",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "creation": "2026-02-08 18:00:00",
+  "modified": "2026-02-08 18:00:00",
+  "modified_by": "Administrator",
+  "owner": "Administrator"
+}

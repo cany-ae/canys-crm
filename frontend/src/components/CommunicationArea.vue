@@ -446,7 +446,7 @@ function toggleEmailBox() {
     showCommentBox.value = false
   }
   if (!showEmailBox.value) {
-    // Beim Oeffnen: Wenn nicht vom Angebot-Flow, frisch starten
+    // Beim Öffnen: Wenn nicht vom Angebot-Flow, frisch starten
     if (!isAngebotFlow.value) {
       saveOrUpdateDraft()
       suppressDraftSave.value = true
@@ -468,7 +468,7 @@ function toggleEmailBox() {
     }
     isAngebotFlow.value = false
   } else {
-    // Beim Schliessen: Draft speichern
+    // Beim Schließen: Draft speichern
     saveOrUpdateDraft()
     currentDraftId.value = null
   }
@@ -524,52 +524,13 @@ function toggleCommentBox() {
   showCommentBox.value = !showCommentBox.value
 }
 
-// --- Angebot-Flow: Mail vorbefuellen + sofort Draft ---
-function handleAngebotEmail(e) {
-  const { fileData, lead } = e.detail
-
-  // Vorhandenen Compose speichern
-  saveOrUpdateDraft()
-
-  suppressDraftSave.value = true
-  currentDraftId.value = null
-  isAngebotFlow.value = true
-  showCommentBox.value = false
-  newEmail.value = ''
-  attachments.value = []
-  showEmailBox.value = true
-  suppressDraftSave.value = false
-
-  nextTick(() => {
-    const editor = newEmailEditor.value
-    if (editor) {
-      editor.subject = 'Ihr Angebot - ' + (lead.lead_name || lead.first_name || '')
-      if (lead.email) {
-        editor.toEmails = [lead.email]
-      }
-    }
-    attachments.value = [{
-      name: fileData.file_doc_name,
-      file_name: fileData.file_name,
-      file_url: fileData.file_url,
-    }]
-
-    // Sofort als Draft speichern (Offer-Flow)
-    nextTick(() => {
-      saveOrUpdateDraft()
-    })
-  })
-}
-
 // --- Lifecycle ---
 onMounted(() => {
-  window.addEventListener('open-email-with-angebot', handleAngebotEmail)
   // beforeunload: Draft speichern wenn Browser/Tab geschlossen wird
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('open-email-with-angebot', handleAngebotEmail)
   window.removeEventListener('beforeunload', handleBeforeUnload)
   // Component wird unmounted (Tab-Wechsel, Route-Wechsel) → Draft speichern
   if (showEmailBox.value) {

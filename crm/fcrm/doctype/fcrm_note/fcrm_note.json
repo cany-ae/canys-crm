@@ -10,6 +10,7 @@
  "field_order": [
   "title",
   "content",
+  "erinnerung",
   "reference_doctype",
   "reference_docname"
  ],
@@ -28,6 +29,13 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Content"
+  },
+  {
+   "fieldname": "erinnerung",
+   "fieldtype": "Datetime",
+   "label": "Erinnerung",
+   "in_list_view": 0,
+   "reqd": 0
   },
   {
    "default": "CRM Lead",
@@ -50,7 +58,7 @@
    "link_fieldname": "note"
   }
  ],
- "modified": "2025-04-01 15:30:14.742001",
+ "modified": "2026-02-26 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "FCRM",
  "name": "FCRM Note",

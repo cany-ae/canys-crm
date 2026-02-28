@@ -176,6 +176,11 @@ def get_contact_history(contact):
 				"status": lead.status,
 				"lead_name": lead.lead_name,
 				"email": lead.email,
+				"mobile_no": lead.mobile_no,
+				"custom_liste": lead.custom_liste,
+				"custom_leadtyp": lead.custom_leadtyp,
+				"custom_produktlinie": lead.custom_produktlinie,
+				"lead_owner": lead.lead_owner,
 				"creation": lead.creation,
 				"modified": lead.modified,
 			})
@@ -245,3 +250,49 @@ def get_contact_history(contact):
 			"last_activity_date": last_activity_date,
 		},
 	}
+
+
+@frappe.whitelist()
+def get_leads_for_contact(contact):
+	"""Get all CRM Leads linked to a Contact.
+	Uses custom_contact field (direct link) with Dynamic Link fallback."""
+	if not frappe.has_permission("Contact", "read", contact):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	# Primary: Query via custom_contact field (fast, indexed)
+	leads_via_field = frappe.get_all("CRM Lead",
+		filters={"custom_contact": contact},
+		fields=[
+			"name", "lead_name", "first_name", "last_name",
+			"email", "mobile_no", "status",
+			"custom_liste", "custom_leadtyp", "custom_produktlinie",
+			"lead_owner", "creation", "modified",
+		],
+		order_by="creation desc")
+
+	# Fallback: Also check Dynamic Links for leads not yet migrated
+	lead_names_from_field = {l.name for l in leads_via_field}
+
+	dl_links = frappe.get_all("Dynamic Link",
+		filters={
+			"parenttype": "Contact",
+			"parent": contact,
+			"link_doctype": "CRM Lead",
+		},
+		fields=["link_name"])
+
+	# Find leads only in Dynamic Links but not in custom_contact
+	missing_names = [dl.link_name for dl in dl_links if dl.link_name not in lead_names_from_field]
+	if missing_names:
+		extra_leads = frappe.get_all("CRM Lead",
+			filters={"name": ["in", missing_names]},
+			fields=[
+				"name", "lead_name", "first_name", "last_name",
+				"email", "mobile_no", "status",
+				"custom_liste", "custom_leadtyp", "custom_produktlinie",
+				"lead_owner", "creation", "modified",
+			],
+			order_by="creation desc")
+		leads_via_field.extend(extra_leads)
+
+	return leads_via_field

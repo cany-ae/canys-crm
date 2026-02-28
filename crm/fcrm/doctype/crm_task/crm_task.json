@@ -63,6 +63,21 @@
    "label": "Due Date"
   },
   {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "Completed At",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "completed_by",
+   "fieldtype": "Link",
+   "label": "Completed By",
+   "options": "User",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
    "fieldname": "section_break_bzhd",
    "fieldtype": "Section Break"
   },

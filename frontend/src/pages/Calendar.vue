@@ -239,6 +239,19 @@ function createEvent(_event) {
     onSuccess: async (e) => {
       await events.reload()
       showDetails({ id: e.name })
+      // Trigger list change if linked to a CRM Lead
+      if (_event.referenceDoctype === 'CRM Lead' && _event.referenceDocname) {
+        try {
+          await call('crm.fcrm.doctype.crm_lead.crm_lead.on_event_created_for_lead', {
+            lead_name: _event.referenceDocname,
+            event_date: _event.fromDate,
+            event_time: _event.fromTime,
+            event_name: _event.title,
+          })
+        } catch (err) {
+          console.error('Failed to trigger list change for lead:', err)
+        }
+      }
     },
   })
 }

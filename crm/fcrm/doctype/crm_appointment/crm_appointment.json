@@ -1,0 +1,192 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "CRM-APT-.#####",
+ "creation": "2026-02-12 19:02:10.217405",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "lead",
+  "lead_name",
+  "berater",
+  "column_break_main",
+  "termin_datum",
+  "termin_zeit_von",
+  "termin_zeit_bis",
+  "section_break_details",
+  "typ",
+  "status",
+  "column_break_details",
+  "quelle",
+  "event_link",
+  "section_break_notiz",
+  "notiz"
+ ],
+ "fields": [
+  {
+   "fieldname": "lead",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Lead",
+   "options": "CRM Lead",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "lead.lead_name",
+   "fieldname": "lead_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Lead Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "berater",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Berater",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "termin_datum",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Termin Datum",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "termin_zeit_von",
+   "fieldtype": "Time",
+   "label": "Uhrzeit von"
+  },
+  {
+   "fieldname": "termin_zeit_bis",
+   "fieldtype": "Time",
+   "label": "Uhrzeit bis"
+  },
+  {
+   "fieldname": "section_break_details",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "default": "Ersttermin",
+   "fieldname": "typ",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Typ",
+   "options": "Ersttermin\nCloser-Termin",
+   "reqd": 1
+  },
+  {
+   "default": "Geplant",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Geplant\nBestaetigt\nDurchgefuehrt\nNo-Show\nAbgesagt\nVerschoben"
+  },
+  {
+   "fieldname": "column_break_details",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Manuell",
+   "fieldname": "quelle",
+   "fieldtype": "Select",
+   "label": "Quelle",
+   "options": "Manuell\nLandingpage\nEvent\nSchnellaktion"
+  },
+  {
+   "fieldname": "event_link",
+   "fieldtype": "Link",
+   "label": "Event",
+   "options": "Event"
+  },
+  {
+   "fieldname": "section_break_notiz",
+   "fieldtype": "Section Break",
+   "label": "Notizen",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "notiz",
+   "fieldtype": "Small Text",
+   "label": "Notiz"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-12 19:02:10.217468",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Appointment",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "CRM Vertrieb",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "termin_datum",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -10,7 +10,7 @@
       <div class="mb-3 flex flex-col">
         <SidebarLink
           id="notifications-btn"
-          :label="__('Notifications')"
+          :label="'Benachrichtigungen'"
           :icon="NotificationsIcon"
           :isCollapsed="isSidebarCollapsed"
           @click="() => toggleNotificationPanel()"
@@ -59,14 +59,103 @@
             </div>
           </template>
           <nav class="flex flex-col">
-            <SidebarLink
-              v-for="link in view.views"
-              :icon="link.icon"
-              :label="link.label"
-              :to="link.to"
-              :isCollapsed="isSidebarCollapsed"
-              class="mx-2 my-0.5"
-            />
+            <template v-for="link in view.views" :key="link.label">
+              <SidebarLink
+                :icon="link.icon"
+                :label="link.label"
+                :to="link.to"
+                :isCollapsed="isSidebarCollapsed"
+                class="mx-2 my-0.5"
+                
+              >
+                <template #right v-if="link.hasQueue && !isSidebarCollapsed">
+                  <Badge
+                    v-if="queueCounts.total"
+                    :label="queueCounts.total"
+                    variant="subtle"
+                  />
+                </template>
+              </SidebarLink>
+              <!-- Lead Queue sub-items -->
+              <div
+                v-if="link.hasQueue && !isSidebarCollapsed"
+                class="ml-4 mr-2 mb-1 flex flex-col gap-0.5"
+              >
+                <router-link
+                  v-for="phase in leadPhases"
+                  :key="phase.value"
+                  :to="{ name: 'Leads', query: { phase: phase.value } }"
+                  class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-ink-gray-7 hover:bg-surface-gray-2 transition-colors cursor-pointer"
+                  :class="{ 'bg-surface-gray-2': currentPhaseFilter === phase.value }"
+                >
+                  <span class="inline-block h-2 w-2 rounded-full flex-shrink-0" :style="{ backgroundColor: phase.hex }"></span>
+                  <span class="flex-1 truncate text-xs">{{ phase.short }}</span>
+                  <span
+                    v-if="queueCounts[phase.value]"
+                    class="ml-auto inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold min-w-[20px]"
+                    :class="phase.badgeClass"
+                  >
+                    {{ queueCounts[phase.value] }}
+                  </span>
+                </router-link>
+                <router-link
+                  v-if="queueCounts.overdue_followups"
+                  :to="{ name: 'Leads', query: { overdue: '1' } }"
+                  class="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-400 mt-0.5 hover:bg-red-100 dark:hover:bg-red-900 cursor-pointer transition-colors"
+                >
+                  <FeatherIcon name="alert-circle" class="h-3 w-3" />
+                  <span>{{ queueCounts.overdue_followups }} überfällig</span>
+                </router-link>
+                <!-- Spezialisten-Queue -->
+                <div
+                  v-if="specialistCounts.total > 0"
+                  class="mt-2 flex flex-col gap-0.5"
+                >
+                  <div class="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-ink-gray-5 uppercase tracking-wider">
+                    <FeatherIcon name="users" class="h-3 w-3" />
+                    <span>Spezialisten</span>
+                  </div>
+                  <router-link
+                    :to="{ name: 'Leads', query: { specialist: 'offen' } }"
+                    class="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs text-ink-gray-7 hover:bg-surface-gray-2 transition-colors cursor-pointer"
+                  >
+                    <span class="inline-block h-2 w-2 rounded-full bg-amber-400 flex-shrink-0"></span>
+                    <span class="flex-1 truncate">Offen</span>
+                    <span v-if="specialistCounts.offen" class="ml-auto inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold min-w-[20px] bg-amber-100 text-amber-700">
+                      {{ specialistCounts.offen }}
+                    </span>
+                  </router-link>
+                  <router-link
+                    :to="{ name: 'Leads', query: { specialist: 'in_bearbeitung' } }"
+                    class="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs text-ink-gray-7 hover:bg-surface-gray-2 transition-colors cursor-pointer"
+                  >
+                    <span class="inline-block h-2 w-2 rounded-full bg-blue-400 flex-shrink-0"></span>
+                    <span class="flex-1 truncate">In Bearbeitung</span>
+                    <span v-if="specialistCounts.in_bearbeitung" class="ml-auto inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold min-w-[20px] bg-blue-100 text-blue-700">
+                      {{ specialistCounts.in_bearbeitung }}
+                    </span>
+                  </router-link>
+                  <router-link
+                    :to="{ name: 'Leads', query: { specialist: 'qualifiziert' } }"
+                    class="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs text-ink-gray-7 hover:bg-surface-gray-2 transition-colors cursor-pointer"
+                  >
+                    <span class="inline-block h-2 w-2 rounded-full bg-green-400 flex-shrink-0"></span>
+                    <span class="flex-1 truncate">Qualifiziert</span>
+                    <span v-if="specialistCounts.qualifiziert" class="ml-auto inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold min-w-[20px] bg-green-100 text-green-700">
+                      {{ specialistCounts.qualifiziert }}
+                    </span>
+                  </router-link>
+                  <router-link
+                    v-if="specialistCounts.my_specialist_leads"
+                    :to="{ name: 'Leads', query: { specialist: 'mine' } }"
+                    class="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400 mt-0.5 hover:bg-purple-100 dark:hover:bg-purple-900 cursor-pointer transition-colors"
+                  >
+                    <FeatherIcon name="user" class="h-3 w-3" />
+                    <span>{{ specialistCounts.my_specialist_leads }} meine</span>
+                  </router-link>
+                </div>
+              </div>
+            </template>
           </nav>
         </Section>
       </div>
@@ -126,6 +215,8 @@
 
 <script setup>
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
+import LucideTarget from '~icons/lucide/target'
+import LucideCoins from '~icons/lucide/coins'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import Section from '@/components/Section.vue'
 import PinIcon from '@/components/Icons/PinIcon.vue'
@@ -155,7 +246,7 @@ import { usersStore } from '@/stores/users'
 import { sessionStore } from '@/stores/session'
 import { showSettings, activeSettingsPage } from '@/composables/settings'
 import { showChangePasswordModal } from '@/composables/modals'
-import { FeatherIcon, call } from 'frappe-ui'
+import { Badge, FeatherIcon, call } from 'frappe-ui'
 import {
   SignupBanner,
   TrialBanner,
@@ -167,7 +258,7 @@ import {
 import { capture } from '@/telemetry'
 import router from '@/router'
 import { useStorage } from '@vueuse/core'
-import { ref, reactive, computed, h, markRaw, onMounted } from 'vue'
+import { ref, reactive, computed, h, markRaw, onMounted, onBeforeUnmount } from 'vue'
 
 const { getPinnedViews, getPublicViews } = viewsStore()
 const { toggle: toggleNotificationPanel } = notificationsStore()
@@ -183,12 +274,14 @@ const links = [
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
+    hasQueue: true,
   },
   {
     label: 'Dashboard',
     icon: LucideLayoutDashboard,
     to: 'Dashboard',
   },
+
   {
     label: 'Deals',
     icon: DealsIcon,
@@ -220,6 +313,70 @@ const links = [
     to: 'Call Logs',
   },
 ]
+
+// Lead Queue Counts
+const leadQueueOpen = useStorage('leadQueueOpen', true)
+const queueCounts = ref({ total: 0 })
+const specialistCounts = ref({ total: 0, offen: 0, in_bearbeitung: 0, qualifiziert: 0, nicht_qualifiziert: 0, my_specialist_leads: 0 })
+const currentPhaseFilter = computed(() => {
+  const route = router.currentRoute.value
+  return route.query?.phase || ''
+})
+
+const leadPhases = [
+  { value: '10 - Neu ohne Termin', short: '10 Neu', hex: '#6B7280', badgeClass: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+  { value: '20 - Termin gebucht', short: '20 Termin', hex: '#3B82F6', badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
+  { value: '30 - Reaktivierung', short: '30 Reaktiv.', hex: '#F59E0B', badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' },
+  { value: '50 - Closer-Termin', short: '50 Closer', hex: '#8B5CF6', badgeClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
+  { value: '70 - Follow-up', short: '70 Follow-up', hex: '#F97316', badgeClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' },
+  { value: '80 - Abschluss gewonnen', short: '80 Gewonnen', hex: '#10B981', badgeClass: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
+  { value: '90 - Abschluss verloren', short: '90 Verloren', hex: '#EF4444', badgeClass: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
+]
+
+function toggleLeadQueue() {
+  leadQueueOpen.value = !leadQueueOpen.value
+}
+
+let queueInterval = null
+
+async function fetchQueueCounts() {
+  try {
+    const result = await call(
+      'crm.fcrm.doctype.crm_lead.crm_lead.get_lead_queue_counts'
+    )
+    if (result) {
+      queueCounts.value = result
+    }
+  } catch (e) {
+    // silently ignore fetch errors
+  }
+}
+
+async function fetchSpecialistCounts() {
+  try {
+    const result = await call(
+      'crm.fcrm.doctype.crm_lead.crm_lead.get_specialist_queue_counts'
+    )
+    if (result) {
+      specialistCounts.value = result
+    }
+  } catch (e) {
+    // silently ignore fetch errors
+  }
+}
+
+onMounted(() => {
+  fetchQueueCounts()
+  fetchSpecialistCounts()
+  queueInterval = setInterval(() => {
+    fetchQueueCounts()
+    fetchSpecialistCounts()
+  }, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (queueInterval) clearInterval(queueInterval)
+})
 
 const allViews = computed(() => {
   let _views = [

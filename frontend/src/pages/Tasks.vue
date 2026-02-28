@@ -1,321 +1,295 @@
 <template>
-  <LayoutHeader>
-    <template #left-header>
-      <ViewBreadcrumbs v-model="viewControls" routeName="Tasks" />
-    </template>
-    <template #right-header>
-      <CustomActions
-        v-if="tasksListView?.customListActions"
-        :actions="tasksListView.customListActions"
-      />
-      <Button
-        variant="solid"
-        :label="__('Create')"
-        iconLeft="plus"
-        @click="createTask"
-      />
-    </template>
-  </LayoutHeader>
-  <ViewControls
-    ref="viewControls"
-    v-model="tasks"
-    v-model:loadMore="loadMore"
-    v-model:resizeColumn="triggerResize"
-    v-model:updatedPageCount="updatedPageCount"
-    doctype="CRM Task"
-    :options="{
-      allowedViews: ['list'],
-      lockView: true,
-      hideColumnsButton: true,
-    }"
-  />
-  <KanbanView
-    v-if="$route.params.viewType == 'kanban' && rows.length"
-    v-model="tasks"
-    :options="{
-      onClick: (row) => showTask(row.name),
-      onNewClick: (column) => createTask(column),
-    }"
-    @update="(data) => viewControls.updateKanbanSettings(data)"
-    @loadMore="(columnName) => viewControls.loadMoreKanban(columnName)"
-  >
-    <template #title="{ titleField, itemName }">
-      <div class="flex items-center gap-2">
-        <div v-if="titleField === 'status'">
-          <TaskStatusIcon :status="getRow(itemName, titleField).label" />
-        </div>
-        <div v-else-if="titleField === 'priority'">
-          <TaskPriorityIcon :priority="getRow(itemName, titleField).label" />
-        </div>
-        <div v-else-if="titleField === 'assigned_to'">
-          <Avatar
-            v-if="getRow(itemName, titleField).full_name"
-            class="flex items-center"
-            :image="getRow(itemName, titleField).user_image"
-            :label="getRow(itemName, titleField).full_name"
-            size="sm"
-          />
-        </div>
-        <div
-          v-if="['modified', 'creation'].includes(titleField)"
-          class="truncate text-base"
-        >
-          <Tooltip :text="getRow(itemName, titleField).label">
-            <div>{{ getRow(itemName, titleField).timeAgo }}</div>
-          </Tooltip>
-        </div>
-        <div
-          v-else-if="getRow(itemName, titleField).label"
-          class="truncate text-base"
-        >
-          {{ getRow(itemName, titleField).label }}
-        </div>
-        <div class="text-ink-gray-4" v-else>{{ __('No Title') }}</div>
-      </div>
-    </template>
-    <template #fields="{ fieldName, itemName }">
-      <div
-        v-if="getRow(itemName, fieldName).label"
-        class="truncate flex items-center gap-2"
-      >
-        <div v-if="fieldName === 'status'">
-          <TaskStatusIcon
-            class="size-3"
-            :status="getRow(itemName, fieldName).label"
-          />
-        </div>
-        <div v-else-if="fieldName === 'priority'">
-          <TaskPriorityIcon :priority="getRow(itemName, fieldName).label" />
-        </div>
-        <div v-else-if="fieldName === 'assigned_to'">
-          <Avatar
-            v-if="getRow(itemName, fieldName).full_name"
-            class="flex items-center"
-            :image="getRow(itemName, fieldName).user_image"
-            :label="getRow(itemName, fieldName).full_name"
-            size="sm"
-          />
-        </div>
-        <div
-          v-if="['modified', 'creation'].includes(fieldName)"
-          class="truncate text-base"
-        >
-          <Tooltip :text="getRow(itemName, fieldName).label">
-            <div>{{ getRow(itemName, fieldName).timeAgo }}</div>
-          </Tooltip>
-        </div>
-        <div
-          v-else-if="fieldName == 'description'"
-          class="truncate text-base max-h-44"
-        >
-          <TextEditor
-            v-if="getRow(itemName, fieldName).label"
-            :content="getRow(itemName, fieldName).label"
-            :editable="false"
-            editor-class="!prose-sm max-w-none focus:outline-none"
-            class="flex-1 overflow-hidden"
-          />
-        </div>
-        <div v-else class="truncate text-base">
-          {{ getRow(itemName, fieldName).label }}
-        </div>
-      </div>
-    </template>
-    <template #actions="{ itemName }">
-      <div class="flex gap-2 items-center justify-between">
-        <div>
+  <div class="flex flex-col h-full overflow-hidden">
+    <!-- Header -->
+    <LayoutHeader>
+      <template #left-header>
+        <ViewBreadcrumbs routeName="Tasks" />
+      </template>
+      <template #right-header>
+        <div class="flex items-center gap-2">
+          <Dropdown
+            v-if="isManager && taskUsers.data?.length"
+            :options="userFilterOptions"
+            placement="right"
+          >
+            <template #default="{ open }">
+              <Button
+                :label="activeUserLabel"
+                :iconRight="open ? 'chevron-up' : 'chevron-down'"
+                variant="outline"
+                size="sm"
+              >
+                <template #prefix>
+                  <Avatar
+                    v-if="activeUser"
+                    :label="activeUserLabel"
+                    :image="activeUserImage"
+                    size="xs"
+                  />
+                  <FeatherIcon v-else name="users" class="h-3.5 w-3.5" />
+                </template>
+              </Button>
+            </template>
+          </Dropdown>
           <Button
-            v-if="getRow(itemName, 'reference_docname').label"
-            class="-ml-2"
-            variant="ghost"
-            size="sm"
-            :label="
-              getRow(itemName, 'reference_doctype').label == 'CRM Deal'
-                ? __('Deal')
-                : __('Lead')
-            "
-            :iconRight="ArrowUpRightIcon"
-            @click.stop="
-              redirect(
-                getRow(itemName, 'reference_doctype').label,
-                getRow(itemName, 'reference_docname').label,
-              )
-            "
+            variant="solid"
+            label="Erstellen"
+            iconLeft="plus"
+            @click="openCreateModal"
           />
         </div>
-        <Dropdown
-          class="flex items-center gap-2"
-          :options="actions(itemName)"
-          variant="ghost"
-          @click.stop.prevent
-        >
-          <Button icon="more-horizontal" variant="ghost" />
-        </Dropdown>
-      </div>
-    </template>
-  </KanbanView>
-  <TasksListView
-    ref="tasksListView"
-    v-else-if="tasks.data && rows.length"
-    v-model="tasks.data.page_length_count"
-    v-model:list="tasks"
-    :rows="rows"
-    :columns="tasks.data.columns"
-    :options="{
-      showTooltip: false,
-      resizeColumn: true,
-      rowCount: tasks.data.row_count,
-      totalCount: tasks.data.total_count,
-    }"
-    @loadMore="() => loadMore++"
-    @columnWidthUpdated="() => triggerResize++"
-    @updatePageCount="(count) => (updatedPageCount = count)"
-    @showTask="showTask"
+      </template>
+    </LayoutHeader>
 
-    @likeDoc="(data) => viewControls.likeDoc(data)"
-    @selectionsChanged="
-      (selections) => viewControls.updateSelections(selections)
-    "
-  />
-  <div v-else-if="tasks.data" class="flex h-full items-center justify-center">
-    <div
-      class="flex flex-col items-center gap-3 text-xl font-medium text-ink-gray-4"
-    >
-      <Email2Icon class="h-10 w-10" />
-      <span>{{ __('No {0} Found', [__('Tasks')]) }}</span>
-      <Button
-        :label="__('Create')"
-        iconLeft="plus"
-        @click="showTaskModal = true"
-      />
+    <!-- Tabs + Quick Filters -->
+    <div class="border-b border-outline-gray-2 bg-surface-white px-3 sm:px-5">
+      <!-- View Tabs -->
+      <div class="flex items-center gap-1 -mb-px">
+        <button
+          v-for="tab in visibleTabs"
+          :key="tab.value"
+          class="relative px-3 py-2.5 text-sm font-medium transition-colors"
+          :class="[
+            activeView === tab.value
+              ? 'text-ink-gray-9 border-b-2 border-ink-gray-9'
+              : 'text-ink-gray-5 hover:text-ink-gray-7',
+          ]"
+          @click="activeView = tab.value"
+        >
+          <span class="flex items-center gap-1.5">
+            {{ tab.label }}
+            <span
+              v-if="tab.count !== null"
+              class="inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-medium min-w-[1.25rem]"
+              :class="[
+                activeView === tab.value
+                  ? 'bg-ink-gray-9 text-white'
+                  : 'bg-surface-gray-3 text-ink-gray-6',
+              ]"
+            >
+              {{ tab.count }}
+            </span>
+          </span>
+        </button>
+      </div>
     </div>
+
+    <!-- Quick Filter Buttons -->
+    <div
+      class="flex items-center gap-2 px-3 sm:px-5 py-2.5 border-b border-outline-gray-2 bg-surface-white"
+    >
+      <button
+        v-for="qf in quickFilters"
+        :key="qf.value"
+        class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium border transition-colors"
+        :class="[
+          activeQuickFilter === qf.value
+            ? 'bg-ink-gray-9 text-white border-ink-gray-9'
+            : 'bg-surface-white text-ink-gray-7 border-outline-gray-2 hover:bg-surface-gray-2',
+        ]"
+        @click="toggleQuickFilter(qf.value)"
+      >
+        {{ qf.label }}
+        <span
+          v-if="qf.count !== null && qf.count > 0"
+          class="inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold min-w-[1.125rem]"
+          :class="[
+            activeQuickFilter === qf.value
+              ? 'bg-white text-ink-gray-9'
+              : qf.countClass,
+          ]"
+        >
+          {{ qf.count }}
+        </span>
+      </button>
+    </div>
+
+    <!-- Task List -->
+    <div class="flex-1 overflow-y-auto">
+      <!-- Loading State -->
+      <div
+        v-if="tasksResource.loading && !tasksResource.data"
+        class="flex items-center justify-center h-48"
+      >
+        <div class="flex items-center gap-2 text-ink-gray-5">
+          <FeatherIcon name="loader" class="h-4 w-4 animate-spin" />
+          <span class="text-sm">Aufgaben werden geladen...</span>
+        </div>
+      </div>
+
+      <!-- Task Rows -->
+      <div v-else-if="tasks.length" class="px-3 sm:px-5 py-1">
+        <div
+          v-for="(task, idx) in tasks"
+          :key="task.name"
+        >
+          <div
+            class="flex items-center gap-3 rounded-md px-3 py-3 cursor-pointer transition-colors hover:bg-surface-gray-1 group"
+            @click="openEditModal(task)"
+          >
+            <!-- Left: Status Icon + Content -->
+            <div class="flex items-start gap-3 flex-1 min-w-0">
+              <!-- Status Quick-Change -->
+              <Dropdown
+                :options="taskStatusOptions(handleStatusChange, task)"
+                @click.stop
+              >
+                <Tooltip :text="statusLabel(task.status)">
+                  <button
+                    class="mt-0.5 rounded p-0.5 transition-colors hover:bg-surface-gray-3"
+                  >
+                    <TaskStatusIcon :status="task.status" />
+                  </button>
+                </Tooltip>
+              </Dropdown>
+
+              <!-- Title + Description -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="text-sm font-medium truncate"
+                    :class="[
+                      task.status === 'Done' || task.status === 'Canceled'
+                        ? 'text-ink-gray-5 line-through'
+                        : 'text-ink-gray-9',
+                    ]"
+                  >
+                    {{ task.title }}
+                  </span>
+                </div>
+                <div
+                  v-if="task.description"
+                  class="mt-0.5 text-xs text-ink-gray-5 truncate max-w-md"
+                  v-html="stripHtml(task.description)"
+                />
+              </div>
+            </div>
+
+            <!-- Right: Meta Info -->
+            <div class="flex items-center gap-3 shrink-0">
+              <!-- Reference Link -->
+              <Button
+                v-if="task.reference_docname"
+                variant="ghost"
+                size="sm"
+                class="text-xs"
+                :label="referenceLabel(task)"
+                @click.stop="navigateToReference(task)"
+              >
+                <template #suffix>
+                  <FeatherIcon name="arrow-up-right" class="h-3 w-3" />
+                </template>
+              </Button>
+
+              <!-- Priority Badge -->
+              <Tooltip :text="priorityLabel(task.priority)">
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-medium"
+                  :class="priorityColor(task.priority)"
+                >
+                  <TaskPriorityIcon
+                    :priority="task.priority"
+                    class="!h-2 !w-2"
+                  />
+                  {{ priorityLabel(task.priority) }}
+                </span>
+              </Tooltip>
+
+              <!-- Due Date -->
+              <span
+                class="inline-flex items-center gap-1 text-xs min-w-[5.5rem] justify-end"
+                :class="dueDateClass(task)"
+              >
+                <FeatherIcon name="calendar" class="h-3 w-3" />
+                <span>{{ dueDateText(task) }}</span>
+              </span>
+
+              <!-- Assigned User -->
+              <Tooltip
+                v-if="task.assigned_to"
+                :text="task.assigned_to_name || task.assigned_to"
+              >
+                <Avatar
+                  :label="task.assigned_to_name || task.assigned_to"
+                  :image="task.assigned_to_image"
+                  size="sm"
+                />
+              </Tooltip>
+              <div v-else class="w-7" />
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div
+            v-if="idx < tasks.length - 1"
+            class="mx-3 border-t border-outline-gray-modals"
+          />
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div
+        v-else-if="tasksResource.data && !tasks.length"
+        class="flex h-full items-center justify-center"
+      >
+        <div
+          class="flex flex-col items-center gap-3 text-xl font-medium text-ink-gray-4"
+        >
+          <FeatherIcon name="check-circle" class="h-10 w-10" />
+          <span>{{ emptyStateText }}</span>
+          <Button
+            label="Aufgabe erstellen"
+            iconLeft="plus"
+            @click="openCreateModal"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Modal -->
+    <TaskModal
+      v-if="showTaskModal"
+      v-model="showTaskModal"
+      v-model:reloadTasks="tasksReloadProxy"
+      :task="selectedTask"
+    />
   </div>
-  <TaskModal
-    v-if="showTaskModal"
-    v-model="showTaskModal"
-    v-model:reloadTasks="tasks"
-    :task="task"
-  />
 </template>
 
 <script setup>
+import LayoutHeader from '@/components/LayoutHeader.vue'
 import ViewBreadcrumbs from '@/components/ViewBreadcrumbs.vue'
-import CustomActions from '@/components/CustomActions.vue'
-import ArrowUpRightIcon from '@/components/Icons/ArrowUpRightIcon.vue'
+import TaskModal from '@/components/Modals/TaskModal.vue'
 import TaskStatusIcon from '@/components/Icons/TaskStatusIcon.vue'
 import TaskPriorityIcon from '@/components/Icons/TaskPriorityIcon.vue'
-import Email2Icon from '@/components/Icons/Email2Icon.vue'
-import LayoutHeader from '@/components/LayoutHeader.vue'
-import ViewControls from '@/components/ViewControls.vue'
-import TasksListView from '@/components/ListViews/TasksListView.vue'
-import KanbanView from '@/components/Kanban/KanbanView.vue'
-import TaskModal from '@/components/Modals/TaskModal.vue'
-import { getMeta } from '@/stores/meta'
-import { usersStore } from '@/stores/users'
-import { formatDate, timeAgo } from '@/utils'
-import { Tooltip, Avatar, TextEditor, Dropdown, call } from 'frappe-ui'
-import { computed, ref } from 'vue'
+import { taskStatusOptions } from '@/utils'
+import { formatDate } from '@/utils'
+import {
+  Button,
+  Avatar,
+  Dropdown,
+  Tooltip,
+  FeatherIcon,
+  createResource,
+  usePageMeta,
+  call,
+} from 'frappe-ui'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
-  getMeta('CRM Task')
-const { getUser } = usersStore()
+usePageMeta(() => ({ title: __('Tasks') }))
 
 const router = useRouter()
 
-const tasksListView = ref(null)
-
-// tasks data is loaded in the ViewControls component
-const tasks = ref({})
-const loadMore = ref(1)
-const triggerResize = ref(1)
-const updatedPageCount = ref(20)
-const viewControls = ref(null)
-
-function getRow(name, field) {
-  function getValue(value) {
-    if (value && typeof value === 'object') {
-      return value
-    }
-    return { label: value }
-  }
-  return getValue(rows.value?.find((row) => row.name == name)[field])
-}
-
-const rows = computed(() => {
-  if (!tasks.value?.data?.data) return []
-
-  if (tasks.value.data.view_type === 'kanban') {
-    return getKanbanRows(tasks.value.data.data, tasks.value.data.fields)
-  }
-
-  openTaskFromURL()
-  return parseRows(tasks.value?.data.data, tasks.value?.data.columns)
-})
-
-function getKanbanRows(data, columns) {
-  let _rows = []
-  data.forEach((column) => {
-    column.data?.forEach((row) => {
-      _rows.push(row)
-    })
-  })
-  return parseRows(_rows, columns)
-}
-
-function parseRows(rows, columns = []) {
-  let view_type = tasks.value.data.view_type
-  let key = view_type === 'kanban' ? 'fieldname' : 'key'
-  let type = view_type === 'kanban' ? 'fieldtype' : 'type'
-
-  return rows.map((task) => {
-    let _rows = {}
-    tasks.value?.data.rows.forEach((row) => {
-      _rows[row] = task[row]
-
-      let fieldType = columns?.find((col) => (col[key] || col.value) == row)?.[
-        type
-      ]
-
-      if (
-        fieldType &&
-        ['Date', 'Datetime'].includes(fieldType) &&
-        !['modified', 'creation', 'due_date'].includes(row)
-      ) {
-        _rows[row] = formatDate(task[row], '', true, fieldType == 'Datetime')
-      }
-
-      if (fieldType && fieldType == 'Currency') {
-        _rows[row] = getFormattedCurrency(row, task)
-      }
-
-      if (fieldType && fieldType == 'Float') {
-        _rows[row] = getFormattedFloat(row, task)
-      }
-
-      if (fieldType && fieldType == 'Percent') {
-        _rows[row] = getFormattedPercent(row, task)
-      }
-
-      if (['modified', 'creation'].includes(row)) {
-        _rows[row] = {
-          label: formatDate(task[row]),
-          timeAgo: __(timeAgo(task[row])),
-        }
-      } else if (row == 'assigned_to') {
-        _rows[row] = {
-          label: task.assigned_to && getUser(task.assigned_to).full_name,
-          ...(task.assigned_to && getUser(task.assigned_to)),
-        }
-      }
-    })
-    return _rows
-  })
-}
-
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+const activeView = ref('open')
+const activeQuickFilter = ref('')
+const activeUser = ref('')
 const showTaskModal = ref(false)
 
-const task = ref({
+const selectedTask = ref({
   name: '',
   title: '',
   description: '',
@@ -327,24 +301,213 @@ const task = ref({
   reference_docname: '',
 })
 
-function showTask(name) {
-  let t = rows.value?.find((row) => row.name === name)
-  task.value = {
-    name: t.name,
-    title: t.title,
-    description: t.description,
-    assigned_to: t.assigned_to?.email || '',
-    due_date: t.due_date,
-    status: t.status,
-    priority: t.priority,
-    reference_doctype: t.reference_doctype,
-    reference_docname: t.reference_docname,
-  }
-  showTaskModal.value = true
+// ---------------------------------------------------------------------------
+// API Resources
+// ---------------------------------------------------------------------------
+const tasksResource = createResource({
+  url: 'crm.api.tasks.get_tasks',
+  makeParams() {
+    return {
+      view: activeView.value,
+      quick_filter: activeQuickFilter.value,
+      user_filter: activeUser.value,
+    }
+  },
+  auto: true,
+})
+
+const taskUsers = createResource({
+  url: 'crm.api.tasks.get_task_users',
+  auto: true,
+})
+
+// Reload when filters change
+watch([activeView, activeQuickFilter, activeUser], () => {
+  tasksResource.reload()
+})
+
+// ---------------------------------------------------------------------------
+// Computed data
+// ---------------------------------------------------------------------------
+const tasks = computed(() => tasksResource.data?.tasks || [])
+const counts = computed(() => tasksResource.data?.counts || {
+  open: 0,
+  completed: 0,
+  total: 0,
+  overdue: 0,
+})
+const isManager = computed(() => tasksResource.data?.is_manager || false)
+
+// Proxy object that exposes a reload() method for TaskModal's v-model:reloadTasks
+const tasksReloadProxy = computed({
+  get() {
+    return { reload: () => tasksResource.reload() }
+  },
+  set() {
+    // TaskModal may assign to this; trigger reload
+    tasksResource.reload()
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------------
+const allTabs = computed(() => [
+  { value: 'open', label: 'Offen', count: counts.value.open },
+  { value: 'completed', label: 'Abgeschlossen', count: counts.value.completed },
+  { value: 'all', label: 'Alle', count: counts.value.total, managerOnly: true },
+])
+
+const visibleTabs = computed(() =>
+  allTabs.value.filter((tab) => !tab.managerOnly || isManager.value),
+)
+
+// ---------------------------------------------------------------------------
+// Quick Filters
+// ---------------------------------------------------------------------------
+const quickFilters = computed(() => [
+  {
+    value: 'overdue',
+    label: 'Überfällig',
+    count: counts.value.overdue,
+    countClass: 'bg-red-100 text-red-600',
+  },
+  { value: 'today', label: 'Heute', count: null, countClass: '' },
+  { value: 'this_week', label: 'Diese Woche', count: null, countClass: '' },
+  { value: 'no_date', label: 'Ohne Datum', count: null, countClass: '' },
+])
+
+function toggleQuickFilter(value) {
+  activeQuickFilter.value = activeQuickFilter.value === value ? '' : value
 }
 
-function createTask(column) {
-  task.value = {
+// ---------------------------------------------------------------------------
+// User Filter (Manager only)
+// ---------------------------------------------------------------------------
+const userFilterOptions = computed(() => {
+  const users = taskUsers.data || []
+  const options = [
+    {
+      label: 'Alle',
+      icon: 'users',
+      onClick: () => {
+        activeUser.value = ''
+      },
+    },
+  ]
+  users.forEach((u) => {
+    options.push({
+      label: u.full_name || u.email,
+      image: u.user_image || null,
+      onClick: () => {
+        activeUser.value = u.email
+      },
+    })
+  })
+  return options
+})
+
+const activeUserLabel = computed(() => {
+  if (!activeUser.value) return 'Alle'
+  const u = (taskUsers.data || []).find((u) => u.email === activeUser.value)
+  return u?.full_name || activeUser.value
+})
+
+const activeUserImage = computed(() => {
+  if (!activeUser.value) return null
+  const u = (taskUsers.data || []).find((u) => u.email === activeUser.value)
+  return u?.user_image || null
+})
+
+// ---------------------------------------------------------------------------
+// Status Labels (German)
+// ---------------------------------------------------------------------------
+const STATUS_LABELS = {
+  Backlog: 'Backlog',
+  Todo: 'Zu erledigen',
+  'In Progress': 'In Bearbeitung',
+  Done: 'Erledigt',
+  Canceled: 'Abgebrochen',
+}
+
+function statusLabel(status) {
+  return STATUS_LABELS[status] || status
+}
+
+// ---------------------------------------------------------------------------
+// Priority Labels (German) and Colors
+// ---------------------------------------------------------------------------
+const PRIORITY_LABELS = {
+  High: 'Hoch',
+  Medium: 'Mittel',
+  Low: 'Niedrig',
+}
+
+function priorityLabel(priority) {
+  return PRIORITY_LABELS[priority] || priority
+}
+
+function priorityColor(priority) {
+  const map = {
+    High: 'text-red-500',
+    Medium: 'text-orange-500',
+    Low: 'text-gray-400',
+  }
+  return map[priority] || 'text-gray-400'
+}
+
+// ---------------------------------------------------------------------------
+// Due Date Display
+// ---------------------------------------------------------------------------
+function dueDateClass(task) {
+  if (task.is_overdue) return 'text-red-600 font-medium'
+  if (task.is_today) return 'text-orange-600 font-medium'
+  if (task.due_date) return 'text-ink-gray-5'
+  return 'text-ink-gray-4 italic'
+}
+
+function dueDateText(task) {
+  if (!task.due_date) return 'Kein Datum'
+  if (task.is_overdue) return 'Überfällig'
+  if (task.is_today) return 'Heute'
+  return formatDate(task.due_date, '', true)
+}
+
+// ---------------------------------------------------------------------------
+// Reference Link
+// ---------------------------------------------------------------------------
+function referenceLabel(task) {
+  if (task.reference_doctype === 'CRM Deal') return 'Deal'
+  return 'Lead'
+}
+
+function navigateToReference(task) {
+  if (!task.reference_docname) return
+  if (task.reference_doctype === 'CRM Deal') {
+    router.push({ name: 'Deal', params: { dealId: task.reference_docname } })
+  } else {
+    router.push({ name: 'Lead', params: { leadId: task.reference_docname } })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Status Quick-Change
+// ---------------------------------------------------------------------------
+async function handleStatusChange(status, task) {
+  if (!task?.name) return
+  await call('frappe.client.set_value', {
+    doctype: 'CRM Task',
+    name: task.name,
+    fieldname: { status },
+  })
+  tasksResource.reload()
+}
+
+// ---------------------------------------------------------------------------
+// Task Modal
+// ---------------------------------------------------------------------------
+function openCreateModal() {
+  selectedTask.value = {
     name: '',
     title: '',
     description: '',
@@ -355,55 +518,43 @@ function createTask(column) {
     reference_doctype: 'CRM Lead',
     reference_docname: '',
   }
-
-  if (column.column?.name) {
-    let column_field = tasks.value.params.column_field
-    if (column_field) {
-      task.value[column_field] = column.column.name
-    }
-  }
-
   showTaskModal.value = true
 }
 
-function actions(name) {
-  return [
-    {
-      label: __('Delete'),
-      icon: 'trash-2',
-      onClick: () => {
-        deletetask(name)
-        tasks.value.reload()
-      },
-    },
-  ]
-}
-
-async function deletetask(name) {
-  await call('frappe.client.delete', {
-    doctype: 'CRM Task',
-    name,
-  })
-}
-
-function redirect(doctype, docname) {
-  if (!docname) return
-  let name = doctype == 'CRM Deal' ? 'Deal' : 'Lead'
-  let params = { leadId: docname }
-  if (name == 'Deal') {
-    params = { dealId: docname }
+function openEditModal(task) {
+  selectedTask.value = {
+    name: task.name,
+    title: task.title,
+    description: task.description || '',
+    assigned_to: task.assigned_to || '',
+    due_date: task.due_date || '',
+    status: task.status,
+    priority: task.priority,
+    reference_doctype: task.reference_doctype || '',
+    reference_docname: task.reference_docname || '',
   }
-  router.push({ name: name, params: params })
+  showTaskModal.value = true
 }
 
-const openTaskFromURL = () => {
-  const searchParams = new URLSearchParams(window.location.search)
-  const taskName = searchParams.get('open')
+// ---------------------------------------------------------------------------
+// Empty State Text
+// ---------------------------------------------------------------------------
+const emptyStateText = computed(() => {
+  if (activeQuickFilter.value === 'overdue') return 'Keine überfälligen Aufgaben'
+  if (activeQuickFilter.value === 'today') return 'Keine Aufgaben für heute'
+  if (activeQuickFilter.value === 'this_week') return 'Keine Aufgaben diese Woche'
+  if (activeQuickFilter.value === 'no_date') return 'Keine Aufgaben ohne Datum'
+  if (activeView.value === 'completed') return 'Keine abgeschlossenen Aufgaben'
+  return 'Keine Aufgaben gefunden'
+})
 
-  if (taskName && rows.value?.length) {
-    showTask(parseInt(taskName))
-    searchParams.delete('open')
-    window.history.replaceState(null, '', window.location.pathname)
-  }
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+function stripHtml(html) {
+  if (!html) return ''
+  const tmp = document.createElement('div')
+  tmp.innerHTML = html
+  return tmp.textContent || tmp.innerText || ''
 }
 </script>

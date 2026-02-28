@@ -80,11 +80,6 @@ def get_valid_statuses():
 
 
 @frappe.whitelist()
-def get_vertriebler_list():
-    """Return list of Vertriebler for frontend display."""
-    return _get_vertriebler()
-
-
 @frappe.whitelist()
 def import_leads(rows, headers):
     frappe.only_for(["System Manager", "Sales Manager"])

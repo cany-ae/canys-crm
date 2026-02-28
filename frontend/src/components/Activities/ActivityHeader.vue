@@ -28,12 +28,12 @@
     <Button
       v-else-if="title == 'Events'"
       variant="solid"
-      @click="modalRef.showEvent()"
+      @click="handleScheduleEvent"
     >
       <template #prefix>
         <EventIcon class="h-4 w-4" />
       </template>
-      <span>{{ __('Schedule an event') }}</span>
+      <span>{{ doctype === 'CRM Lead' ? __('Termin mit Vorschlägen') : __('Schedule an event') }}</span>
     </Button>
     <Button
       v-else-if="title == 'Notes'"
@@ -118,6 +118,7 @@ const props = defineProps({
   title: String,
   titleLabel: String,
   doc: Object,
+  doctype: String,
   modalRef: Object,
   emailBox: Object,
   whatsappBox: Object,
@@ -172,8 +173,8 @@ const defaultActions = computed(() => {
     },
     {
       icon: h(EventIcon, { class: 'h-4 w-4' }),
-      label: __('Schedule an event'),
-      onClick: () => props.modalRef.showEvent(),
+      label: props.doctype === 'CRM Lead' ? __('Termin mit Vorschlägen') : __('Schedule an event'),
+      onClick: () => handleScheduleEvent(),
     },
     {
       icon: h(PhoneIcon, { class: 'h-4 w-4' }),
@@ -215,6 +216,15 @@ const defaultActions = computed(() => {
 
 function getTabIndex(name) {
   return props.tabs.findIndex((tab) => tab.name === name)
+}
+
+
+function handleScheduleEvent() {
+  if (props.doctype === 'CRM Lead') {
+    window.dispatchEvent(new CustomEvent('open-termin-vorschlaege'))
+  } else {
+    props.modalRef.showEvent()
+  }
 }
 
 const callActions = computed(() => {

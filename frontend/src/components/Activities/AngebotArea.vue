@@ -204,6 +204,17 @@
             <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ angebot.file_name }}</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(angebot.creation) }}</p>
           </div>
+          <!-- Kopieren Button -->
+          <button
+            @click="openCopyDialog(angebot)"
+            class="ml-2 p-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-md transition-colors"
+            title="E-Mail-Text kopieren"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+          </button>
+          <!-- Download Button -->
           <a
             :href="angebot.file_url"
             download
@@ -218,11 +229,19 @@
       </div>
     </div>
   </div>
+
+  <!-- AngebotCopyDialog fuer Angebote aus der Liste -->
+  <AngebotCopyDialog
+    v-model="showCopyDialog"
+    :lead-id="leadId"
+    :file-data="selectedAngebotFile"
+  />
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { createResource } from 'frappe-ui'
+import AngebotCopyDialog from '@/components/AngebotCopyDialog.vue'
 
 const props = defineProps({
   leadId: { type: String, required: true }
@@ -248,6 +267,10 @@ const beitrag20 = ref('')
 const beitrag10 = ref('')
 const beitrag0 = ref('')
 
+// Copy dialog state
+const showCopyDialog = ref(false)
+const selectedAngebotFile = ref(null)
+
 const canGenerate = computed(() => horseName.value.trim() && selectedFile.value && currentMitarbeiter.value)
 const statusClass = computed(() =>
   statusType.value === 'success'
@@ -267,6 +290,15 @@ const angeboteResource = createResource({
   auto: true,
   onSuccess: (data) => { angebote.value = data || [] }
 })
+
+function openCopyDialog(angebot) {
+  selectedAngebotFile.value = {
+    file_name: angebot.file_name,
+    file_url: angebot.file_url,
+    file_doc_name: angebot.name,
+  }
+  showCopyDialog.value = true
+}
 
 function selectFile() { fileInput.value?.click() }
 

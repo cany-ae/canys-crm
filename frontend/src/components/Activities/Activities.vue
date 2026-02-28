@@ -8,6 +8,7 @@
     :title="title"
     :titleLabel="titleLabel"
     :doc="doc"
+    :doctype="doctype"
     :emailBox="emailBox"
     :whatsappBox="whatsappBox"
     :modalRef="modalRef"
@@ -593,6 +594,11 @@
       }
     "
   />
+  <AngebotCopyDialog
+    v-model="showAngebotCopyDialog"
+    :lead-id="docname"
+    :file-data="angebotFileData"
+  />
 </template>
 <script setup>
 import ActivityHeader from '@/components/Activities/ActivityHeader.vue'
@@ -603,6 +609,7 @@ import NoteArea from '@/components/Activities/NoteArea.vue'
 import TaskArea from '@/components/Activities/TaskArea.vue'
 import AttachmentArea from '@/components/Activities/AttachmentArea.vue'
 import AngebotArea from '@/components/Activities/AngebotArea.vue'
+import AngebotCopyDialog from '@/components/AngebotCopyDialog.vue'
 import DataFields from '@/components/Activities/DataFields.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ActivityIcon from '@/components/Icons/ActivityIcon.vue'
@@ -1030,7 +1037,7 @@ const STATUS_COLORS = {
   'Kontaktiert': 'blue',
   'Nicht erreicht': 'orange',
   'Kontaktiert aber nicht erreicht': 'orange',
-  'Rueckruf geplant': 'yellow',
+  'Rückruf geplant': 'yellow',
   'Rückruf geplant': 'yellow',
   'Termin vereinbart': 'green',
   'Kein Interesse': 'red',
@@ -1100,19 +1107,17 @@ function statusDotClass(status) {
   return colorMap[getStatusColor(status)] || colorMap.gray
 }
 
+const showAngebotCopyDialog = ref(false)
+const angebotFileData = ref(null)
+
 function openEmailWithAngebot(fileData) {
-  changeTabTo('emails')
-  nextTick(() => {
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('open-email-with-angebot', {
-        detail: {
-          fileData,
-          lead: doc.value,
-        },
-      }))
-    }, 300)
-  })
+  angebotFileData.value = fileData
+  showAngebotCopyDialog.value = true
 }
 
-defineExpose({ emailBox, all_activities, changeTabTo })
+function showNoteWithTimer() {
+  modalRef.value?.showNoteWithTimer()
+}
+
+defineExpose({ emailBox, all_activities, changeTabTo, showNoteWithTimer })
 </script>

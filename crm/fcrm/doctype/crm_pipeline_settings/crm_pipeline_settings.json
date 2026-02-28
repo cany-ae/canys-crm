@@ -1,0 +1,57 @@
+{
+  "name": "CRM Pipeline Settings",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "document_type": "Setup",
+  "issingle": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "info_section",
+    "info_html",
+    "phases_section",
+    "phases"
+  ],
+  "fields": [
+    {
+      "fieldname": "info_section",
+      "fieldtype": "Section Break",
+      "label": "Info"
+    },
+    {
+      "fieldname": "info_html",
+      "fieldtype": "HTML",
+      "label": "Info",
+      "options": "<div class='alert alert-info'><b>CRM Pipeline Konfiguration</b><br>Hier werden die Pipeline-Phasen (Listen 10-90) konfiguriert. Änderungen wirken sich auf die gesamte Lead-Steuerung aus.<br><br><b>Wichtig:</b> Phase-Werte (z.B. '10 - Neu ohne Termin') dürfen nicht geändert werden, wenn bereits Leads in dieser Phase existieren. Labels, Farben und Übergänge können jederzeit angepasst werden.</div>"
+    },
+    {
+      "fieldname": "phases_section",
+      "fieldtype": "Section Break",
+      "label": "Pipeline-Phasen"
+    },
+    {
+      "fieldname": "phases",
+      "fieldtype": "Table",
+      "label": "Phasen",
+      "options": "CRM Pipeline Phase",
+      "reqd": 1,
+      "description": "Alle Pipeline-Phasen mit Konfiguration"
+    }
+  ],
+  "naming_rule": "Expression (old style)",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "creation": "2026-02-08 14:00:00",
+  "modified": "2026-02-08 14:00:00",
+  "modified_by": "Administrator",
+  "owner": "Administrator"
+}

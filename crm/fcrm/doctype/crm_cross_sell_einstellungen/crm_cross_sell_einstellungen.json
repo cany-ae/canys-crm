@@ -1,0 +1,56 @@
+{
+  "name": "CRM Cross Sell Einstellungen",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "document_type": "Setup",
+  "issingle": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "info_section",
+    "info_html",
+    "regeln_section",
+    "regeln"
+  ],
+  "fields": [
+    {
+      "fieldname": "info_section",
+      "fieldtype": "Section Break",
+      "label": "Info"
+    },
+    {
+      "fieldname": "info_html",
+      "fieldtype": "HTML",
+      "label": "Info",
+      "options": "<div class='alert alert-info'><b>Cross-Sell Konfiguration</b><br>Hier werden die Cross-Selling-Regeln pro Leadtyp konfiguriert. Jede Regel definiert ein Cross-Sell-Thema mit Priorität (1-3) für einen bestimmten Leadtyp.<br><br><b>Priorität 1</b> = Muss vom Closer angesprochen werden (Pflicht-Feedback)<br><b>Priorität 2-3</b> = Optional, aber empfohlen<br><br><b>Beispiel:</b> Leadtyp 'Pferd' → Prio 1: 'PrivatSchutz / KV Mensch', Prio 2: 'Autoversicherung (Zugfahrzeug)', Prio 3: 'Geldanlage / Sparen'</div>"
+    },
+    {
+      "fieldname": "regeln_section",
+      "fieldtype": "Section Break",
+      "label": "Cross-Sell-Regeln"
+    },
+    {
+      "fieldname": "regeln",
+      "fieldtype": "Table",
+      "label": "Regeln",
+      "options": "CRM Cross Sell Regel",
+      "description": "Cross-Sell-Regeln pro Leadtyp und Priorität"
+    }
+  ],
+  "naming_rule": "Expression (old style)",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "creation": "2026-02-27 10:00:00",
+  "modified": "2026-02-27 10:00:00",
+  "modified_by": "Administrator",
+  "owner": "Administrator"
+}

@@ -1,0 +1,169 @@
+{
+  "name": "CRM Gamification Score",
+  "module": "FCRM",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "naming_rule": "Expression",
+  "autoname": "format:GAM-{user}-{score_type}-{period}",
+  "creation": "2026-02-12 10:00:00",
+  "modified": "2026-02-12 10:00:00",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "custom": 0,
+  "is_submittable": 0,
+  "istable": 0,
+  "is_virtual": 0,
+  "allow_rename": 0,
+  "allow_copy": 0,
+  "in_create": 0,
+  "search_fields": "user,score_type,period",
+  "title_field": "",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "submit": 0,
+      "cancel": 0,
+      "amend": 0,
+      "report": 1,
+      "export": 1,
+      "import": 0,
+      "share": 1,
+      "print": 1,
+      "email": 1
+    },
+    {
+      "role": "CRM Vertrieb",
+      "read": 1,
+      "write": 0,
+      "create": 0,
+      "delete": 0,
+      "submit": 0,
+      "cancel": 0,
+      "amend": 0,
+      "report": 1,
+      "export": 0,
+      "import": 0,
+      "share": 0,
+      "print": 0,
+      "email": 0
+    }
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "fieldtype": "Link",
+      "label": "User",
+      "options": "User",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "score_type",
+      "fieldtype": "Select",
+      "label": "Score Type",
+      "options": "daily_points\nweekly_points\nmonthly_points\ntotal_points",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "period",
+      "fieldtype": "Data",
+      "label": "Period",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "z.B. 2026-02-12 (daily), 2026-W07 (weekly), 2026-02 (monthly), ALL (total)"
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "points",
+      "fieldtype": "Int",
+      "label": "Points",
+      "default": "0",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "current_streak",
+      "fieldtype": "Int",
+      "label": "Current Streak",
+      "default": "0",
+      "description": "Aufeinanderfolgende Arbeitstage mit Aktion (nur bei daily_points)"
+    },
+    {
+      "fieldname": "best_streak",
+      "fieldtype": "Int",
+      "label": "Best Streak",
+      "default": "0",
+      "description": "Laengste Streak des Users (nur bei daily_points)"
+    },
+    {
+      "fieldname": "section_break_details",
+      "fieldtype": "Section Break",
+      "label": "Details"
+    },
+    {
+      "fieldname": "lead_created_count",
+      "fieldtype": "Int",
+      "label": "Lead Created Count",
+      "default": "0"
+    },
+    {
+      "fieldname": "termin_booked_count",
+      "fieldtype": "Int",
+      "label": "Termin Booked Count",
+      "default": "0"
+    },
+    {
+      "fieldname": "column_break_2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "abschluss_count",
+      "fieldtype": "Int",
+      "label": "Abschluss Count",
+      "default": "0"
+    },
+    {
+      "fieldname": "followup_count",
+      "fieldtype": "Int",
+      "label": "Follow-up Count",
+      "default": "0"
+    },
+    {
+      "fieldname": "column_break_3",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "spezialist_count",
+      "fieldtype": "Int",
+      "label": "Spezialist Qualified Count",
+      "default": "0"
+    },
+    {
+      "fieldname": "cross_sell_count",
+      "fieldtype": "Int",
+      "label": "Cross-Sell Count",
+      "default": "0"
+    },
+    {
+      "fieldname": "verloren_count",
+      "fieldtype": "Int",
+      "label": "Verloren Count",
+      "default": "0"
+    }
+  ],
+  "links": [],
+  "actions": []
+}
