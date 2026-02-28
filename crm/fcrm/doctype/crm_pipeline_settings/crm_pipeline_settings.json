@@ -9,7 +9,9 @@
     "info_section",
     "info_html",
     "phases_section",
-    "phases"
+    "phases",
+    "permissions_section",
+    "lead_owner_filter_aktiv"
   ],
   "fields": [
     {
@@ -21,7 +23,7 @@
       "fieldname": "info_html",
       "fieldtype": "HTML",
       "label": "Info",
-      "options": "<div class='alert alert-info'><b>CRM Pipeline Konfiguration</b><br>Hier werden die Pipeline-Phasen (Listen 10-90) konfiguriert. Änderungen wirken sich auf die gesamte Lead-Steuerung aus.<br><br><b>Wichtig:</b> Phase-Werte (z.B. '10 - Neu ohne Termin') dürfen nicht geändert werden, wenn bereits Leads in dieser Phase existieren. Labels, Farben und Übergänge können jederzeit angepasst werden.</div>"
+      "options": "<div class='alert alert-info'><b>CRM Pipeline Konfiguration</b><br>Hier werden die Pipeline-Phasen (Listen 10-90) konfiguriert. \u00c4nderungen wirken sich auf die gesamte Lead-Steuerung aus.<br><br><b>Wichtig:</b> Phase-Werte (z.B. '10 - Neu ohne Termin') d\u00fcrfen nicht ge\u00e4ndert werden, wenn bereits Leads in dieser Phase existieren. Labels, Farben und \u00dcberg\u00e4nge k\u00f6nnen jederzeit angepasst werden.</div>"
     },
     {
       "fieldname": "phases_section",
@@ -35,6 +37,18 @@
       "options": "CRM Pipeline Phase",
       "reqd": 1,
       "description": "Alle Pipeline-Phasen mit Konfiguration"
+    },
+    {
+      "fieldname": "permissions_section",
+      "fieldtype": "Section Break",
+      "label": "Berechtigungen"
+    },
+    {
+      "fieldname": "lead_owner_filter_aktiv",
+      "fieldtype": "Check",
+      "label": "Lead-Eigent\u00fcmer-Filter aktiv",
+      "default": "0",
+      "description": "Wenn aktiviert, sehen Vertriebler nur ihre eigenen Leads (zugewiesen oder als Lead-Owner). System Manager sieht immer alle Leads."
     }
   ],
   "naming_rule": "Expression (old style)",
@@ -51,7 +65,7 @@
   "sort_order": "DESC",
   "track_changes": 1,
   "creation": "2026-02-08 14:00:00",
-  "modified": "2026-02-08 14:00:00",
+  "modified": "2026-02-28 10:00:00",
   "modified_by": "Administrator",
   "owner": "Administrator"
 }

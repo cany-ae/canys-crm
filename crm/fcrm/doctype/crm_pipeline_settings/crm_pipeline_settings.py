@@ -30,6 +30,7 @@ class CRMPipelineSettings(Document):
 		frappe.cache().delete_key("crm_pipeline_transitions")
 		frappe.cache().delete_key("crm_pipeline_phases")
 		frappe.cache().delete_key("crm_pipeline_default_phase")
+		frappe.cache().delete_key("crm_lead_owner_filter_aktiv")
 
 
 def get_allowed_transitions():
@@ -121,3 +122,23 @@ def get_default_phase():
 		pass
 
 	return "10 - Neu ohne Termin"
+
+
+def is_lead_owner_filter_active():
+	"""Check if the lead owner filter feature flag is enabled (cached).
+
+	Returns:
+		bool: True if filter is active, False otherwise.
+	"""
+	cache_key = "crm_lead_owner_filter_aktiv"
+	cached = frappe.cache().get_value(cache_key)
+	if cached is not None:
+		return bool(cached)
+
+	try:
+		value = frappe.db.get_single_value("CRM Pipeline Settings", "lead_owner_filter_aktiv") or 0
+	except Exception:
+		value = 0
+
+	frappe.cache().set_value(cache_key, int(value), expires_in_sec=300)
+	return bool(value)

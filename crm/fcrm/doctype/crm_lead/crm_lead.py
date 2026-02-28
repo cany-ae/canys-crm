@@ -4405,3 +4405,86 @@ def get_primary_advisor(lead_name):
         'contact_name': advisor.contact_name,
         'lead_typ': advisor.lead_typ,
     }
+
+# ============================================================
+# Permission: Lead-Eigentümer-Filter (Feature-Flag gesteuert)
+# Aktivierung über: CRM Pipeline Settings → lead_owner_filter_aktiv
+# ============================================================
+
+def get_permission_query_conditions(user):
+    """Filter CRM Lead list queries based on role and feature flag.
+
+    When the feature flag 'lead_owner_filter_aktiv' is OFF (default):
+        No filtering — all users see all leads.
+
+    When the feature flag is ON:
+        System Manager / Administrator: see all leads.
+        Everyone else (CRM Vertrieb): only leads assigned to them or
+        where lead_owner matches their user.
+    """
+    from crm.fcrm.doctype.crm_pipeline_settings.crm_pipeline_settings import (
+        is_lead_owner_filter_active,
+    )
+
+    if not is_lead_owner_filter_active():
+        return ""
+
+    if not user:
+        user = frappe.session.user
+
+    if user == "Administrator":
+        return ""
+
+    roles = frappe.get_roles(user)
+    if "System Manager" in roles:
+        return ""
+
+    # SQL-safe: use frappe.db.escape for the user value
+    escaped_user = frappe.db.escape(user)
+    return (
+        "(`tabCRM Lead`._assign LIKE CONCAT('%%', {user}, '%%')"
+        " OR `tabCRM Lead`.lead_owner = {user}"
+        " OR `tabCRM Lead`.lead_owner = ''"
+        " OR `tabCRM Lead`.lead_owner IS NULL)"
+    ).format(user=escaped_user)
+
+
+def has_lead_permission(doc, ptype, user):
+    """Check single-document permission for CRM Lead (feature-flag gated).
+
+    When the feature flag 'lead_owner_filter_aktiv' is OFF (default):
+        No extra check — standard DocPerm applies.
+
+    When the feature flag is ON:
+        System Manager / Administrator: full access.
+        Everyone else: only if assigned to them, lead_owner matches,
+        or lead_owner is unset.
+    """
+    from crm.fcrm.doctype.crm_pipeline_settings.crm_pipeline_settings import (
+        is_lead_owner_filter_active,
+    )
+
+    if not is_lead_owner_filter_active():
+        return True
+
+    if not user:
+        user = frappe.session.user
+
+    if user == "Administrator":
+        return True
+
+    roles = frappe.get_roles(user)
+    if "System Manager" in roles:
+        return True
+
+    # Check lead_owner
+    lead_owner = doc.get("lead_owner") if isinstance(doc, dict) else doc.lead_owner
+    if not lead_owner or lead_owner == user:
+        return True
+
+    # Check _assign (JSON array of assigned users)
+    assigned = doc.get("_assign") if isinstance(doc, dict) else doc._assign
+    if assigned and user in assigned:
+        return True
+
+    return False
