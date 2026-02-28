@@ -348,8 +348,23 @@ def get_data(
 			"user": frappe.session.user,
 		}
 
-		if not custom_view and frappe.db.exists("CRM View Settings", default_view_filters):
-			list_view_settings = frappe.get_doc("CRM View Settings", default_view_filters)
+		# Fallback: also check for global settings (user="")
+		global_view_filters = {
+			"dt": doctype,
+			"type": view_type or "list",
+			"is_standard": 1,
+			"user": "",
+		}
+
+		view_settings_name = None
+		if not custom_view:
+			view_settings_name = (
+				frappe.db.exists("CRM View Settings", default_view_filters)
+				or frappe.db.exists("CRM View Settings", global_view_filters)
+			)
+
+		if view_settings_name:
+			list_view_settings = frappe.get_doc("CRM View Settings", view_settings_name)
 			columns = frappe.parse_json(list_view_settings.columns)
 			rows = frappe.parse_json(list_view_settings.rows)
 			is_default = False
@@ -366,10 +381,11 @@ def get_data(
 			if column.get("key") == "_liked_by" and column.get("width") == "10rem":
 				column["width"] = "50px"
 
-			# remove column if column.hidden is True
-			column_meta = meta.get_field(column.get("key"))
-			if column_meta and column_meta.get("hidden"):
-				columns.remove(column)
+			# Note: Do NOT remove columns based on field.hidden from the
+			# doctype meta.  CRM has its own frontend and column config
+			# (CRM View Settings / default_list_data).  Frappe form-level
+			# hidden flags (e.g. full_name on Contact) must not suppress
+			# explicitly configured CRM list columns.
 
 		# check if rows has group_by_field if not add it
 		if group_by_field and group_by_field not in rows:
@@ -384,9 +400,9 @@ def get_data(
 		if doctype == 'CRM Lead':
 			_required_lead_fields = [
 				'custom_termin_datum', 'custom_termin_status', 'custom_termin_typ',
-				'custom_termin_berater', 'custom_leadtyp', 'custom_liste',
-				'custom_leadquelle', 'custom_lead_potenzial', 'custom_naechster_kontakt',
-				'custom_zustaendige_rolle',
+				'custom_termin_berater', 'custom_termin_zeit_von', 'custom_leadtyp',
+				'custom_liste', 'custom_leadquelle', 'custom_lead_potenzial',
+				'custom_naechster_kontakt', 'custom_zustaendige_rolle',
 			]
 			for _rf in _required_lead_fields:
 				if _rf not in rows:
