@@ -467,16 +467,23 @@ const scopedColumns = computed(() => {
   if (!leads.value?.data?.columns) return []
   // Status-Spalte immer ausblenden
   const cols = leads.value.data.columns.filter(col => col.key !== 'status')
+  // Enforce minimum width for custom_liste so long labels like "Abschluss gewonnen" fit
+  const withWidths = (list) => list.map(col => {
+    if (col.key === 'custom_liste') {
+      return { ...col, width: '14rem' }
+    }
+    return col
+  })
   if (listScope.value === 'mine') {
     // Replace _assign column with custom_termin_datum for "Meine" tab
-    return cols.map(col => {
+    return withWidths(cols.map(col => {
       if (col.key === '_assign') {
         return { label: 'Termin', type: 'Datetime', key: 'custom_termin_datum', width: col.width || '10rem' }
       }
       return col
-    })
+    }))
   }
-  return cols
+  return withWidths(cols)
 })
 
 function clearPhaseFilter() {

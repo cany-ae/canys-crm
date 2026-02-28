@@ -84,7 +84,7 @@
         @click.stop="activityFilter = 'all'"
       />
     </div>
-    <Dropdown v-else-if="!['Activity', 'StatusUpdates', 'Data', 'InvoiceTool'].includes(title)" :options="defaultActions" @click.stop>
+    <Dropdown v-else-if="!['Activity', 'Data', 'InvoiceTool'].includes(title)" :options="defaultActions" @click.stop>
       <template v-slot="{ open }">
         <Button
           variant="solid"
@@ -133,7 +133,6 @@ const activityFilter = defineModel('activityFilter')
 
 const filterLabels = {
   all: 'Alle',
-  status_change: __('Status Updates'),
   calls: 'Anrufe',
   communication: 'E-Mails',
   angebot: 'Angebote',

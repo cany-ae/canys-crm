@@ -69,16 +69,7 @@
       </div>
       <ListRowItem v-else :item="item" :align="column.align">
         <template #prefix>
-          <div v-if="column.key === 'status'" class="flex items-center">
-            <span
-              class="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold"
-              :class="getStatusBadgeClass(item)"
-            >
-              <span class="inline-block h-1.5 w-1.5 rounded-full" :class="getStatusDotClass(item)"></span>
-            </span>
-          </div>
-
-          <div v-else-if="column.key === 'lead_name'" class="relative">
+          <div v-if="column.key === 'lead_name'" class="relative">
             <Avatar
               v-if="item.label"
               class="flex items-center"
@@ -181,7 +172,7 @@
             "
           >
             <span
-              class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
+              class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold whitespace-nowrap"
               :class="getListeBadgeClass(item.phase_color)"
             >
               {{ item.label }}
@@ -324,7 +315,6 @@
 
 <script setup>
 import HeartIcon from '@/components/Icons/HeartIcon.vue'
-import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import Email2Icon from '@/components/Icons/Email2Icon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
@@ -472,47 +462,7 @@ function getListeBadgeClass(color) {
   return LISTE_BADGE_CLASSES[color] || LISTE_BADGE_CLASSES.gray
 }
 
-const STATUS_COLOR_MAP = {
-  'Nicht kontaktiert': 'gray',
-  'Kontaktiert': 'blue',
-  'Kontaktiert aber nicht erreicht': 'orange',
-  'Nicht erreicht': 'orange',
-  'Rückruf geplant': 'yellow',
-  'Rückruf geplant': 'yellow',
-  'Termin vereinbart': 'green',
-  'Kein Interesse': 'red',
-}
 
-function getStatusColor(item) {
-  const statusName = item?.label || ''
-  return STATUS_COLOR_MAP[statusName] || 'gray'
-}
-
-function getStatusBadgeClass(item) {
-  const color = getStatusColor(item)
-  const map = {
-    gray: 'bg-gray-100 text-gray-700',
-    blue: 'bg-blue-100 text-blue-700',
-    orange: 'bg-orange-100 text-orange-700',
-    yellow: 'bg-yellow-100 text-yellow-800',
-    green: 'bg-green-100 text-green-700',
-    red: 'bg-red-100 text-red-700',
-  }
-  return map[color] || map.gray
-}
-
-function getStatusDotClass(item) {
-  const color = getStatusColor(item)
-  const map = {
-    gray: 'bg-gray-500',
-    blue: 'bg-blue-500',
-    orange: 'bg-orange-500',
-    yellow: 'bg-yellow-500',
-    green: 'bg-green-500',
-    red: 'bg-red-500',
-  }
-  return map[color] || map.gray
-}
 
 // Overdue detection: check if custom_naechster_kontakt is in the past
 // and lead is not in closed phases (80/90)

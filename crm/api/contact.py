@@ -214,10 +214,10 @@ def get_contact_history(contact):
 		except frappe.DoesNotExistError:
 			continue
 
-	# 3. Build aggregation summary
+	# 3. Build aggregation summary (group by pipeline phase)
 	leads_by_status = {}
 	for lead in leads:
-		s = lead.get("status") or "Unknown"
+		s = lead.get("custom_liste") or "Unbekannt"
 		leads_by_status[s] = leads_by_status.get(s, 0) + 1
 
 	deals_by_status = {}

@@ -135,16 +135,16 @@ const history = createResource({
 
 const summary = computed(() => history.data?.summary || null)
 
-// -- Lead status color mapping --
+// -- Pipeline Phase (Liste) color mapping --
 
-const leadStatusColorMap = {
-  'Nicht kontaktiert': 'gray',
-  'Kontaktiert': 'blue',
-  'Kontaktiert aber nicht erreicht': 'orange',
-  'Rückruf geplant': 'yellow',
-  'R\u00fcckruf geplant': 'yellow',
-  'Termin vereinbart': 'green',
-  'Kein Interesse': 'red',
+const listePhaseColorMap = {
+  '10 - Neu ohne Termin': 'gray',
+  '20 - Termin gebucht': 'blue',
+  '30 - Reaktivierung': 'orange',
+  '50 - Closer-Termin': 'cyan',
+  '70 - Follow-up': 'yellow',
+  '80 - Abschluss gewonnen': 'green',
+  '90 - Abschluss verloren': 'red',
 }
 
 const badgeClassMap = {
@@ -167,16 +167,16 @@ const dotClassMap = {
   cyan: 'bg-cyan-500',
 }
 
-function getLeadColor(status) {
-  return leadStatusColorMap[status] || 'gray'
+function getLeadColor(phase) {
+  return listePhaseColorMap[phase] || 'gray'
 }
 
-function getLeadBadgeClass(status) {
-  return badgeClassMap[getLeadColor(status)] || badgeClassMap.gray
+function getLeadBadgeClass(phase) {
+  return badgeClassMap[getLeadColor(phase)] || badgeClassMap.gray
 }
 
-function getLeadDotClass(status) {
-  return dotClassMap[getLeadColor(status)] || dotClassMap.gray
+function getLeadDotClass(phase) {
+  return dotClassMap[getLeadColor(phase)] || dotClassMap.gray
 }
 
 // -- Deal status color mapping --
@@ -205,15 +205,16 @@ function getDealDotClass(status) {
 
 // -- Helpers --
 
-function truncateStatus(status) {
-  const shortNames = {
-    'Kontaktiert aber nicht erreicht': 'Nicht erreicht',
-    'Nicht kontaktiert': 'Nicht kontaktiert',
-    'Rückruf geplant': 'Rückruf',
-    'R\u00fcckruf geplant': 'Rückruf',
-    'Termin vereinbart': 'Termin',
+function truncateStatus(phase) {
+  if (!phase) return 'Unbekannt'
+  const match = phase.match(/^(\d+)\s*-\s*(.+)/)
+  if (match) {
+    const code = match[1]
+    const label = match[2]
+    if (label.length > 12) return code + ' ' + label.substring(0, 10) + '...'
+    return code + ' ' + label
   }
-  return shortNames[status] || status
+  return phase
 }
 
 function formatCurrency(value) {

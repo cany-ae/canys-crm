@@ -206,13 +206,7 @@
                 ) && activity.status == 'Busy'
               "
             />
-            <div
-              v-else-if="activity.activity_type == 'status_change'"
-              class="flex h-6 w-6 items-center justify-center rounded-full"
-              :class="statusChangeIconBgClass(activity.data?.value)"
-            >
-              <StatusChangeIcon class="h-3 w-3 text-white" />
-            </div>
+
             <component
               v-else
               :is="activity.icon"
@@ -301,74 +295,7 @@
         >
           <CallArea :activity="activity" />
         </div>
-        <div v-else-if="activity.activity_type == 'status_change'"
-          class="relative -mx-4 my-2"
-        >
-          <div
-            class="relative overflow-hidden rounded-xl border-2 shadow-lg"
-            :class="statusChangeBorderClass(activity.data?.value)"
-          >
-            <div class="h-1.5 w-full bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse"
-              :class="statusChangeIconBgClass(activity.data?.value)"
-            ></div>
-            <div class="relative px-5 py-2">
-              <div class="absolute inset-0 opacity-[0.04]"
-                :class="statusChangeIconBgClass(activity.data?.value)"
-              ></div>
-              <div class="relative flex items-center justify-between mb-1.5">
-                <div class="flex items-center gap-2">
-                  <div class="flex items-center justify-center w-7 h-7 rounded-full ring-2 ring-white shadow-md"
-                    :class="statusChangeIconBgClass(activity.data?.value)"
-                  >
-                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-                    </svg>
-                  </div>
-                  <span class="text-xs font-bold uppercase tracking-widest"
-                    :class="statusChangeTextClass(activity.data?.value)"
-                  >
-                    {{ __('Status Update') }}
-                  </span>
-                </div>
-                <Tooltip :text="formatDate(activity.creation)">
-                  <div class="text-[11px] text-gray-400 font-medium">
-                    {{ __(timeAgo(activity.creation)) }}
-                  </div>
-                </Tooltip>
-              </div>
-              <div class="relative flex items-center gap-3 mb-1">
-                <div class="flex-1 min-w-0">
-                  <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold opacity-60 bg-gray-100 text-gray-500 ring-1 ring-gray-200 line-through decoration-1">
-                    <span class="w-2 h-2 rounded-full flex-shrink-0" :class="statusDotClass(activity.data?.old_value)"></span>
-                    <span class="truncate">{{ activity.data?.old_value }}</span>
-                  </div>
-                </div>
-                <div class="flex-shrink-0 flex items-center gap-0.5">
-                  <div class="w-6 h-0.5 rounded-full" :class="statusChangeIconBgClass(activity.data?.value)"></div>
-                  <div class="w-8 h-0.5 rounded-full animate-pulse" :class="statusChangeIconBgClass(activity.data?.value)"></div>
-                  <svg class="w-5 h-5 -ml-1" :class="statusChangeTextClass(activity.data?.value)" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-                  </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold shadow-md ring-2 ring-offset-1"
-                    :class="statusBadgeClass(activity.data?.value)"
-                  >
-                    <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" :class="statusDotClass(activity.data?.value)"></span>
-                      <span class="relative inline-flex rounded-full h-2.5 w-2.5" :class="statusDotClass(activity.data?.value)"></span>
-                    </span>
-                    <span class="truncate">{{ activity.data?.value }}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="relative flex items-center gap-1 text-[10px] text-gray-400 mt-1">
-                <span>{{ activity.owner_name }}</span>
-              </div>
-            </div>
-            <div class="h-1 w-full" :class="statusChangeIconBgClass(activity.data?.value)"></div>
-          </div>
-        </div>
+
         <div v-else class="mb-4 flex flex-col gap-2 py-1.5">
           <div class="flex items-center justify-stretch gap-2 text-base">
             <div
@@ -629,7 +556,6 @@ import MultiActionButton from '@/components/MultiActionButton.vue'
 import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import DotIcon from '@/components/Icons/DotIcon.vue'
-import StatusChangeIcon from '@/components/Icons/StatusChangeIcon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import SelectIcon from '@/components/Icons/SelectIcon.vue'
 import MissedCallIcon from '@/components/Icons/MissedCallIcon.vue'
@@ -794,11 +720,6 @@ const activities = computed(() => {
     _activities = all_activities.data.versions.filter(
       (activity) => activity.activity_type === 'communication',
     )
-  } else if (title.value == 'StatusUpdates') {
-    if (!all_activities.data?.versions) return []
-    _activities = all_activities.data.versions.filter(
-      (activity) => activity.activity_type === 'status_change',
-    )
   } else if (title.value == 'Comments') {
     if (!all_activities.data?.versions) return []
     _activities = all_activities.data.versions.filter(
@@ -817,23 +738,6 @@ const activities = computed(() => {
     if (!all_activities.data?.attachments) return []
     return sortByModified(all_activities.data.attachments)
   }
-
-  // FIX: Doppelte Status-Anzeige entfernen
-  // 1. Status-"changed" Activities filtern (Card zeigt das bereits)
-  // 2. Info-Comments mit "STATUS UPDATE" filtern (Card zeigt das bereits)
-  _activities = _activities.filter((activity) => {
-    if (activity.activity_type === 'changed' && activity.data?.field === 'status') {
-      return false
-    }
-    if (
-      (activity.activity_type === 'comment' || activity.activity_type === 'info') &&
-      activity.content &&
-      activity.content.includes('STATUS UPDATE')
-    ) {
-      return false
-    }
-    return true
-  })
 
   _activities.forEach((activity) => {
     activity.icon = timelineIcon(activity.activity_type, activity.is_lead)
@@ -879,10 +783,6 @@ function update_activities_details(activity) {
 
   if (activity.activity_type == 'creation') {
     activity.type = activity.data
-  } else if (activity.activity_type == 'status_change') {
-    activity.type = 'changed'
-    activity.value = 'from'
-    activity.to = 'to'
   } else if (activity.activity_type == 'added') {
     activity.type = 'added'
     activity.value = 'as'
@@ -898,9 +798,7 @@ function update_activities_details(activity) {
 
 const emptyText = computed(() => {
   let text = 'Keine Aktivitäten'
-  if (title.value == 'StatusUpdates') {
-    text = 'Keine Status-Updates'
-  } else if (title.value == 'Emails') {
+  if (title.value == 'Emails') {
     text = 'Keine E-Mails'
   } else if (title.value == 'Comments') {
     text = 'Keine Kommentare'
@@ -922,9 +820,7 @@ const emptyText = computed(() => {
 
 const emptyTextIcon = computed(() => {
   let icon = ActivityIcon
-  if (title.value == 'StatusUpdates') {
-    icon = ActivityIcon
-  } else if (title.value == 'Emails') {
+  if (title.value == 'Emails') {
     icon = Email2Icon
   } else if (title.value == 'Comments') {
     icon = CommentIcon
@@ -968,9 +864,7 @@ function timelineIcon(activity_type, is_lead) {
     case 'attachment_log':
       icon = AttachmentIcon
       break
-    case 'status_change':
-      icon = StatusChangeIcon
-      break
+
     case 'info':
       icon = ActivityIcon
       break
@@ -1032,80 +926,6 @@ const callActions = computed(() => {
 })
 
 
-const STATUS_COLORS = {
-  'Nicht kontaktiert': 'gray',
-  'Kontaktiert': 'blue',
-  'Nicht erreicht': 'orange',
-  'Kontaktiert aber nicht erreicht': 'orange',
-  'Rückruf geplant': 'yellow',
-  'Rückruf geplant': 'yellow',
-  'Termin vereinbart': 'green',
-  'Kein Interesse': 'red',
-}
-
-function getStatusColor(status) {
-  return STATUS_COLORS[status] || 'gray'
-}
-
-function statusChangeBorderClass(status) {
-  const colorMap = {
-    gray: 'border-gray-400 bg-gray-50',
-    blue: 'border-blue-500 bg-blue-50',
-    orange: 'border-orange-500 bg-orange-50',
-    yellow: 'border-yellow-500 bg-yellow-50',
-    green: 'border-green-500 bg-green-50',
-    red: 'border-red-500 bg-red-50',
-  }
-  return colorMap[getStatusColor(status)] || colorMap.gray
-}
-
-function statusChangeIconBgClass(status) {
-  const colorMap = {
-    gray: 'bg-gray-500',
-    blue: 'bg-blue-600',
-    orange: 'bg-orange-500',
-    yellow: 'bg-yellow-500',
-    green: 'bg-green-600',
-    red: 'bg-red-500',
-  }
-  return colorMap[getStatusColor(status)] || colorMap.gray
-}
-
-function statusChangeTextClass(status) {
-  const colorMap = {
-    gray: 'text-gray-800',
-    blue: 'text-blue-800',
-    orange: 'text-orange-800',
-    yellow: 'text-yellow-800',
-    green: 'text-green-800',
-    red: 'text-red-800',
-  }
-  return colorMap[getStatusColor(status)] || colorMap.gray
-}
-
-function statusBadgeClass(status) {
-  const colorMap = {
-    gray: 'bg-gray-100 text-gray-700 ring-1 ring-gray-300',
-    blue: 'bg-blue-100 text-blue-700 ring-1 ring-blue-300',
-    orange: 'bg-orange-100 text-orange-700 ring-1 ring-orange-300',
-    yellow: 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300',
-    green: 'bg-green-100 text-green-700 ring-1 ring-green-300',
-    red: 'bg-red-100 text-red-700 ring-1 ring-red-300',
-  }
-  return colorMap[getStatusColor(status)] || colorMap.gray
-}
-
-function statusDotClass(status) {
-  const colorMap = {
-    gray: 'bg-gray-500',
-    blue: 'bg-blue-500',
-    orange: 'bg-orange-500',
-    yellow: 'bg-yellow-500',
-    green: 'bg-green-500',
-    red: 'bg-red-500',
-  }
-  return colorMap[getStatusColor(status)] || colorMap.gray
-}
 
 const showAngebotCopyDialog = ref(false)
 const angebotFileData = ref(null)

@@ -1003,11 +1003,13 @@ const listePhaseHex = computed(() => {
 
 const lastStatusChange = computed(() => {
   if (!activities.value?.all_activities?.data?.versions) return null
-  const statusChanges = activities.value.all_activities.data.versions.filter(
-    a => a.activity_type === 'status_change'
+  // Look for LISTENWECHSEL comments (pipeline phase transitions)
+  const phaseChanges = activities.value.all_activities.data.versions.filter(
+    a => (a.activity_type === 'comment' || a.activity_type === 'info') &&
+         a.content && a.content.includes('LISTENWECHSEL')
   )
-  if (statusChanges.length) {
-    const last = statusChanges[statusChanges.length - 1]
+  if (phaseChanges.length) {
+    const last = phaseChanges[phaseChanges.length - 1]
     return timeAgo(last.creation)
   }
   return null
@@ -1020,7 +1022,7 @@ const lastActivity = computed(() => {
     const last = versions[versions.length - 1]
     if (last.activity_type === 'communication') return 'E-Mail'
     if (last.activity_type === 'comment') return 'Kommentar'
-    if (last.activity_type === 'status_change') return 'Status Update'
+
     if (last.activity_type === 'incoming_call' || last.activity_type === 'outgoing_call') return 'Anruf'
     return timeAgo(last.creation)
   }
@@ -1036,11 +1038,6 @@ const tabs = computed(() => {
     {
       name: 'Activity',
       label: __('Alle Aktivitäten'),
-      icon: ActivityIcon,
-    },
-    {
-      name: 'StatusUpdates',
-      label: __('Status Updates'),
       icon: ActivityIcon,
     },
     {
