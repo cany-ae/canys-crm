@@ -115,9 +115,6 @@ def get_deal_activities(name):
 		activities.append(activity)
 
 	for comment in docinfo.comments:
-		# Skip STATUS UPDATE comments (legacy, now handled by phase_change/status_change activity types)
-		if comment.content and "STATUS UPDATE:" in comment.content:
-			continue
 		activity = {
 			"name": comment.name,
 			"activity_type": "comment",
@@ -163,9 +160,11 @@ def get_deal_activities(name):
 		activities.append(activity)
 
 	for info_log in docinfo.info_logs:
-		# Skip STATUS UPDATE entries (legacy, now handled by status_change activity type)
+		# Skip phase-related STATUS UPDATE entries (contain phase numbers like "10 -", "80 -" etc.)
 		if info_log.content and "STATUS UPDATE:" in info_log.content:
-			continue
+			import re as _re
+			if _re.search(r'\b\d{2}\s*-\s', info_log.content):
+				continue
 		activity = {
 			"name": info_log.name,
 			"activity_type": "angebot" if "Angebot erstellt" in (info_log.content or "") else "info",
@@ -271,9 +270,6 @@ def get_lead_activities(name):
 		activities.append(activity)
 
 	for comment in docinfo.comments:
-		# Skip STATUS UPDATE comments (legacy, now handled by phase_change activity type)
-		if comment.content and "STATUS UPDATE:" in comment.content:
-			continue
 		activity = {
 			"name": comment.name,
 			"activity_type": "comment",
@@ -319,9 +315,11 @@ def get_lead_activities(name):
 		activities.append(activity)
 
 	for info_log in docinfo.info_logs:
-		# Skip STATUS UPDATE entries (legacy, now handled by phase_change activity type)
+		# Skip phase-related STATUS UPDATE entries (contain phase numbers like "10 -", "80 -" etc.)
 		if info_log.content and "STATUS UPDATE:" in info_log.content:
-			continue
+			import re as _re
+			if _re.search(r'\b\d{2}\s*-\s', info_log.content):
+				continue
 		activity = {
 			"name": info_log.name,
 			"activity_type": "angebot" if "Angebot erstellt" in (info_log.content or "") else "info",

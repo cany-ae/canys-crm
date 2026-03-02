@@ -742,12 +742,12 @@ class CRMLead(Document):
 	@staticmethod
 	def default_list_data():
 		columns = [
-			{"label": "Name", "type": "Data", "key": "lead_name", "width": "11rem"},
+			{"label": "Name", "type": "Data", "key": "lead_name", "width": "14rem"},
 			{"label": "Leadtyp", "type": "Select", "key": "custom_leadtyp", "width": "10rem"},
-			{"label": "Leadquelle", "type": "Select", "key": "custom_leadquelle", "width": "9rem"},
+			{"label": "Leadquelle", "type": "Select", "key": "custom_leadquelle", "width": "8rem"},
 			{"label": "Mobilfunknummer", "type": "Data", "key": "mobile_no", "width": "12rem"},
 			{"label": "Zugewiesen zu", "type": "Link", "key": "_assign", "width": "11rem"},
-			{"label": "Phase", "type": "Select", "key": "custom_liste", "width": "13rem"},
+			{"label": "Phase", "type": "Select", "key": "custom_liste", "width": "12rem"},
 		]
 		rows = [
 			"name", "lead_name", "email", "mobile_no", "modified",

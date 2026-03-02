@@ -606,7 +606,19 @@
               </template>
               {{ __('Follow-up setzen') }}
             </Button>
-</div>
+            <Button
+              v-if="!isClosedPhase"
+              size="sm"
+              variant="subtle"
+              theme="blue"
+              @click="activities?.showNoteWithTimer()"
+            >
+              <template #prefix>
+                <FeatherIcon name="bell" class="h-3.5 w-3.5" />
+              </template>
+              {{ __('Erinnerung') }}
+            </Button>
+          </div>
         </template>
 
         <!-- Gruppe: Reaktivierung (nur bei Liste 90) -->
