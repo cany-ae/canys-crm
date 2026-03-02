@@ -8,11 +8,7 @@
         <Button
           v-if="_note?.reference_docname"
           size="sm"
-          :label="
-            _note.reference_doctype == 'CRM Deal'
-              ? __('Deal öffnen')
-              : __('Lead öffnen')
-          "
+          :label="redirectButtonLabel"
           :iconRight="ArrowUpRightIcon"
           @click="redirect()"
         />
@@ -102,7 +98,7 @@ import ArrowUpRightIcon from '@/components/Icons/ArrowUpRightIcon.vue'
 import { capture } from '@/telemetry'
 import { TextEditor, call } from 'frappe-ui'
 import { useOnboarding } from 'frappe-ui/frappe'
-import { ref, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -192,14 +188,23 @@ async function updateNote() {
   show.value = false
 }
 
+const redirectButtonLabel = computed(() => {
+  if (!_note.value?.reference_doctype) return __('Öffnen')
+  if (_note.value.reference_doctype === 'CRM Deal') return __('Deal öffnen')
+  if (_note.value.reference_doctype === 'Contact') return __('Kontakt öffnen')
+  return __('Lead öffnen')
+})
+
 function redirect() {
   if (!props.note?.reference_docname) return
-  let name = props.note.reference_doctype == 'CRM Deal' ? 'Deal' : 'Lead'
-  let params = { leadId: props.note.reference_docname }
-  if (name == 'Deal') {
-    params = { dealId: props.note.reference_docname }
+  const refType = props.note.reference_doctype
+  if (refType === 'CRM Deal') {
+    router.push({ name: 'Deal', params: { dealId: props.note.reference_docname } })
+  } else if (refType === 'Contact') {
+    router.push({ name: 'Contact', params: { contactId: props.note.reference_docname } })
+  } else {
+    router.push({ name: 'Lead', params: { leadId: props.note.reference_docname } })
   }
-  router.push({ name: name, params: params })
 }
 
 watch(

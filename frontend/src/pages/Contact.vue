@@ -146,13 +146,17 @@
         <div class="mb-3 flex items-center gap-2">
           <LeadsIcon class="h-4 w-4 text-ink-gray-5" />
           <span class="text-sm font-semibold text-ink-gray-8">Leads</span>
+          <Badge variant="solid" theme="gray" size="sm">
+            {{ historyData.data.leads.length }}
+          </Badge>
         </div>
         <div class="flex flex-col gap-2">
           <router-link
             v-for="lead in historyData.data.leads"
             :key="lead.name"
             :to="{ name: 'Lead', params: { leadId: lead.name } }"
-            class="flex items-center justify-between rounded-lg border border-outline-gray-modals px-3 py-2 transition-colors hover:bg-surface-gray-2"
+            class="flex items-center justify-between rounded-lg border px-3 py-2 transition-colors hover:bg-surface-gray-2"
+            :class="getLeadRowBorderClass(lead.custom_liste)"
           >
             <div class="flex flex-col gap-0.5">
               <div class="flex items-center gap-2">
@@ -191,6 +195,9 @@
         <div class="mb-3 flex items-center gap-2">
           <DealsIcon class="h-4 w-4 text-ink-gray-5" />
           <span class="text-sm font-semibold text-ink-gray-8">Deals</span>
+          <Badge variant="solid" theme="gray" size="sm">
+            {{ rows.length }}
+          </Badge>
         </div>
         <DealsListView
           :rows="rows"
@@ -199,9 +206,48 @@
         />
       </div>
 
-      <!-- Empty State -->
+      <!-- Notizen Section -->
+      <div class="border-t px-5 py-4">
+        <div class="mb-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <NoteIcon class="h-4 w-4 text-ink-gray-5" />
+            <span class="text-sm font-semibold text-ink-gray-8">Notizen</span>
+            <Badge v-if="contactNotes.data?.length" variant="solid" theme="gray" size="sm">
+              {{ contactNotes.data.length }}
+            </Badge>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            iconLeft="plus"
+            :label="__('Notiz erstellen')"
+            @click="openNoteModal()"
+          />
+        </div>
+        <div
+          v-if="contactNotes.data?.length"
+          class="grid grid-cols-1 gap-3 lg:grid-cols-2"
+        >
+          <div
+            v-for="note in contactNotes.data"
+            :key="note.name"
+            @click="openNoteModal(note)"
+          >
+            <NoteArea :note="note" v-model="contactNotes" />
+          </div>
+        </div>
+        <div
+          v-else-if="!contactNotes.loading"
+          class="flex flex-col items-center justify-center gap-2 py-6 text-ink-gray-4"
+        >
+          <NoteIcon class="h-8 w-8" />
+          <span class="text-sm">Keine Notizen vorhanden</span>
+        </div>
+      </div>
+
+      <!-- Empty State (no leads, deals, or notes) -->
       <div
-        v-if="!historyData.loading && !historyData.data?.leads?.length && !rows.length"
+        v-if="!historyData.loading && !historyData.data?.leads?.length && !rows.length && !contactNotes.data?.length"
         class="grid flex-1 place-items-center text-xl font-medium text-ink-gray-4"
       >
         <div class="flex flex-col items-center justify-center space-y-3">
@@ -251,6 +297,14 @@
     :docname="contact.doc.name"
     name="Contacts"
   />
+  <NoteModal
+    v-model="showNoteModal"
+    v-model:reloadNotes="contactNotes"
+    :note="currentNote"
+    doctype="Contact"
+    :doc="props.contactId"
+    @after="onNoteAfter"
+  />
 </template>
 
 <script setup>
@@ -264,6 +318,9 @@ import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
+import NoteIcon from '@/components/Icons/NoteIcon.vue'
+import NoteArea from '@/components/Activities/NoteArea.vue'
+import NoteModal from '@/components/Modals/NoteModal.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import {
@@ -392,12 +449,40 @@ const historyData = createResource({
   auto: true,
 })
 
+// Notes for this contact
+const contactNotes = createResource({
+  url: 'frappe.client.get_list',
+  cache: ['contactNotes', props.contactId],
+  params: {
+    doctype: 'FCRM Note',
+    filters: {
+      reference_doctype: 'Contact',
+      reference_docname: props.contactId,
+    },
+    fields: ['name', 'title', 'content', 'owner', 'modified', 'erinnerung'],
+    order_by: 'modified desc',
+    page_length: 100,
+  },
+  auto: true,
+})
+
+const showNoteModal = ref(false)
+const currentNote = ref({})
+
+function openNoteModal(note) {
+  currentNote.value = note || { title: '', content: '' }
+  showNoteModal.value = true
+}
+
+function onNoteAfter() {
+  contactNotes.reload()
+}
+
 // Lead status badge helpers
 const leadBadgeClasses = {
   'Nicht kontaktiert': { badge: 'bg-gray-100 text-gray-700', dot: 'bg-gray-500' },
   'Kontaktiert': { badge: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
   'Kontaktiert aber nicht erreicht': { badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
-  'Rückruf geplant': { badge: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' },
   'Rückruf geplant': { badge: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' },
   'Termin vereinbart': { badge: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
   'Kein Interesse': { badge: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
@@ -426,6 +511,14 @@ const listeBadgeClasses = {
 }
 function getListeBadgeClass(liste) {
   return listeBadgeClasses[liste] || 'bg-gray-100 text-gray-700'
+}
+
+// Lead row border classes for won/lost visual indication
+function getLeadRowBorderClass(liste) {
+  if (!liste) return 'border-outline-gray-modals'
+  if (liste.startsWith('80')) return 'border-l-4 border-l-green-500 border-r border-t border-b border-r-outline-gray-modals border-t-outline-gray-modals border-b-outline-gray-modals'
+  if (liste.startsWith('90')) return 'border-l-4 border-l-red-400 border-r border-t border-b border-r-outline-gray-modals border-t-outline-gray-modals border-b-outline-gray-modals'
+  return 'border-outline-gray-modals'
 }
 
 const rows = computed(() => {
