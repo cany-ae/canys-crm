@@ -743,11 +743,11 @@ class CRMLead(Document):
 	def default_list_data():
 		columns = [
 			{"label": "Name", "type": "Data", "key": "lead_name", "width": "14rem"},
-			{"label": "Leadtyp", "type": "Select", "key": "custom_leadtyp", "width": "10rem"},
+			{"label": "Leadtyp", "type": "Select", "key": "custom_leadtyp", "width": "9rem"},
+			{"label": "Leadquelle", "type": "Select", "key": "custom_leadquelle", "width": "9rem"},
 			{"label": "Mobilfunknummer", "type": "Data", "key": "mobile_no", "width": "11rem"},
 			{"label": "Zugewiesen zu", "type": "Link", "key": "_assign", "width": "10rem"},
-			{"label": "Status", "type": "Select", "key": "status", "width": "12rem"},
-			{"label": "Liste", "type": "Select", "key": "custom_liste", "width": "9rem"},
+			{"label": "Phase", "type": "Select", "key": "custom_liste", "width": "14rem"},
 		]
 		rows = [
 			"name", "lead_name", "email", "mobile_no", "modified",
@@ -756,6 +756,7 @@ class CRMLead(Document):
 			"first_responded_on", "_assign", "image",
 			"custom_leadtyp", "custom_leadquelle", "custom_lead_potenzial",
 			"custom_naechster_kontakt", "custom_termin_datum", "custom_termin_status",
+			"custom_termin_zeit_von", "converted",
 			"custom_zustaendige_rolle",
 		]
 		return {"columns": columns, "rows": rows}
@@ -3506,7 +3507,7 @@ def get_lead_preview(lead_name):
         "custom_tierart", "custom_tiername", "organization",
         "custom_zustaendige_rolle", "custom_kontaktversuche",
         "custom_erreichbarkeit", "custom_followup_grund",
-        "custom_termin_datum", "custom_termin_zeit_von", "custom_termin_status",
+        "custom_termin_datum", "custom_termin_zeit_von", "converted", "custom_termin_status",
         "custom_termin_typ", "custom_termin_berater",
         "custom_cross_sell_prio1_produkt", "custom_cross_sell_prio1_status",
         "custom_cross_sell_prio2_produkt", "custom_cross_sell_prio2_status",

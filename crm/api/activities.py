@@ -191,6 +191,7 @@ def get_lead_activities(name):
 	}
 	avoid_fields = [
 		"converted",
+		"status",
 		"response_by",
 		"sla_creation",
 		"sla",
@@ -248,11 +249,10 @@ def get_lead_activities(name):
 					"value": change[1],
 				}
 
-		# Mark status changes as special activity type
-		if change[0] == "status":
-			activity_type = "status_change"
-			data["old_color"] = get_status_color("CRM Lead Status", data.get("old_value"))
-			data["new_color"] = get_status_color("CRM Lead Status", data.get("value"))
+		# Mark phase changes (custom_liste) as special activity type
+		if change[0] == "custom_liste":
+			activity_type = "phase_change"
+			data["is_phase_change"] = True
 
 		activity = {
 			"activity_type": activity_type,

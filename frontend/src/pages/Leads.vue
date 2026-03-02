@@ -60,6 +60,15 @@
       >
         {{ __('Alle') }}
       </button>
+      <button
+        class="px-3 py-1 text-xs font-medium rounded-md transition-all duration-150"
+        :class="listScope === 'archiv'
+          ? 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100'
+          : 'text-ink-gray-5 hover:text-ink-gray-7'"
+        @click="listScope = 'archiv'"
+      >
+        {{ __('Archiv') }}
+      </button>
     </div>
     <div v-if="selectedLeadList" class="flex items-center gap-1.5 text-xs text-ink-gray-5">
       <span class="inline-block h-2 w-2 rounded-full" :style="{ backgroundColor: getPhaseHex(selectedLeadList) }"></span>
@@ -75,6 +84,10 @@
       <FeatherIcon name="users" class="h-3 w-3" />
       <span>Spezialisten: {{ specialistFilterLabel }}</span>
       <button @click="clearPhaseFilter" class="ml-1 text-purple-400 hover:text-purple-700">✕</button>
+    </div>
+    <div v-else-if="listScope === 'archiv'" class="flex items-center gap-1.5 text-xs text-amber-600">
+      <FeatherIcon name="archive" class="h-3 w-3" />
+      <span>Archiv: Alle Leads inkl. konvertierte</span>
     </div>
   </div>
   <KanbanView
@@ -489,7 +502,12 @@ function clearPhaseFilter() {
 // getPhaseHex now provided directly by usePipelinePhases composable
 
 const computedFilters = computed(() => {
-  let filters = { converted: 0 }
+  let filters = {}
+  // Archiv mode: show ALL leads including converted ones
+  // Normal mode: hide converted leads
+  if (listScope.value !== 'archiv') {
+    filters.converted = 0
+  }
 
   if (selectedSpecialist.value) {
     // Specialist queue filters
@@ -665,6 +683,10 @@ function parseRows(rows, columns = []) {
         _rows[row] = {
           label: lead.custom_leadtyp || '',
         }
+      } else if (row == 'custom_leadquelle') {
+        _rows[row] = {
+          label: lead.custom_leadquelle || '',
+        }
       } else if (row == 'custom_termin_datum') {
         let terminLabel = lead.custom_termin_datum ? formatTerminDate(lead.custom_termin_datum) : ''
         // Append time from custom_termin_zeit_von if available
@@ -733,6 +755,7 @@ function parseRows(rows, columns = []) {
         }
       }
     })
+    _rows['converted'] = lead.converted
     _rows['_email_count'] = lead._email_count
     _rows['_note_count'] = lead._note_count
     _rows['_task_count'] = lead._task_count

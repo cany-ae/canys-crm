@@ -66,7 +66,7 @@
       <EventArea :doctype="doctype" :docname="docname" />
     </div>
     <div v-else-if="title == 'InvoiceTool'" class="h-full overflow-y-auto">
-      <AngebotArea :leadId="docname" @angebotCreated="openEmailWithAngebot" />
+      <AngebotArea :leadId="docname" :tiername="doc.custom_tiername" @angebotCreated="openEmailWithAngebot" />
     </div>
     <div
       v-else-if="
@@ -175,7 +175,7 @@
             class="flex h-7 w-7 items-center justify-center bg-surface-white"
             :class="{
               'mt-2.5': ['communication'].includes(activity.activity_type),
-              'bg-surface-white': ['added', 'removed', 'changed'].includes(
+              'bg-surface-white': ['added', 'removed', 'changed', 'phase_change'].includes(
                 activity.activity_type,
               ),
               'h-8': [
@@ -211,7 +211,7 @@
               v-else
               :is="activity.icon"
               :class="
-                ['added', 'removed', 'changed'].includes(activity.activity_type)
+                ['added', 'removed', 'changed', 'phase_change'].includes(activity.activity_type)
                   ? 'text-ink-gray-4'
                   : 'text-ink-gray-8'
               "
@@ -793,6 +793,10 @@ function update_activities_details(activity) {
     activity.type = 'changed'
     activity.value = 'from'
     activity.to = 'to'
+  } else if (activity.activity_type == 'phase_change') {
+    activity.type = 'hat die Phase geändert'
+    activity.value = 'von'
+    activity.to = 'nach'
   }
 }
 
@@ -869,6 +873,9 @@ function timelineIcon(activity_type, is_lead) {
       icon = ActivityIcon
       break
     case 'angebot':
+      icon = ActivityIcon
+      break
+    case 'phase_change':
       icon = ActivityIcon
       break
     default:

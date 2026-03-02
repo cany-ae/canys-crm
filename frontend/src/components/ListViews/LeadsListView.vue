@@ -155,6 +155,16 @@
                   Überfällig
                 </span>
               </Tooltip>
+              <span
+                v-if="row.converted"
+                class="inline-flex items-center gap-0.5 rounded px-1 py-px text-[10px] font-semibold leading-tight bg-purple-100 text-purple-700 whitespace-nowrap flex-shrink-0"
+                :title="__('In Deal umgewandelt')"
+              >
+                <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                Konvertiert
+              </span>
             </span>
           </div>
           <div
@@ -187,6 +197,28 @@
             >
               {{ item.label }}
             </span>
+          </div>
+          <div
+            v-else-if="column.key === 'custom_leadquelle'"
+            class="truncate text-base"
+            @click="
+              (event) =>
+                emit('applyFilter', {
+                  event,
+                  idx,
+                  column,
+                  item,
+                  firstColumn: columns[0],
+                })
+            "
+          >
+            <span
+              v-if="item.label"
+              class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+            >
+              {{ item.label }}
+            </span>
+            <span v-else class="text-xs text-ink-gray-4">–</span>
           </div>
           <div
             v-else-if="column.key === 'sla_status'"
