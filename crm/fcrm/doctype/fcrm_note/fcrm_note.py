@@ -16,5 +16,6 @@ class FCRMNote(Document):
 			"reference_docname",
 			"owner",
 			"modified",
+			"erinnerung",
 		]
 		return {'columns': [], 'rows': rows}

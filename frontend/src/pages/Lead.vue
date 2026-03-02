@@ -606,20 +606,7 @@
               </template>
               {{ __('Follow-up setzen') }}
             </Button>
-            <Button
-              v-if="!isClosedPhase"
-              size="sm"
-              variant="subtle"
-              theme="blue"
-              @click="activities?.showNoteWithTimer()"
-            >
-              <template #prefix>
-                <FeatherIcon name="bell" class="h-3.5 w-3.5" />
-              </template>
-              {{ __('Erinnerung') }}
-            </Button>
-
-          </div>
+</div>
         </template>
 
         <!-- Gruppe: Reaktivierung (nur bei Liste 90) -->
@@ -1042,7 +1029,7 @@ const tabs = computed(() => {
     },
     {
       name: 'Notes',
-      label: __('Notizen'),
+      label: __('Notizen & Erinnerungen'),
       icon: NoteIcon,
     },
     {

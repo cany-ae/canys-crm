@@ -35,8 +35,18 @@
         @click="editNote(note)"
       >
         <div class="flex items-center justify-between">
-          <div class="truncate text-lg font-medium text-ink-gray-9">
-            {{ note.title }}
+          <div class="flex items-center gap-2 truncate">
+            <div class="truncate text-lg font-medium text-ink-gray-9">
+              {{ note.title }}
+            </div>
+            <span
+              v-if="note.erinnerung"
+              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+              :class="isOverdue(note.erinnerung) ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'"
+            >
+              <FeatherIcon name="bell" class="h-3 w-3" />
+              {{ formatReminderDate(note.erinnerung) }}
+            </span>
           </div>
           <Dropdown
             :options="[
@@ -113,10 +123,28 @@ import NoteModal from '@/components/Modals/NoteModal.vue'
 import ViewControls from '@/components/ViewControls.vue'
 import { usersStore } from '@/stores/users'
 import { timeAgo, formatDate } from '@/utils'
-import { TextEditor, call, Dropdown, Tooltip, ListFooter } from 'frappe-ui'
+import { TextEditor, call, Dropdown, Tooltip, ListFooter, FeatherIcon } from 'frappe-ui'
 import { ref, watch } from 'vue'
 
 const { getUser } = usersStore()
+
+function formatReminderDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const now = new Date()
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = String(d.getFullYear()).slice(-2)
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  if (hours === '00' && minutes === '00') return day + '.' + month + '.' + year
+  return day + '.' + month + '.' + year + ' ' + hours + ':' + minutes
+}
+
+function isOverdue(dateStr) {
+  if (!dateStr) return false
+  return new Date(dateStr) < new Date()
+}
 
 const showNoteModal = ref(false)
 const currentNote = ref(null)
