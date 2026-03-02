@@ -93,10 +93,31 @@
         </div>
       </div>
 
-      <!-- Pferdename -->
+      <!-- Pferdename (auto-populated from Lead) -->
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pferdename *</label>
+        <!-- Warning when tiername is missing from Lead -->
+        <div
+          v-if="!props.tiername"
+          class="mb-2 flex items-start gap-2 p-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-md"
+        >
+          <svg class="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+          </svg>
+          <span class="text-xs text-amber-700 dark:text-amber-400">Tiername fehlt im Lead. Bitte zuerst im Lead unter "Tier-Daten" eintragen.</span>
+        </div>
+        <!-- Read-only display when tiername comes from Lead -->
+        <div v-if="props.tiername" class="relative">
+          <div class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 text-sm">
+            {{ horseName }}
+          </div>
+          <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded">
+            aus Lead
+          </span>
+        </div>
+        <!-- Fallback: editable input if no tiername in Lead -->
         <input
+          v-else
           v-model="horseName"
           type="text"
           placeholder="z.B. Luna, Blitz, Shadow..."
@@ -244,7 +265,8 @@ import { createResource } from 'frappe-ui'
 import AngebotCopyDialog from '@/components/AngebotCopyDialog.vue'
 
 const props = defineProps({
-  leadId: { type: String, required: true }
+  leadId: { type: String, required: true },
+  tiername: { type: String, default: '' }
 })
 
 const emit = defineEmits(['angebotCreated'])
@@ -277,6 +299,18 @@ const statusClass = computed(() =>
     ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
     : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
 )
+
+// Auto-populate horseName from Lead's tiername
+function syncTiername(val) {
+  if (val) {
+    horseName.value = val
+  }
+}
+
+// Watch for prop changes (e.g. if Lead data loads after component mounts)
+watch(() => props.tiername, (newVal) => {
+  syncTiername(newVal)
+}, { immediate: true })
 
 const mitarbeiterResource = createResource({
   url: 'pferdeversicherung.api.get_current_user_mitarbeiter',
@@ -401,7 +435,10 @@ async function generateAngebot() {
         file_url: res.file_url,
         file_doc_name: res.file_doc_name,
       })
-      horseName.value = ''
+      // Only reset horseName if it was manually entered (not from Lead)
+      if (!props.tiername) {
+        horseName.value = ''
+      }
       beitrag20.value = ''
       beitrag10.value = ''
       beitrag0.value = ''

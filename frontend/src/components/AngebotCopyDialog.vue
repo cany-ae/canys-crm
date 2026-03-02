@@ -107,24 +107,6 @@
             </svg>
             <span class="flex-1 text-sm font-medium text-gray-800 truncate">{{ fileData?.file_name || 'Angebot.pdf' }}</span>
             <div class="flex items-center gap-2">
-              <!-- Link kopieren -->
-              <button
-                v-if="fileData?.file_url"
-                @click.stop="copyField(pdfFullUrl, 'pdflink')"
-                class="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium transition-colors"
-                :class="copyStatus.pdflink === 'ok'
-                  ? 'text-green-600 border-green-400'
-                  : copyStatus.pdflink === 'fail'
-                    ? 'text-red-600 border-red-400'
-                    : 'text-gray-700 hover:bg-gray-100'"
-                :title="copyTitle('pdflink')"
-              >
-                <FeatherIcon
-                  :name="copyStatus.pdflink === 'ok' ? 'check' : copyStatus.pdflink === 'fail' ? 'x' : 'link'"
-                  class="h-4 w-4"
-                />
-                {{ copyStatus.pdflink === 'ok' ? 'Kopiert!' : copyStatus.pdflink === 'fail' ? 'Fehler' : 'Link' }}
-              </button>
               <!-- Herunterladen -->
               <a
                 v-if="fileData?.file_url"
@@ -184,15 +166,8 @@ const loadError = ref('')
 const emailData = ref({ betreff: '', inhalt_plain: '', inhalt_html: '', empfaenger: '' })
 
 // Track copy status per field: '' = idle, 'ok' = success, 'fail' = failed
-const copyStatus = ref({ empfaenger: '', betreff: '', inhalt: '', pdflink: '' })
+const copyStatus = ref({ empfaenger: '', betreff: '', inhalt: '' })
 const allStatus = ref('')
-
-const pdfFullUrl = computed(() => {
-  if (!props.fileData?.file_url) return ''
-  const url = props.fileData.file_url
-  if (url.startsWith('http')) return url
-  return window.location.origin + url
-})
 
 function copyTitle(field) {
   if (copyStatus.value[field] === 'ok') return 'Kopiert!'
@@ -209,7 +184,7 @@ watch(show, (val) => emit('update:modelValue', val))
 async function loadTemplate() {
   loading.value = true
   loadError.value = ''
-  copyStatus.value = { empfaenger: '', betreff: '', inhalt: '', pdflink: '' }
+  copyStatus.value = { empfaenger: '', betreff: '', inhalt: '' }
   allStatus.value = ''
   try {
     const data = await call(

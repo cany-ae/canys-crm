@@ -37,6 +37,8 @@
                   <div
                     v-if="field.visible"
                     class="field flex items-center gap-2 px-3 leading-5 first:mt-3"
+                    :class="{ 'lp-field-empty': isLpFieldEmpty(field.fieldname) }"
+                    :data-fieldname="field.fieldname"
                   >
                     <Tooltip :text="__(field.label)" :hoverDelay="1">
                       <div
@@ -351,6 +353,10 @@ const props = defineProps({
   addContact: {
     type: Function,
   },
+  highlightFields: {
+    type: Array,
+    default: () => [],
+  },
 })
 
 const emit = defineEmits(['beforeFieldChange', 'afterFieldChange', 'reload'])
@@ -372,6 +378,13 @@ if (props.docname) {
 }
 
 const doc = computed(() => document.doc || {})
+
+function isLpFieldEmpty(fieldname) {
+  if (!props.highlightFields.length) return false
+  if (!props.highlightFields.includes(fieldname)) return false
+  const val = doc.value?.[fieldname]
+  return !val || (typeof val === 'string' && val.trim() === '')
+}
 
 const _sections = computed(() => {
   if (!props.sections?.length) return []
@@ -527,5 +540,33 @@ function firstVisibleIndex() {
 
 .sections .section:last-of-type .column {
   max-height: none;
+}
+
+.field.lp-field-empty {
+  background-color: rgba(239, 68, 68, 0.06);
+  border-left: 3px solid #ef4444;
+  border-radius: 4px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  position: relative;
+}
+
+.field.lp-field-empty .label-text {
+  color: #dc2626 !important;
+  font-weight: 600;
+}
+
+.field.lp-field-empty::after {
+  content: 'LP-Pflichtfeld';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px;
+  font-weight: 600;
+  color: #ef4444;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  opacity: 0.7;
 }
 </style>

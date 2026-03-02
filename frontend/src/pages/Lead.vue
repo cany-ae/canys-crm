@@ -710,6 +710,7 @@
           :sections="sections.data"
           doctype="CRM Lead"
           :docname="leadId"
+          :highlightFields="LP_HIGHLIGHT_FIELDS"
           @reload="sections.reload"
           @afterFieldChange="reloadAssignees"
         />
@@ -1741,6 +1742,16 @@ async function submitBewertung() {
     toast.error(err.messages?.[0] || __('Fehler beim Speichern'))
   }
 }
+
+// Landing page fields that should be visually marked red when empty
+const LP_HIGHLIGHT_FIELDS = [
+  'first_name',
+  'last_name',
+  'mobile_no',
+  'email',
+  'custom_leadtyp',
+  'custom_leadquelle',
+]
 
 defineExpose({})
 </script>
